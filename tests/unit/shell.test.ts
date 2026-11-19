@@ -15,6 +15,7 @@ import { meta as thMeta } from '../../src/games/thundering-herd/meta';
 import { meta as rgMeta } from '../../src/games/the-ring/meta';
 import { meta as asMeta } from '../../src/games/autoscaler/meta';
 import { meta as bpMeta } from '../../src/games/backpressure/meta';
+import { meta as rsMeta } from '../../src/games/retry-storm/meta';
 import { meta as tc } from '../../src/games/traffic-cop/meta';
 import { meta as rd } from '../../src/games/replica-diff/meta';
 import { meta as sb } from '../../src/games/split-brain/meta';
@@ -99,7 +100,7 @@ describe('curriculum registry', () => {
 });
 
 describe('game metadata follows the walkthrough rules', () => {
-  for (const m of [dnsMeta, hsMeta, lbMeta, hbMeta, rlMeta, chMeta, thMeta, rgMeta, asMeta, bpMeta, tc, rd, sb]) {
+  for (const m of [dnsMeta, hsMeta, lbMeta, hbMeta, rlMeta, chMeta, thMeta, rgMeta, asMeta, bpMeta, rsMeta, tc, rd, sb]) {
     it(m.id, () => {
       expect(m.tasks.length).toBeGreaterThanOrEqual(3);
       expect(m.tasks.length).toBeLessThanOrEqual(5);

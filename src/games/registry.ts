@@ -41,7 +41,7 @@ export const GAMES: GameEntry[] = [
   { id: 'the-ring', level: 4, title: 'The Ring', concept: 'Consistent hashing', blurb: 'Add a server and move as little data as possible.', load: () => import('./the-ring') },
   { id: 'autoscaler', level: 4, title: 'Autoscaler', concept: 'Scaling policies and cost', blurb: 'Meet the morning spike without burning the budget.', load: () => import('./autoscaler') },
   { id: 'backpressure', level: 4, title: 'Backpressure', concept: 'Queues and dead-letter queues', blurb: 'Drain a backlog, then find the poison message that crashes every consumer.', load: () => import('./backpressure') },
-  { id: 'retry-storm', level: 5, title: 'Retry Storm', concept: 'Timeouts, backoff and jitter', blurb: 'A slow dependency plus naive retries triples the load. Calm it down.' },
+  { id: 'retry-storm', level: 5, title: 'Retry Storm', concept: 'Timeouts, backoff and jitter', blurb: 'A slow dependency plus naive retries triples the load. Calm it down.', load: () => import('./retry-storm') },
   { id: 'circuit-breaker', level: 5, title: 'Circuit Breaker', concept: 'Closed, open, half-open', blurb: 'Stop one failing service from taking the whole page down.' },
   { id: 'blast-radius', level: 5, title: 'Blast Radius', concept: 'Zones, regions and cells', blurb: 'Lose a zone, then a region, and keep serving.' },
   { id: 'partition', level: 6, title: 'Partition', concept: 'CAP', blurb: 'Split the network and choose: reject writes, or accept them and diverge.' },

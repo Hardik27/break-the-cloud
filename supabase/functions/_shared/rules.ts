@@ -23,5 +23,6 @@ export const RULES: Record<string, GameRules> = {
   'thundering-herd': { tasks: 4, minTimeMs: [0, 15000, 2000, 2000], parMs: [0, 27000, 12000, 14000] },
   'traffic-cop': { tasks: 5, minTimeMs: [0, 7000, 12000, 6000, 7000], parMs: [0, 11000, 18000, 12000, 18000] },
   'replica-diff': { tasks: 5, minTimeMs: [0, 1500, 1500, 1500, 3000], parMs: [0, 15000, 15000, 15000, 28000] },
+  'retry-storm': { tasks: 4, minTimeMs: [0, 7000, 2000, 2000], parMs: [0, 12000, 12000, 12000] },
   'split-brain': { tasks: 5, minTimeMs: [0, 3000, 4000, 10000, 7000], parMs: [0, 12000, 11000, 17000, 22000] },
 };

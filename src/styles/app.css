@@ -570,3 +570,18 @@ svg.as-chart{display:block;width:100%;height:auto;border:1px solid var(--line);b
 .bp-dlq{font-size:12px}
 .bp-dlq code{color:var(--ok)}
 .bp-dlq code.bad{color:var(--bad);text-decoration:line-through}
+
+/* ---------- Retry Storm ---------- */
+.rs-panel{padding:14px;display:grid;gap:12px}
+.rs-panel>*{min-width:0}
+.rs-meter{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:4px 12px;align-items:center;border:1.5px solid var(--ok);border-radius:6px;padding:10px 12px}
+.rs-meter .eyebrow{margin:0}
+.rs-meter b{font-family:var(--mono);font-size:16px;font-variant-numeric:tabular-nums}
+.rs-meter.full{border-color:var(--bad)}.rs-meter.full .as-bar i{background:var(--bad)}
+.rs-tiles{display:flex;flex-wrap:wrap;gap:6px}
+.rs-tile{font-family:var(--mono);font-size:11px;padding:6px 9px;border-radius:4px;border:1px dashed var(--bad);color:var(--bad)}
+.rs-tile.ok{border:1px solid var(--ok);background:var(--ok);color:#fff}
+#rs-send{justify-self:start}
+#rs-send.pulse{animation:boxpulse 1s infinite}
+.rs-lbl{width:60px}
+#rs-run{justify-self:start}
