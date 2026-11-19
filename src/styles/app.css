@@ -747,3 +747,24 @@ svg.as-chart{display:block;width:100%;height:auto;border:1px solid var(--line);b
 .sg-design b{font-family:var(--mono);font-size:13px}
 .sg-design[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,var(--panel))}
 #sg-dedupe{justify-self:start;white-space:normal;text-align:left}
+
+/* ---------- Gossip ---------- */
+.gs-panel{padding:14px;display:grid;gap:12px}
+.gs-panel>*{min-width:0}
+.gs-grid16{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
+@media (max-width:560px){.gs-grid16{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.gs-node{aspect-ratio:1;border-radius:50%;border:1.5px solid var(--line);background:var(--panel);font-family:var(--mono);font-size:14px;color:var(--ink);touch-action:manipulation;min-width:0;max-width:64px;justify-self:center;width:100%}
+.gs-node.on{background:var(--append);border-color:var(--append);color:#fff}
+.gs-dots{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;max-width:360px}
+.gs-dots i{aspect-ratio:1;border-radius:50%;background:var(--line);transition:background .2s}
+.gs-dots i.on{background:var(--append)}
+.gs-dots i.new{background:var(--accent)}
+.gs-hb{display:grid;gap:4px;font-family:var(--mono);font-size:13px}
+.gs-hbrow{display:grid;grid-template-columns:40px 80px minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+.gs-hbrow.head{border:0;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+.gs-hbrow b{font-family:var(--display);font-stretch:125%;font-weight:900;font-size:16px}
+.gs-hbrow.warn .gs-age{color:var(--vote);font-weight:600}
+.gs-hbrow.sus{border-color:var(--bad)}.gs-hbrow.sus .gs-age{color:var(--bad);font-weight:600}
+.gs-hbrow.dead{opacity:.55;background:color-mix(in srgb,var(--bad) 8%,var(--panel))}
+.gs-mark{padding:5px 10px}
+@media (max-width:480px){.gs-hbrow{grid-template-columns:30px 54px minmax(0,1fr) auto}}
