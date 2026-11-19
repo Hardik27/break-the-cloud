@@ -459,3 +459,31 @@ svg.hb-run{display:block;width:100%;height:auto;border:1px solid var(--line);bor
 .ch-stbox.db{border-color:var(--ink)}
 .ch-stbox.stale{border-color:var(--bad);animation:alarm .8s infinite}
 .ch-panel>*{min-width:0}
+
+/* ---------- Thundering Herd ---------- */
+.th-panel{padding:14px;display:grid;gap:12px}
+.th-panel>*{min-width:0}
+.th-flow{display:grid;grid-template-columns:90px minmax(0,1fr) 130px;gap:10px;align-items:stretch}
+@media (max-width:560px){.th-flow{grid-template-columns:minmax(0,1fr)}}
+.th-users,.th-db{border:1px solid var(--line);border-radius:6px;padding:10px;display:flex;flex-direction:column;justify-content:center;gap:4px}
+.th-users b{font-family:var(--display);font-stretch:112%;font-weight:900;font-size:22px}
+.th-cache{border:1.5px solid var(--ok);border-radius:6px;padding:10px;display:grid;gap:8px}
+.th-key{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.th-key b{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:18px}
+.th-ttl{position:relative;height:16px;border-radius:8px;background:var(--grid);overflow:hidden}
+.th-ttl .zone{position:absolute;left:0;top:0;bottom:0;width:30%;background:color-mix(in srgb,var(--vote) 30%,transparent)}
+.th-ttl i{position:absolute;left:0;top:3px;bottom:3px;border-radius:5px;background:var(--ok)}
+.th-ttl i.zone{background:var(--vote)}
+.th-ttl i.early{background:var(--ok)}
+.th-db{background:var(--ink);color:var(--bg)}
+.th-db .small{color:var(--bg);opacity:.75}
+.th-meter{height:8px;border-radius:4px;background:color-mix(in srgb,var(--bg) 25%,transparent);overflow:hidden}
+.th-meter i{display:block;height:100%;background:var(--ok)}
+.th-db.hot{box-shadow:inset 0 0 0 3px var(--bad)}
+.th-db.hot .th-meter i{background:var(--bad)}
+.th-herd{display:flex;flex-wrap:wrap;gap:3px;min-height:12px}
+.th-herd span{width:8px;height:8px;border-radius:50%;background:var(--bad);opacity:0;transition:opacity .2s}
+.th-herd span.on{opacity:1}
+#th-refresh.pulse{animation:boxpulse 1s infinite}
+.th-res{display:grid;gap:6px;font-family:var(--mono);font-size:12px}
+svg.th-chart{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:6px}
