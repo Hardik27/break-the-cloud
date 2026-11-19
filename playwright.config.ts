@@ -12,7 +12,8 @@ export default defineConfig({
   reporter: [['list']],
   use: {
     baseURL: `http://localhost:${PORT}/`,
-    trace: 'retain-on-failure',
+    // Traces are kept only for failures, without screenshots, to keep disk use small during long runs.
+    trace: { mode: 'retain-on-failure', screenshots: false, snapshots: true },
   },
   projects: [
     { name: 'desktop', use: { browserName: 'chromium', viewport: { width: 1280, height: 900 } } },

@@ -15,8 +15,11 @@ function playManual(limit: number, ahead: boolean) {
 }
 
 describe('tasks 1–2: by hand', () => {
-  it('the tutorial is frozen and boots instantly', () => {
+  it('the tutorial is frozen (traffic does not grow) and boots instantly', () => {
     const m = as.createManual(0);
+    as.stepManual(m, 60_000);
+    expect(m.now).toBe(0);
+    expect(as.rampDemand(m.now)).toBe(150);
     as.addInstance(m);
     as.stepManual(m, 16);
     expect(m.running).toBe(as.START_INSTANCES + 1);

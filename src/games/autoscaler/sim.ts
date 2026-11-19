@@ -48,8 +48,16 @@ export function stepManual(m: Manual, dt: number): ManualEvent[] {
   const end = m.now + dt;
   while (m.now < end) {
     const h = Math.min(20, end - m.now);
-    if (!m.frozen) m.now += h;
-    else m.now = end;
+    // A frozen (tutorial) fleet keeps its clock still; only finishes instant boots.
+    if (m.frozen) {
+      if (m.booting.length) {
+        m.running += m.booting.length;
+        m.booting = [];
+        ev.push({ type: 'ready' });
+      }
+      break;
+    }
+    m.now += h;
     for (let i = m.booting.length - 1; i >= 0; i--) {
       if (m.now >= m.booting[i]) {
         m.booting.splice(i, 1);
@@ -57,7 +65,6 @@ export function stepManual(m: Manual, dt: number): ManualEvent[] {
         ev.push({ type: 'ready' });
       }
     }
-    if (m.frozen) break;
     m.instanceMs += h * (m.running + m.booting.length);
     const c = cpu(m);
     if (c > 1) {
