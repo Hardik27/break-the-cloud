@@ -903,3 +903,23 @@ svg.as-chart{display:block;width:100%;height:auto;border:1px solid var(--line);b
 .rl-vapi.hot .meter i{background:var(--bad)}
 @media (max-width:520px){.rl-vrow{grid-template-columns:70px minmax(0,1fr);}.rl-vrow .rl-reqs{grid-column:1/-1}.rl-vapi{grid-template-columns:70px minmax(0,1fr) 44px}}
 .hb-result.playing .mrow{visibility:hidden}
+.hs-dup{margin:8px 0 0;font-family:var(--mono);font-size:12.5px}
+.hs-acks .ack.pending{opacity:.5;border-style:dashed}
+.gs-gridwrap{position:relative}
+.gs-arcs{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.gs-arc{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-dasharray:6 5;animation:gsarc .9s linear forwards}
+@keyframes gsarc{from{stroke-dashoffset:60;opacity:1}to{stroke-dashoffset:0;opacity:0}}
+.gs-node.sender{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 55%,transparent)}
+.gs-timer{flex:1;min-width:80px;max-width:220px;height:8px;border-radius:4px;background:var(--grid);overflow:hidden}
+.gs-timer i{display:block;height:100%;background:var(--accent);transition:width .1s linear}
+.gs-ring{position:relative;height:220px;max-width:360px;width:100%;margin:0 auto;border:1px dashed var(--line);border-radius:50%}
+.gs-friend{position:absolute;transform:translate(-50%,-50%);border:2px solid var(--ok);background:var(--panel);border-radius:999px;padding:4px 10px;font-family:var(--mono);font-size:12px;font-weight:600}
+.gs-friend.me{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.gs-friend.sus{border-color:var(--vote);animation:boxpulse 1.1s infinite}
+.gs-friend.helper{border-color:var(--append)}
+.gs-friend.gone{border-color:var(--bad);opacity:.5;text-decoration:line-through}
+.gs-friend.fine{border-color:var(--ok)}
+.gs-swim{border:1.5px solid var(--accent);border-radius:6px;padding:10px 12px}
+.gs-swim p{margin:0 0 4px}.gs-swim p:last-child{margin:0}
+.gs-probe{font-family:var(--mono)}
+.btn.gs-deadbtn{border-color:var(--bad);color:var(--bad)}

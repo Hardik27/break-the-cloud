@@ -10,8 +10,8 @@ type Phase = 'pre' | 'tutorial' | 'play' | 'between' | 'done';
 const INFO = [
   { h: 'Tutorial: your first connection', p: 'Follow the highlighted steps. The clock starts after the tutorial.' },
   { h: 'Both sides of the handshake', p: 'Open <b>4 connections</b>. In some you are the client, in some the server. Read the ladder: what did the other side just send, and what is your reply?' },
-  { h: 'A packet went missing', p: 'The sender sent 6 segments; one was lost on the way. The receiver’s ACKs say which byte it still needs. Click that segment to resend it. <b>3 rounds.</b>' },
-  { h: 'Out of order', p: 'Five segments arrived, shuffled. The app must get the bytes in order. Click them in sequence order. <b>2 rounds.</b>' },
+  { h: 'A packet went missing', p: '<b>Goal:</b> find and resend the lost segment, 3 times.<br><b>Your tools:</b> click a segment in the sender’s buffer to resend it. You can’t see which one was lost: only the ACKs coming back tell you.' },
+  { h: 'Out of order', p: '<b>Goal:</b> hand the app all the bytes, in order. 2 messages.<br><b>Your tools:</b> segments drop into the receive buffer one by one, in random order. Click a segment to deliver it to the app. You may have to wait for the next one to arrive.' },
   { h: 'The RTT tax', p: `A page needs <b>20 requests</b>. Each round trip takes ${sim.RTT} ms, and every new connection costs 2 round trips of handshakes. Change the settings and load the page under <b>800 ms</b>, then under <b>400 ms</b>.` },
 ];
 
@@ -29,6 +29,17 @@ export const game: Game = {
     let lossRound = 0;
     let order = sim.makeOrder(rng);
     let orderRound = 0;
+    // Time-based reveals: ACKs stream back, segments trickle in.
+    let acksShown = 0;
+    let arrivedN = 0;
+    let revealAt = 0;
+    const tick = window.setInterval(() => {
+      if (phase !== 'play') return;
+      const now = performance.now();
+      if (now < revealAt) return;
+      if (task === 2 && acksShown < loss.acks.length) { acksShown++; revealAt = now + 550; render(); }
+      else if (task === 3 && arrivedN < order.arrived.length) { arrivedN++; revealAt = now + 750; render(); }
+    }, 100);
     const opts: sim.LoadOpts = { keepAlive: false, parallel: 1, http2: false };
     let goal = 0;
     let betweenT = 0;
@@ -55,7 +66,7 @@ export const game: Game = {
     panelA.append(ladderHead, svg, note, pktRow);
     // B: lost segment
     const panelB = el('div', { class: 'hs-panel', hidden: true });
-    panelB.innerHTML = `<p class="eyebrow">Sender buffer (click to resend)</p>`;
+    panelB.innerHTML = `<p class="eyebrow">Sender buffer: 6 segments sent (click one to resend it)</p>`;
     const segRow = el('div', { class: 'hs-segs' });
     const segBtns = Array.from({ length: 6 }, (_, i) => {
       const b = el('button', { class: 'hs-seg', type: 'button', 'data-seg': i }, `<b>${sim.seqOf(i)}</b><span class="st"></span>`);
@@ -64,10 +75,11 @@ export const game: Game = {
       return b;
     });
     const ackRow = el('div', { class: 'hs-acks', id: 'hs-acks' });
-    panelB.append(segRow, el('p', { class: 'eyebrow', style: 'margin-top:12px' }, 'ACKs coming back from the receiver'), ackRow);
+    const dupLine = el('p', { class: 'hs-dup', id: 'hs-dup' });
+    panelB.append(segRow, el('p', { class: 'eyebrow', style: 'margin-top:12px' }, 'ACKs coming back: “the next byte I need is…”'), ackRow, dupLine);
     // C: out of order
     const panelC = el('div', { class: 'hs-panel', hidden: true });
-    panelC.innerHTML = `<p class="eyebrow">Arrived at the receiver (click in byte order)</p>`;
+    panelC.innerHTML = `<p class="eyebrow">Receive buffer (click a segment to deliver it to the app)</p>`;
     const arrRow = el('div', { class: 'hs-segs' });
     const arrBtns = Array.from({ length: 5 }, (_, k) => {
       const b = el('button', { class: 'hs-seg', type: 'button', 'data-arr': k }, `<b></b><span class="st"></span>`);
@@ -76,7 +88,8 @@ export const game: Game = {
       return b;
     });
     const appRow = el('div', { class: 'hs-app', id: 'hs-app' });
-    panelC.append(arrRow, el('p', { class: 'eyebrow', style: 'margin-top:12px' }, 'Delivered to the app'), appRow);
+    const needLine = el('p', { class: 'hs-dup', id: 'hs-need' });
+    panelC.append(arrRow, needLine, el('p', { class: 'eyebrow', style: 'margin-top:12px' }, 'Delivered to the app'), appRow);
     // D: RTT tax
     const panelD = el('div', { class: 'hs-panel', hidden: true });
     const ctl = el('div', { class: 'row' });
@@ -134,21 +147,25 @@ export const game: Game = {
         s1.innerHTML = `round <b>${Math.min(lossRound + 1, 3)}/3</b>`;
         s2.innerHTML = `RTT <b>${sim.RTT} ms</b>`;
         segBtns.forEach((b, i) => {
-          b.classList.toggle('lost', i === loss.dropped);
-          b.querySelector('.st')!.textContent = i === loss.dropped ? '✕ lost' : '✓ arrived';
+          b.querySelector('.st')!.textContent = `bytes ${sim.seqOf(i)}–${sim.seqOf(i + 1) - 1}`;
           b.setAttribute('aria-label', `Resend segment starting at byte ${sim.seqOf(i)}`);
         });
-        ackRow.innerHTML = loss.acks.map((a, i) => `<span class="ack${i > 0 && a === loss.acks[i - 1] ? ' dup' : ''}">ACK ${a}</span>`).join('');
+        const shown = loss.acks.slice(0, acksShown);
+        ackRow.innerHTML = shown.map((a, i) => `<span class="ack${i > 0 && a === shown[i - 1] ? ' dup' : ''}">ACK ${a}</span>`).join('') + (acksShown < loss.acks.length ? '<span class="ack pending">…</span>' : '');
+        const dups = dupCount();
+        dupLine.innerHTML = dups ? `Duplicate ACKs: <b>${dups}</b>${dups >= 3 ? ' · three in a row: real TCP resends now (fast retransmit)' : ''}` : 'Duplicate ACKs: 0';
       } else if (task === 3) {
         s1.innerHTML = `round <b>${Math.min(orderRound + 1, 2)}/2</b>`;
         s2.innerHTML = `delivered <b>${order.delivered}/5</b>`;
         arrBtns.forEach((b, k) => {
           const seg = order.arrived[k];
+          b.hidden = k >= arrivedN;
           b.querySelector('b')!.textContent = `seq ${sim.seqOf(seg)}`;
           b.classList.toggle('used', seg < order.delivered);
           b.querySelector('.st')!.textContent = seg < order.delivered ? 'delivered' : 'waiting';
           b.setAttribute('aria-label', `Deliver the segment starting at byte ${sim.seqOf(seg)}`);
         });
+        needLine.innerHTML = `Receiver’s ACK: next byte needed <b>${sim.seqOf(order.delivered)}</b>${arrivedN < order.arrived.length ? ` · ${order.arrived.length - arrivedN} still on the way…` : ''}`;
         appRow.innerHTML = Array.from({ length: order.delivered }, (_, i) => `<span class="ack">${sim.seqOf(i)}–${sim.seqOf(i + 1) - 1}</span>`).join('') || '<span class="small">nothing yet</span>';
       } else {
         s1.innerHTML = `goal <b>under ${sim.GOALS[Math.min(goal, 1)]} ms</b>`;
@@ -171,8 +188,8 @@ export const game: Game = {
         if (r === 'client' && hs.step === 0) return ['You are the <b>client</b>. Start the connection.', 'act'];
         return [`You are the <b>${r}</b>. The ${r === 'client' ? 'server' : 'client'} just sent <b>${last?.pkt}</b>. What do you send back?`, 'act'];
       }
-      if (task === 2) return ['The receiver keeps sending the same ACK number. Which segment is it still waiting for? Click it to resend.', 'act'];
-      if (task === 3) return [`Deliver bytes in order. Next, the app needs the segment starting at byte <b>${sim.seqOf(order.delivered)}</b>.`, 'act'];
+      if (task === 2) return acksShown < 2 ? ['ACKs are coming back from the receiver. Read them: each one names the next byte it needs.', 'watch'] : ['The receiver keeps repeating one ACK number. Which segment is it still waiting for? Resend it.', 'act'];
+      if (task === 3) return order.arrived.slice(0, arrivedN).includes(order.delivered) ? ['The next bytes the app needs are in the buffer. <b>Deliver them.</b>', 'act'] : ['Waiting for the next bytes in order. Out-of-order ones wait in the buffer.', 'watch'];
       if (task === 4) return [`Get the page under <b>${sim.GOALS[goal]} ms</b>: change the settings, then press <b>Load page</b>.`, 'act'];
       return ['', 'watch'];
     }
@@ -187,8 +204,8 @@ export const game: Game = {
       task = t;
       phase = t === 0 ? 'tutorial' : 'play';
       if (t <= 1) hs = sim.createHandshake(t, rng);
-      if (t === 2) { loss = sim.makeLoss(rng); lossRound = 0; }
-      if (t === 3) { order = sim.makeOrder(rng); orderRound = 0; }
+      if (t === 2) { loss = sim.makeLoss(rng); lossRound = 0; acksShown = 0; revealAt = 0; }
+      if (t === 3) { order = sim.makeOrder(rng); orderRound = 0; arrivedN = 0; revealAt = 0; }
       if (t === 4) { goal = 0; res.innerHTML = ''; }
       renderSide();
       render();
@@ -230,18 +247,29 @@ export const game: Game = {
       if (guard()) return;
       if (task !== 2) return api.toast('The sender buffer is used in the lost-packet task.');
       api.move();
+      if (!acksShown) return api.toast('No ACKs yet. Wait for the receiver to answer before resending anything.');
       const r = sim.resend(loss, i);
       if (!r.ok) {
         api.mistake('wrong segment', segBtns[i]);
         api.toast(r.msg);
         return;
       }
-      api.hit('recovered', segBtns[i]);
-      api.toast(r.msg);
+      const dups = dupCount();
+      api.hit(dups >= 3 ? 'fast retransmit!' : 'recovered', segBtns[i]);
+      api.toast(`${r.msg}${dups < 3 && acksShown < loss.acks.length ? ' (Real TCP waits for 3 duplicate ACKs before resending, so a reordered packet isn’t mistaken for a lost one.)' : ''}`);
       lossRound++;
       if (lossRound >= 3) return taskDone();
       loss = sim.makeLoss(rng);
+      acksShown = 0;
+      revealAt = performance.now() + 600;
       render();
+    }
+
+    function dupCount(): number {
+      const shown = loss.acks.slice(0, acksShown);
+      let d = 0;
+      for (let i = 1; i < shown.length; i++) if (shown[i] === shown[i - 1]) d++;
+      return d;
     }
 
     function clickArrived(k: number) {
@@ -252,7 +280,7 @@ export const game: Game = {
       const r = sim.deliver(order, seg);
       if (!r.ok) {
         api.mistake('out of order', arrBtns[k]);
-        api.toast(r.msg);
+        api.toast(`${r.msg} Keep it in the buffer${order.arrived.slice(0, arrivedN).includes(order.delivered) ? '' : ': the segment you need hasn’t arrived yet, so wait'}.`);
         return;
       }
       api.hit(undefined, arrBtns[k]);
@@ -261,6 +289,8 @@ export const game: Game = {
         if (orderRound >= 2) { render(); return taskDone(); }
         api.toast('Message reassembled. Here comes another one.');
         order = sim.makeOrder(rng);
+        arrivedN = 0;
+        revealAt = performance.now() + 600;
       }
       render();
     }
@@ -313,6 +343,9 @@ export const game: Game = {
     });
 
     render();
-    return () => clearTimeout(betweenT);
+    return () => {
+      clearTimeout(betweenT);
+      clearInterval(tick);
+    };
   },
 };

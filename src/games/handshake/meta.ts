@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="12"';
 const arrow = (y: number, ltr: boolean, label: string, color: string) => {
@@ -54,6 +55,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['handshake'].minTimeMs,
   parMs: RULES['handshake'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'TCP gives applications a reliable byte stream over an unreliable network. It numbers bytes (sequence numbers), acknowledges them cumulatively, keeps a timer for each unacknowledged segment, and resends on timeout or after three duplicate ACKs. <b>Flow control</b> stops a fast sender from flooding a slow receiver, and <b>congestion control</b> slows everyone down when the network is overloaded.',

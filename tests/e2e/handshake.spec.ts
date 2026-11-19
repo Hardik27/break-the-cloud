@@ -36,14 +36,15 @@ test('solver completes every task with real mouse clicks, no console errors', as
     await realClick(page, page.locator(`[data-pkt="${await nextPacket(page)}"]`));
   }
 
-  // Task 3: resend whichever segment is marked lost (3 rounds).
+  // Task 3: nothing is marked lost. Read the ACKs as they stream in: the repeated number is the byte to resend.
   await waitTask(page, 3);
+  await expect(page.locator('.hs-seg.lost')).toHaveCount(0);
   for (let i = 0; i < 3; i++) {
-    const lost = page.locator('.hs-seg.lost');
-    await expect(lost).toHaveCount(1);
-    const idx = await lost.getAttribute('data-seg');
-    await realClick(page, lost);
-    if (i < 2) await expect(page.locator('.hs-seg.lost')).not.toHaveAttribute('data-seg', idx!, { timeout: 3000 }).catch(() => {});
+    await expect(page.locator('#hs-acks .ack:not(.pending)')).toHaveCount(5, { timeout: 8000 });
+    const acks = await page.locator('#hs-acks .ack').allTextContents();
+    const need = Number(acks[acks.length - 1].replace('ACK ', ''));
+    await realClick(page, page.locator(`[data-seg="${(need - 1) / 1000}"]`));
+    if (i < 2) await expect(page.locator('#hs-acks .ack:not(.pending)')).not.toHaveCount(5, { timeout: 3000 });
   }
   await expectTasks(page, 3, T);
 
@@ -52,7 +53,9 @@ test('solver completes every task with real mouse clicks, no console errors', as
   for (let round = 0; round < 2; round++) {
     for (let i = 0; i < 5; i++) {
       const seq = 1 + i * 1000;
-      await realClick(page, page.locator('[data-arr]', { hasText: `seq ${seq}` }).first());
+      const seg = page.locator('[data-arr]:visible', { hasText: `seq ${seq}` }).first();
+      await expect(seg).toBeVisible({ timeout: 8000 });
+      await realClick(page, seg);
     }
   }
   await expectTasks(page, 4, T);

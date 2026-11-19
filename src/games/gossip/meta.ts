@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="11"';
 const bars = [1, 2, 4, 8, 16, 32, 50];
@@ -30,13 +31,13 @@ export const meta: GameMeta = {
     'Tutorial: tell one node, end the round',
     'Spread a rumour to 16 nodes by hand',
     'Pick a fanout for 50 nodes',
-    'Find the dead nodes from gossiped heartbeats',
+    'Who is ghosting? Ping, ask others, decide',
   ],
   lessons: [
     'In one round, each node that knows the rumour can pass it on. Nodes told this round start telling others next round.',
     'Every round the number of nodes that know <b>doubled</b>: 1, 2, 4, 8, 16. So reaching N nodes takes about log₂ N rounds: 4 for 16, 10 for 1,000, 20 for a million. That is why gossip scales.',
     'Random picks waste messages on nodes that already know, so real gossip needs a fanout above 1. With fanout 3 the rounds still grow only with log N: about 5 rounds for 50 nodes, 6 for 200, 8 for 800. Cassandra gossips cluster state every second to a few random peers this way.',
-    'Each node bumps its own <b>heartbeat counter</b> and gossips the table. A counter that stops going up for a while means the node is probably dead; one that just stalls briefly may only be slow gossip. Timeouts trade fast detection against false alarms. Consul and Serf use SWIM, a gossip failure detector.',
+    'You just ran <b>SWIM</b>, the failure detector inside Consul and Serf. One failed ping proves nothing: your own link may be slow. So a member asks others to ping the suspect (an <b>indirect ping</b>), and only declares it dead when nobody can reach it. Then it gossips the news, so the whole cluster learns in O(log N) rounds.',
   ],
   walkthrough: [
     { id: 'tell', target: '[data-node="1"]', text: 'You are node 0 and know a rumour. Click node 1 to tell it.' },
@@ -44,6 +45,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['gossip'].minTimeMs,
   parMs: RULES['gossip'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'Demers et al. (Xerox PARC, 1987) borrowed the maths of epidemics to keep replicated databases in sync: <b>push</b> gossip sends updates to random peers, <b>pull</b> asks random peers for news, and push-pull does both. With N nodes, a rumour reaches everyone in O(log N) rounds with high probability.',

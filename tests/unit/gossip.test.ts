@@ -37,24 +37,31 @@ describe('task 2: random gossip and fanout', () => {
   });
 });
 
-describe('task 3: failure detection from heartbeats', () => {
-  it('live nodes never look dead; the laggard stalls for less than the timeout', () => {
-    for (const p of gs.PEERS) if (!(p in gs.DEATHS)) for (let r = 1; r <= 20; r++) expect(gs.age(p, r)).toBeLessThan(gs.SUSPECT_AFTER);
-    expect(Math.max(...Array.from({ length: 20 }, (_, r) => gs.age('E', r + 1)))).toBe(gs.SUSPECT_AFTER - 1);
+describe('task 3: who is dead? (SWIM)', () => {
+  const play = (i: number, steps: ('direct' | 'indirect')[], v: gs.Verdict) => {
+    const r = gs.createSwim(i);
+    for (const st of steps) st === 'direct' ? gs.pingDirect(r) : gs.pingIndirect(r);
+    return gs.judge(r, v);
+  };
+  it('a slow member fails your direct ping but answers others: alive', () => {
+    const bea = gs.SUSPECTS.findIndex((x) => x.truth === 'slow');
+    expect(play(bea, ['direct'], 'dead').ok).toBe(false);
+    expect(play(bea, ['direct', 'indirect'], 'alive').ok).toBe(true);
   });
-  it('dead nodes cross the timeout', () => {
-    for (const p of Object.keys(gs.DEATHS)) expect(gs.age(p, gs.DEATHS[p] + 1 + gs.SUSPECT_AFTER)).toBeGreaterThanOrEqual(gs.SUSPECT_AFTER);
+  it('a dead member can only be declared dead after the indirect ping fails too', () => {
+    const dev = gs.SUSPECTS.findIndex((x) => x.truth === 'dead');
+    expect(play(dev, ['direct'], 'dead').why).toMatch(/Too early/);
+    expect(play(dev, ['direct', 'indirect'], 'dead').ok).toBe(true);
   });
-  it('marking too early is a false alarm; at the timeout it is accepted', () => {
-    expect(gs.markCheck('E', 7).ok).toBe(false);
-    expect(gs.markCheck('C', 6).ok).toBe(false);
-    expect(gs.markCheck('C', 8).ok).toBe(true);
-    expect(gs.markCheck('F', 14).ok).toBe(true);
+  it('a verdict without any check is rejected', () => {
+    expect(play(0, [], 'alive').ok).toBe(false);
   });
-  it('both deaths are detectable within the round budget', () => {
-    for (const p of Object.keys(gs.DEATHS)) {
-      const r = Array.from({ length: gs.HB_ROUNDS }, (_, k) => k + 1).find((k) => gs.markCheck(p, k).ok);
-      expect(r).toBeDefined();
-    }
+  it('an alive member answers your own ping', () => {
+    const raj = gs.SUSPECTS.findIndex((x) => x.truth === 'alive');
+    expect(play(raj, ['direct'], 'alive').ok).toBe(true);
+  });
+  it('“declare dead after one missed ping” wrongly kills the slow member', () => {
+    const naive = gs.SUSPECTS.map((_, i) => play(i, ['direct'], gs.createSwim(i).s.truth === 'alive' ? 'alive' : 'dead').ok);
+    expect(naive.filter((ok) => !ok).length).toBeGreaterThanOrEqual(2);
   });
 });

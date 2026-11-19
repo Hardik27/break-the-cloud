@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { meta } from '../../src/games/gossip/meta';
-import { DEATHS, MANUAL_N, SUSPECT_AFTER } from '../../src/games/gossip/sim';
+import { MANUAL_N, SUSPECTS } from '../../src/games/gossip/sim';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask, answerPredict,
 } from './helpers';
 
 const T = meta.tasks.length;
@@ -33,19 +33,28 @@ test('solver completes every task with real mouse clicks, no console errors', as
   // Task 3: fanout 1 is too slow; fanout 3 passes after its animation.
   await waitTask(page, 3);
   await realClick(page, page.locator('#gs-run'));
+  await answerPredict(page);
   await expect(page.locator('#gs-within')).toHaveClass(/bad-pill/);
   await expect(page.locator('#gs-anim')).toContainText('50 of 50', { timeout: 15_000 });
   await realClick(page, page.locator('[data-f="3"]'));
   await realClick(page, page.locator('#gs-run'));
   await expectTasks(page, 3, T);
 
-  // Task 4: a false alarm on a fresh counter is a mistake; mark each dead node once it is still for the timeout.
+  // Task 4 (SWIM): a verdict before any check is a mistake; then ping, ask others when needed, and decide.
   await waitTask(page, 4);
-  await realClick(page, page.locator('[data-mark="A"]'));
-  await expect(page.locator('#toast')).toContainText('alive');
-  for (const p of Object.keys(DEATHS)) {
-    await expect.poll(async () => Number(await page.locator(`[data-peer="${p}"]`).getAttribute('data-age')), { timeout: 25_000 }).toBeGreaterThanOrEqual(SUSPECT_AFTER);
-    await realClick(page, page.locator(`[data-mark="${p}"]`));
+  await realClick(page, page.locator('#gs-alive'));
+  await expect(page.locator('#toast')).toContainText('Ping first');
+  for (const sp of SUSPECTS) {
+    await expect(page.locator('#gs-swim')).toContainText(sp.name);
+    await realClick(page, page.locator('#gs-ping'));
+    if (sp.truth !== 'alive') {
+      if (sp.truth === 'slow') {
+        await realClick(page, page.locator('#gs-dead'));
+        await expect(page.locator('#toast')).toContainText('fine');
+      }
+      await realClick(page, page.locator('#gs-ask'));
+    }
+    await realClick(page, page.locator(sp.truth === 'dead' ? '#gs-dead' : '#gs-alive'));
   }
 
   await expectFinished(page, T);

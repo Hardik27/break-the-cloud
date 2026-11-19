@@ -100,38 +100,42 @@ export function checkFanout(f: number): { ok: boolean; within: number; median: n
   return { ok: true, ...t, why: '' };
 }
 
-// ---------- task 3: failure detection ----------
-export const PEERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-/** Round in which each dead node stops beating. */
-export const DEATHS: Record<string, number> = { C: 3, F: 9 };
-/** Rounds during which gossip about E is delayed (its counter looks frozen). */
-export const LAG: Record<string, [number, number]> = { E: [5, 7] };
-export const SUSPECT_AFTER = 4;
-export const MISS_AFTER = 7;
-export const HB_ROUNDS = 16;
-export const ROUND_MS = 1200;
+// ---------- task 3: who is dead? (SWIM: direct and indirect pings) ----------
+export type Truth = 'dead' | 'slow' | 'alive';
+export interface Suspect { name: string; truth: Truth; story: string }
+export const SUSPECTS: Suspect[] = [
+  { name: 'Dev', truth: 'dead', story: 'Dev hasn’t answered the cluster for a while.' },
+  { name: 'Bea', truth: 'slow', story: 'Bea hasn’t answered you for a while.' },
+  { name: 'Raj', truth: 'alive', story: 'Someone says Raj might be down.' },
+  { name: 'Mo', truth: 'dead', story: 'Mo went quiet a few seconds ago.' },
+];
+export const PING_TIMEOUT_MS = 500;
+export type Probe = 'none' | 'direct-ok' | 'direct-fail' | 'indirect-ok' | 'indirect-fail';
+export interface SwimRound { s: Suspect; probe: Probe }
+export const createSwim = (i: number): SwimRound => ({ s: SUSPECTS[i], probe: 'none' });
 
-const beat = (p: string, t: number): number => Math.max(0, Math.min(t, DEATHS[p] ?? Infinity));
-/** Heartbeat counter of peer p as you see it at round r (gossip arrives one round late; laggards later). */
-export function seen(p: string, r: number): number {
-  const lag = LAG[p];
-  if (lag && r >= lag[0] && r <= lag[1]) return beat(p, lag[0] - 2);
-  return beat(p, r - 1);
+/** You ping the suspect yourself. A slow link (yours) looks exactly like a dead node. */
+export function pingDirect(r: SwimRound): { ok: boolean; ms: number | null } {
+  const ok = r.s.truth === 'alive';
+  r.probe = ok ? 'direct-ok' : 'direct-fail';
+  return { ok, ms: ok ? 40 : null };
 }
-/** Rounds since you last saw p's counter go up. */
-export function age(p: string, r: number): number {
-  let k = r;
-  while (k > 1 && seen(p, k - 1) === seen(p, r)) k--;
-  return r - k;
+/** You ask two other members to ping the suspect for you and report back. */
+export function pingIndirect(r: SwimRound): { ok: boolean; via: string } {
+  const ok = r.s.truth !== 'dead';
+  r.probe = ok ? 'indirect-ok' : 'indirect-fail';
+  return { ok, via: ok ? 'Ana and Kim' : 'nobody' };
 }
-export const isDead = (p: string, r: number): boolean => p in DEATHS && r > DEATHS[p];
 
-export function markCheck(p: string, r: number): { ok: boolean; why: string } {
-  const a = age(p, r);
-  if (a < SUSPECT_AFTER) {
-    return { ok: false, why: a === 0
-      ? `${p}’s counter went up last round: it is alive.`
-      : `${p}’s counter has been still for only ${a} round${a > 1 ? 's' : ''}. Gossip can be slow; wait until it is still for ${SUSPECT_AFTER} rounds.` };
+export type Verdict = 'alive' | 'dead';
+export function judge(r: SwimRound, v: Verdict): { ok: boolean; why: string } {
+  if (r.probe === 'none') return { ok: false, why: `You haven’t checked on ${r.s.name} at all. Ping first: rumours are not evidence.` };
+  if (v === 'dead') {
+    if (r.s.truth !== 'dead') return { ok: false, why: `${r.s.name} is fine: the indirect ping got an answer. Only your own link to ${r.s.name} was slow.` };
+    if (r.probe !== 'indirect-fail') return { ok: false, why: `Too early. Your own ping failed, but the problem could be your link. Ask others to ping ${r.s.name} first.` };
+    return { ok: true, why: `Nobody can reach ${r.s.name}: not you, not two others. ${r.s.name} is dead. Gossip that news so everyone stops sending work there.` };
   }
-  return { ok: true, why: '' };
+  if (r.s.truth === 'dead') return { ok: false, why: `${r.s.name} never answered anyone. Calling a dead node alive keeps users waiting on it.` };
+  if (r.probe === 'direct-fail') return { ok: false, why: `Your ping failed, so you can’t be sure yet. Ask others to ping ${r.s.name}.` };
+  return { ok: true, why: r.probe === 'direct-ok' ? `${r.s.name} answered your ping in 40 ms: alive, the rumour was wrong.` : `${r.s.name} answered the others: alive. Your own link was the slow part, so you did not wrongly evict a healthy node.` };
 }

@@ -16,15 +16,14 @@ describe('Gossip difficulty', () => {
     })) / 1000;
     // Task 3: two or three tries, each with a ~2.5 s animation.
     const t3 = (3000 + 2.5 * (4000 + 2500)) / 1000;
-    // Task 4: fixed by the clock: the last death crosses the timeout at round 14.
-    const lastDetect = Math.max(...Object.keys(gs.DEATHS).map((p) => gs.DEATHS[p] + 1 + gs.SUSPECT_AFTER));
-    const t4 = ((lastDetect - 1) * gs.ROUND_MS + 1500) / 1000;
+    // Task 4: per member about 3 decisions (ping, ask others, verdict).
+    const t4 = (3000 + gs.SUSPECTS.length * 3 * 1500) / 1000;
     const badFan = gs.FANOUTS.filter((f) => !gs.checkFanout(f).ok).length / gs.FANOUTS.length;
-    // Wrong strategy for task 4: accuse anything that stalls for 2 rounds (the laggard E gets accused).
-    const jumpy = gs.PEERS.filter((p) => !(p in gs.DEATHS) && Array.from({ length: 16 }, (_, r) => gs.age(p, r + 1)).some((a) => a >= 2)).length;
+    // Wrong strategy for task 4: declare dead after your own ping fails (SWIM without indirect pings).
+    const jumpy = gs.SUSPECTS.filter((_, i) => { const r = gs.createSwim(i); gs.pingDirect(r); return !gs.judge(r, r.probe === 'direct-ok' ? 'alive' : 'dead').ok; }).length;
     report('gossip', 'task 2 (wrong: end rounds early)', t2, 1, 1);
     report('gossip', 'task 3 (wrong: any other fanout)', t3, 1, badFan);
-    report('gossip', `task 4 (wrong: accuse after a 2-round stall, ${jumpy} false alarms)`, t4, 1, jumpy ? 1 : 0);
+    report('gossip', `task 4 (wrong: one failed ping means dead, ${jumpy} mistakes)`, t4, 1, jumpy ? 1 : 0);
     for (const t of [t2, t3, t4]) {
       expect(t).toBeGreaterThanOrEqual(10);
       expect(t).toBeLessThanOrEqual(40);
