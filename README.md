@@ -62,6 +62,12 @@ Later updates: `git add -A`, `git commit -m "..."`, `git push`. Every push redep
 
 The Playwright suite is not run in CI (it takes about 15 minutes); run `npm run e2e` locally before pushing big changes.
 
+Own domain, Supabase in Mumbai, and what to do before a training centre relies on it: see [docs/DEPLOY.md](docs/DEPLOY.md).
+
+## Classes (training centres and colleges)
+
+An instructor opens `#/classes/new`, enters the centre name and city, and gets a 6-character join code plus a private instructor link (shown once). Learners open `#/join/<CODE>`; from then on every run they start is tagged with the class. The instructor link shows learners, per-game progress and a CSV export. It needs Supabase (the `classes` migration).
+
 ## Showing usage numbers
 
 Milestone M2 records runs started and finished per game, and the home page shows them. For page views, add Cloudflare Web Analytics or Plausible: both are cookieless, so the privacy page stays simple.
