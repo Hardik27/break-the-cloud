@@ -10,7 +10,7 @@ import { esc, fmtTime } from '../lib/dom';
 import { getBackend, withTimeout, type Backend, type Range } from '../lib/leaderboard';
 import { randomSeed } from '../lib/rng';
 import { sfx } from '../lib/sfx';
-import { careerPoints, getBest, markDailyDone, markPlayedToday, saveBest, unlockLesson } from '../lib/storage';
+import { careerPoints, getBest, markDailyDone, markPlayedToday, myClass, saveBest, unlockLesson } from '../lib/storage';
 import { dailyGameId } from './daily';
 import { finishHeadline, GRADE_EMOJI, gradeWord } from './cheer';
 import { bindTopbar, fmtPts, footer, refreshRankChip, toast, topbar } from './chrome';
@@ -180,7 +180,7 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
       run.t0 = performance.now();
       if (clk.depth > 0) clk.pausedAt = run.t0;
       $('hud-time-wrap').classList.remove('paused');
-      runId = backendReady.then((b) => withTimeout(b.startRun(meta.id), 6000, null));
+      runId = backendReady.then((b) => withTimeout(b.startRun(meta.id, myClass()?.code ?? null), 6000, null));
     }
   }
 

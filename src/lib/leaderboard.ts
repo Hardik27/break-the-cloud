@@ -28,10 +28,24 @@ export interface FinishResult {
   reason?: string;
 }
 
+export interface ClassInfo { code: string; name: string; city: string; course: string | null }
+export interface ClassReport {
+  class: ClassInfo & { created_at: string };
+  summary: { learners: number; runs_started: number; runs_finished: number; first_activity: string | null; last_activity: string | null };
+  games: { game_id: string; learners_started: number; learners_finished: number; avg_points: number | null; avg_stars: number | null }[];
+  learners: { name: string; games_finished: number; points: number; last_active: string }[];
+}
+
 export interface Backend {
   kind: 'supabase' | 'mock' | 'offline';
-  /** Records a run start on the server (server timestamp). Returns the run id, or null if offline. */
-  startRun(gameId: string): Promise<string | null>;
+  /** Records a run start on the server (server timestamp), tagged with the learner's class if any. Returns the run id, or null if offline. */
+  startRun(gameId: string, classCode?: string | null): Promise<string | null>;
+  /** Instructor: create a class. Returns the join code and the secret instructor key (shown once). */
+  createClass(name: string, city: string, course: string): Promise<{ ok: true; code: string; key: string } | { ok: false; reason: string }>;
+  /** Public: the name and city behind a join code, or null if it does not exist. */
+  classInfo(code: string): Promise<ClassInfo | null>;
+  /** Instructor: the class report (needs the key). */
+  classReport(code: string, key: string): Promise<{ ok: true; report: ClassReport } | { ok: false; reason: string }>;
   finishRun(runId: string, payload: FinishPayload): Promise<FinishResult>;
   top(gameId: string, range: Range): Promise<LbRow[] | null>;
   myRank(gameId: string, range: Range): Promise<{ rank: number; points: number; of: number } | null>;
@@ -52,11 +66,15 @@ export const offlineBackend: Backend = {
   setNickname: async () => ({ ok: false, reason: 'The shared leaderboard is not available right now.' }),
   stats: async () => null,
   deleteMyData: async () => true,
+  createClass: async () => ({ ok: false, reason: 'Classes need the shared leaderboard, which is not set up on this site yet.' }),
+  classInfo: async () => null,
+  classReport: async () => ({ ok: false, reason: 'Classes need the shared leaderboard, which is not set up on this site yet.' }),
 };
 
 /** In-memory backend that behaves like the real one, including server-side validation. */
 export function mockBackend(): Backend {
-  interface Run { id: string; user: string; game: string; started: number; status: 'started' | 'finished' | 'rejected'; points: number; ms: number; stars: number; at: number }
+  interface Run { id: string; user: string; game: string; started: number; status: 'started' | 'finished' | 'rejected'; points: number; ms: number; stars: number; at: number; cls?: string | null }
+  const classes = new Map<string, ClassInfo & { key: string; created_at: string }>();
   const me = 'me';
   const runs: Run[] = [];
   const names = new Map<string, string>([['bot1', 'packet_pusher'], ['bot2', 'raft_raccoon'], ['bot3', 'quorum_queen']]);
@@ -78,10 +96,39 @@ export function mockBackend(): Backend {
   };
   return {
     kind: 'mock',
-    async startRun(game) {
+    async startRun(game, cls) {
       const id = `run${++seq}`;
-      runs.push({ id, user: me, game, started: performance.now(), status: 'started', points: 0, ms: 0, stars: 0, at: Date.now() });
+      runs.push({ id, user: me, game, started: performance.now(), status: 'started', points: 0, ms: 0, stars: 0, at: Date.now(), cls: cls && classes.has(cls) ? cls : null });
       return id;
+    },
+    async createClass(name, city, course) {
+      if (name.trim().length < 3 || city.trim().length < 2) return { ok: false, reason: 'Give the class a name (3+ letters) and a city.' };
+      const code = `T${String(++seq).padStart(5, '0')}`.replace(/[01]/g, '7').slice(0, 6);
+      const key = `KEY${seq}ABCDEFGHJKLMNPQ`.slice(0, 20);
+      classes.set(code, { code, name: name.trim(), city: city.trim(), course: course.trim() || null, key, created_at: new Date().toISOString() });
+      return { ok: true, code, key };
+    },
+    async classInfo(code) {
+      const c = classes.get(code.toUpperCase());
+      return c ? { code: c.code, name: c.name, city: c.city, course: c.course } : null;
+    },
+    async classReport(code, key) {
+      const c = classes.get(code.toUpperCase());
+      if (!c || c.key !== key) return { ok: false, reason: 'wrong class code or instructor key' };
+      const rs = runs.filter((r) => r.cls === c.code);
+      const users = [...new Set(rs.map((r) => r.user))];
+      const games = [...new Set(rs.map((r) => r.game))].sort().map((g) => {
+        const gr = rs.filter((r) => r.game === g);
+        const fin = gr.filter((r) => r.status === 'finished');
+        return { game_id: g, learners_started: new Set(gr.map((r) => r.user)).size, learners_finished: new Set(fin.map((r) => r.user)).size, avg_points: fin.length ? Math.round(fin.reduce((a, r) => a + r.points, 0) / fin.length) : null, avg_stars: fin.length ? Math.round((10 * fin.reduce((a, r) => a + r.stars, 0)) / fin.length) / 10 : null };
+      });
+      const learners = users.map((u) => {
+        const fin = rs.filter((r) => r.user === u && r.status === 'finished');
+        const best = new Map<string, number>();
+        fin.forEach((r) => best.set(r.game, Math.max(best.get(r.game) ?? 0, r.points)));
+        return { name: names.get(u) ?? `learner-${u.slice(0, 4)}`, games_finished: best.size, points: [...best.values()].reduce((a, b) => a + b, 0), last_active: new Date(Math.max(...rs.filter((r) => r.user === u).map((r) => r.at))).toISOString() };
+      }).sort((a, b) => b.points - a.points);
+      return { ok: true, report: { class: { code: c.code, name: c.name, city: c.city, course: c.course, created_at: c.created_at }, summary: { learners: users.length, runs_started: rs.length, runs_finished: rs.filter((r) => r.status === 'finished').length, first_activity: rs.length ? new Date(Math.min(...rs.map((r) => r.at))).toISOString() : null, last_activity: rs.length ? new Date(Math.max(...rs.map((r) => r.at))).toISOString() : null }, games, learners } };
     },
     async finishRun(id, payload) {
       const r = runs.find((x) => x.id === id && x.user === me);

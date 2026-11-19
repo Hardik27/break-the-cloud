@@ -1,7 +1,7 @@
 /** Supabase backend for the leaderboard. Loaded only when the Supabase env vars are set. */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { checkNickname } from './nickname';
-import type { Backend, LbRow, Range } from './leaderboard';
+import type { Backend, ClassReport, LbRow, Range } from './leaderboard';
 
 const CLIENT_VERSION = 'web-1';
 const weekAgo = () => new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
@@ -25,10 +25,31 @@ export function supabaseBackend(url: string, anonKey: string): Backend {
 
   return {
     kind: 'supabase',
-    async startRun(gameId) {
+    async startRun(gameId, classCode) {
       if (!(await userId())) return null;
-      const { data, error } = await sb.from('runs').insert({ game_id: gameId, client_version: CLIENT_VERSION }).select('id').single();
+      const row: { game_id: string; client_version: string; class_code?: string } = { game_id: gameId, client_version: CLIENT_VERSION };
+      if (classCode) row.class_code = classCode;
+      let { data, error } = await sb.from('runs').insert(row).select('id').single();
+      // A class that no longer exists must not stop the learner from playing.
+      if (error && classCode) ({ data, error } = await sb.from('runs').insert({ game_id: gameId, client_version: CLIENT_VERSION }).select('id').single());
       return error || !data ? null : (data.id as string);
+    },
+    async createClass(name, city, course) {
+      if (!(await userId())) return { ok: false, reason: 'Could not reach the server. Try again.' };
+      const { data, error } = await sb.rpc('create_class', { p_name: name, p_city: city, p_course: course || null });
+      const row = Array.isArray(data) ? data[0] : null;
+      if (error || !row) return { ok: false, reason: error?.message?.includes('too many') ? 'Too many classes created today. Try tomorrow.' : 'Could not create the class. Check the name (3–80 characters) and city.' };
+      return { ok: true, code: row.code as string, key: row.admin_key as string };
+    },
+    async classInfo(code) {
+      const { data, error } = await sb.rpc('class_info', { p_code: code });
+      const row = Array.isArray(data) ? data[0] : null;
+      return error || !row ? null : { code: row.code, name: row.name, city: row.city, course: row.course };
+    },
+    async classReport(code, key) {
+      const { data, error } = await sb.rpc('class_report', { p_code: code, p_key: key });
+      if (error || !data) return { ok: false, reason: error?.message?.includes('wrong') ? 'Wrong class code or instructor key.' : 'Could not load the report.' };
+      return { ok: true, report: data as ClassReport };
     },
     async finishRun(runId, payload) {
       if (!(await userId())) return { ok: false, reason: 'not signed in' };

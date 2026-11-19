@@ -2,6 +2,7 @@ import './styles/tokens.css';
 import './styles/app.css';
 import { findGame } from './games/registry';
 import { showNoticeOnce } from './shell/chrome';
+import { renderClassReport, renderJoin, renderNewClass } from './shell/classes';
 import { renderDeck } from './shell/deck';
 import { renderHome } from './shell/home';
 import { renderPlay } from './shell/play';
@@ -20,6 +21,21 @@ async function route() {
   if (r.page === 'privacy') {
     unmount = renderPrivacy(app);
     document.title = 'Privacy · Break the Cloud';
+    return;
+  }
+  if (r.page === 'join') {
+    unmount = renderJoin(app, r.id!);
+    document.title = 'Join a class · Break the Cloud';
+    return;
+  }
+  if (r.page === 'newclass') {
+    unmount = renderNewClass(app);
+    document.title = 'Create a class · Break the Cloud';
+    return;
+  }
+  if (r.page === 'class') {
+    unmount = renderClassReport(app, r.id!, r.key);
+    document.title = `Class ${r.id} · Break the Cloud`;
     return;
   }
   if (r.page === 'deck') {

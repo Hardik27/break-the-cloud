@@ -113,3 +113,9 @@ export const markDailyDone = (): void => storage.set('daily', today());
 /** Stand-up recall: the day it was answered and whether it was right. */
 export const standup = (): { date: string; ok: boolean } | null => storage.get<{ date: string; ok: boolean } | null>('standup', null);
 export const saveStandup = (ok: boolean): void => storage.set('standup', { date: today(), ok });
+
+/** The class (training centre or college section) this browser joined, if any. */
+export interface JoinedClass { code: string; name: string; city: string }
+export const myClass = (): JoinedClass | null => storage.get<JoinedClass | null>('class', null);
+export const joinClass = (c: JoinedClass): void => storage.set('class', c);
+export const leaveClass = (): void => storage.remove('class');

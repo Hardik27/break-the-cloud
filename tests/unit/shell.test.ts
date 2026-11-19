@@ -47,6 +47,11 @@ describe('router', () => {
     expect(parseHash('#/privacy')).toEqual({ page: 'privacy', seed: null });
     expect(parseHash('#/play/split-brain')).toEqual({ page: 'play', id: 'split-brain', seed: null });
     expect(parseHash('#/play/traffic-cop?seed=42')).toEqual({ page: 'play', id: 'traffic-cop', seed: 42 });
+    expect(parseHash('#/deck')).toEqual({ page: 'deck', seed: null });
+    expect(parseHash('#/join/ab3k9z')).toEqual({ page: 'join', id: 'AB3K9Z', seed: null });
+    expect(parseHash('#/classes/new')).toEqual({ page: 'newclass', seed: null });
+    expect(parseHash('#/class/AB3K9Z?key=XYZ123')).toEqual({ page: 'class', id: 'AB3K9Z', seed: null, key: 'XYZ123' });
+    expect(parseHash('#/class/AB3K9Z')).toEqual({ page: 'class', id: 'AB3K9Z', seed: null, key: undefined });
   });
 });
 

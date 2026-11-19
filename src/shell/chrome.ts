@@ -2,7 +2,8 @@
 import { rankFor } from '../../supabase/functions/_shared/scoring.ts';
 import { el } from '../lib/dom';
 import { sfx } from '../lib/sfx';
-import { careerPoints, storage } from '../lib/storage';
+import { esc } from '../lib/dom';
+import { careerPoints, myClass, storage } from '../lib/storage';
 
 let toastTimer = 0;
 export function toast(msg: string): void {
@@ -20,7 +21,7 @@ export function topbar(): string {
   const pts = careerPoints();
   const r = rankFor(pts);
   return `<div class="topbar"><a class="brand" href="#/">Break the <span>Cloud</span></a>
-   <nav><span class="rankchip" id="rankchip" title="Your career rank: the sum of your best score in every game">${r.title} · ${fmtPts(pts)} pts</span>
+   <nav>${(() => { const c = myClass(); return c ? `<a class="classchip" id="classchip" href="#/join/${c.code}" title="Your runs count for this class">🏫 ${esc(c.name)}</a>` : ''; })()}<span class="rankchip" id="rankchip" title="Your career rank: the sum of your best score in every game">${r.title} · ${fmtPts(pts)} pts</span>
    <button class="chip" type="button" id="sound-toggle" aria-pressed="${!sfx.muted}">${sfx.muted ? 'Sound off' : 'Sound on'}</button>
    <a href="#/">All games</a><a href="#/privacy">Privacy</a></nav></div>`;
 }
@@ -43,7 +44,7 @@ export function refreshRankChip(): void {
 }
 
 export const footer = (): string =>
-  `<footer><span>Break the Cloud: learn distributed systems by breaking them. Free, for students and engineers.</span><a href="#/privacy">Privacy &amp; data</a></footer>`;
+  `<footer><span>Break the Cloud: learn distributed systems by breaking them. Free, for students and engineers.</span><span class="footlinks"><a href="#/classes/new">For instructors: create a class</a><a href="#/privacy">Privacy &amp; data</a></span></footer>`;
 
 /** One-time dismissible notice about local storage (no cookies are used). */
 export function showNoticeOnce(): void {
