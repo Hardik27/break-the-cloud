@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { meta } from '../../src/games/retry-storm/meta';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks, hudTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask, answerPredict, skipReplay,
 } from './helpers';
 
 const T = meta.tasks.length;
@@ -30,17 +30,25 @@ test('solver completes every task with real mouse clicks, no console errors', as
   // Task 3: immediate retries pile on; exponential backoff does not.
   await waitTask(page, 3);
   await realClick(page, page.locator('#rs-run'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expect(page.locator('#rs-ol')).toHaveClass(/bad-pill/);
   await realClick(page, page.locator('[data-policy="exponential"]'));
   await realClick(page, page.locator('#rs-run'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expectTasks(page, 3, T);
 
   // Task 4: backoff alone leaves synchronized spikes; add jitter.
   await waitTask(page, 4);
   await realClick(page, page.locator('#rs-run'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expect(page.locator('#rs-peak')).toHaveClass(/bad-pill/);
   await realClick(page, page.locator('#rs-jitter'));
   await realClick(page, page.locator('#rs-run'));
+  await answerPredict(page);
+  await skipReplay(page);
 
   await expectFinished(page, T);
   await expectNoHorizontalScroll(page);

@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="12"';
 const vec = (x: number, y: number, label: string, v: number[], col: string) =>
@@ -47,6 +48,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['crdt-merge'].minTimeMs,
   parMs: RULES['crdt-merge'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'Shapiro, Preguiça, Baquero and Zawirski (2011) defined CRDTs. A <b>state-based</b> CRDT has a merge that is commutative, associative and idempotent (order, grouping and repeats don’t matter), so replicas converge however messages are delayed, reordered or duplicated. An <b>operation-based</b> CRDT instead sends operations that commute.',

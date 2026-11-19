@@ -3,7 +3,7 @@ import { meta } from '../../src/games/quorum/meta';
 import { ROUNDS } from '../../src/games/quorum/sim';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask, answerPredict, skipReplay,
 } from './helpers';
 
 const T = meta.tasks.length;
@@ -46,20 +46,28 @@ test('solver completes every task with real mouse clicks, no console errors', as
   // Task 3: R=1, W=1 gives stale reads (mistake); R=2, W=2 passes.
   await waitTask(page, 3);
   await realClick(page, page.locator('#qr-run'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expect(page.locator('#qr-stale')).toHaveClass(/bad-pill/);
   await realClick(page, page.locator('[data-r="2"]'));
   await realClick(page, page.locator('[data-w="2"]'));
   await expect(page.locator('#qr-sum')).toContainText('R + W = 4');
   await realClick(page, page.locator('#qr-run'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expectTasks(page, 3, T);
 
   // Task 4: the default W=3 fails writes while C is down; R=2, W=2 survives.
   await waitTask(page, 4);
   await realClick(page, page.locator('#qr-run'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expect(page.locator('#qr-wf')).toHaveClass(/bad-pill/);
   await realClick(page, page.locator('[data-r="2"]'));
   await realClick(page, page.locator('[data-w="2"]'));
   await realClick(page, page.locator('#qr-run'));
+  await answerPredict(page);
+  await skipReplay(page);
 
   await expectFinished(page, T);
   await expectNoHorizontalScroll(page);

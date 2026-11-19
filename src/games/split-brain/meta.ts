@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="12"';
 const node = (x: number, y: number, name: string, both = false) =>
@@ -58,6 +59,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['split-brain'].minTimeMs,
   parMs: RULES['split-brain'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'Raft splits agreement into three parts. <b>Leader election</b>: one server leads per term, chosen by a majority vote. <b>Log replication</b>: the leader appends each write to its log and copies it to followers; once a majority store it, it is committed. <b>Safety</b>: a server only votes for a candidate whose log is at least as up to date as its own.',

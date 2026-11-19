@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="11"';
 const spikes = (y: number, xs: number[], h: number, col: string) => xs.map((x) => `<rect x="${x}" y="${y - h}" width="8" height="${h}" style="fill:${col}"/>`).join('');
@@ -46,6 +47,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['retry-storm'].minTimeMs,
   parMs: RULES['retry-storm'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'Retries turn a short outage into a long one when they are synchronized and unbounded. The classic sequence: a dependency slows down, clients time out and retry, the extra load slows it further, and the system settles into a stable overloaded state even after the original trigger is gone. This is called a <b>metastable failure</b>.',

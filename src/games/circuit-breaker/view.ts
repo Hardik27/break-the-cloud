@@ -1,6 +1,7 @@
 /** Circuit Breaker view. Gauges and controls are built once; frames update text, styles and classes. */
 import { el, onPress, setText } from '../../lib/dom';
 import { makeFlow } from '../flow';
+import { predictAndReveal, replayBusy } from '../replay';
 import type { Game, GameApi } from '../types';
 import { meta } from './meta';
 import * as sim from './sim';
@@ -178,13 +179,19 @@ export const game: Game = {
       render();
     }
 
-    function runIt() {
+    async function runIt() {
       if (flow.guard()) return;
       if (flow.task < 2) return api.toast('Breaker settings unlock in the next task.');
+      if (replayBusy()) return api.toast('Watch the replay first.');
       api.move();
       const r = sim.runAuto(threshold, probeS);
       drawResult(r);
       const ok = flow.task === 2 ? sim.thresholdOk(r) : sim.probeOk(r);
+      const q = flow.task === 2
+        ? { q: `The breaker opens after ${threshold} failed call${threshold > 1 ? 's' : ''} in a row. Over 2 minutes there are one-off blips and one real outage. What happens?`, options: ['It opens on harmless blips', 'It opens too late: the page goes down', 'It opens only for the real outage'], answer: r.falseOpens ? 0 : r.pageDownMs ? 1 : 2, why: r.falseOpens ? 'A low threshold mistakes a single slow call for an outage.' : r.pageDownMs ? 'A high threshold waits while every thread gets stuck on a dead service.' : 'A few failures in a row is a real pattern; one is just a blip.' }
+        : { q: `The open breaker sends a probe every ${probeS} s. What happens?`, options: ['Too many probes hit the recovering service', 'Recommendations come back long after the service did', 'Few probes, and a quick recovery'], answer: r.probesInOutage > sim.PROBE_BUDGET ? 0 : r.recoveryMs > sim.RECOVERY_GOAL_MS ? 1 : 2, why: r.probesInOutage > sim.PROBE_BUDGET ? 'Frequent probes add load to a service that is trying to come back.' : r.recoveryMs > sim.RECOVERY_GOAL_MS ? 'Rare probes mean nobody notices the service is back for a long time.' : 'A middle interval checks often enough without hammering it.' };
+      await predictAndReveal(api, res, { title: '2 minutes with the breaker', simMs: sim.AUTO_MS, predict: q });
+      if (!alive) return;
       if (ok) {
         api.hit('resilient', run);
         return flow.done();

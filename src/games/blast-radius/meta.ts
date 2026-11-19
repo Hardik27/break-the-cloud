@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="11"';
 const az = (x: number, label: string, dead = false) =>
@@ -50,6 +51,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['blast-radius'].minTimeMs,
   parMs: RULES['blast-radius'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'Zones are close enough (usually under 100 km) for fast synchronous replication, and far enough apart not to share power, cooling or flooding risk. Regions are hundreds of kilometres apart: they survive regional disasters, but replication between them is slow, so it is usually asynchronous.',

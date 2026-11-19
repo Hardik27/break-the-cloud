@@ -1,6 +1,7 @@
 /** Blast Radius view. Placement grid, zone cards and option chips are built once; updates change text and classes. */
 import { el, onPress, setText } from '../../lib/dom';
 import { makeFlow } from '../flow';
+import { predictAndReveal, replayBusy } from '../replay';
 import type { Game, GameApi } from '../types';
 import { meta } from './meta';
 import * as sim from './sim';
@@ -210,11 +211,20 @@ export const game: Game = {
       render();
     }
 
-    function runDr() {
+    async function runDr() {
       if (flow.guard()) return;
       if (flow.task !== 3) return;
+      if (replayBusy()) return api.toast('Wait for this run.');
       api.move();
       const r = sim.evaluateDr(repl, standby);
+      drRes.innerHTML = '';
+      await predictAndReveal(api, drRes, {
+        title: 'The region goes dark',
+        simMs: 1000,
+        realMs: 1500,
+        predict: { q: `Replication: ${repl}, standby: ${standby}. The whole region fails. What is the weakest point of this plan?`, options: ['We lose data', 'We are down too long', 'Every write gets slower, or it costs too much', 'Nothing: it meets every goal'], answer: !r.rpoOk ? 0 : !r.rtoOk ? 1 : !r.latencyOk || !r.costOk ? 2 : 3, why: !r.rpoOk ? 'Backups or slow copies mean the newest orders exist only in the region that died.' : !r.rtoOk ? 'A cold standby has to be built from scratch before it can serve.' : !r.latencyOk ? 'Synchronous replication makes every write wait for the far region.' : !r.costOk ? 'A hot standby doubles your bill.' : 'Asynchronous copies lose only seconds, and a warm standby is quick to promote.' },
+      });
+      if (!alive) return;
       const pill = (ok: boolean, txt: string, id: string) => `<span class="${ok ? 'ok-pill' : 'bad-pill'}" id="${id}">${txt}</span>`;
       drRes.innerHTML = `<div class="mrow"><span>Data lost (RPO, goal ≤ ${sim.RPO_GOAL_S} s)</span>${pill(r.rpoOk, sim.fmtDuration(r.rpoS), 'br-rpo')}</div>
         <div class="mrow"><span>Time down (RTO, goal ≤ ${sim.RTO_GOAL_S / 60} min)</span>${pill(r.rtoOk, sim.fmtDuration(r.rtoS), 'br-rto')}</div>

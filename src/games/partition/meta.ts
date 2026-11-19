@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="12"';
 const node = (x: number, y: number, label: string, col: string) => `<circle cx="${x}" cy="${y}" r="20" style="fill:${col}"/><text x="${x}" y="${y + 4}" text-anchor="middle" ${mono} style="fill:#fff">${label}</text>`;
@@ -47,6 +48,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['partition'].minTimeMs,
   parMs: RULES['partition'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'Eric Brewer’s CAP conjecture (2000), later proved by Gilbert and Lynch, says a distributed store cannot be Consistent, Available and Partition-tolerant all at once. Since partitions do happen, the real choice is what to give up <i>while</i> one is happening: consistency or availability.',

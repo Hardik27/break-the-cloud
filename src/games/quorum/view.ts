@@ -1,6 +1,7 @@
 /** Quorum view. Turn-based: replica cards and buttons are built once; text and classes update after each action. */
 import { el, onPress, setText } from '../../lib/dom';
 import { makeFlow } from '../flow';
+import { predictAndReveal, replayBusy } from '../replay';
 import type { Game, GameApi } from '../types';
 import { meta } from './meta';
 import * as sim from './sim';
@@ -177,11 +178,19 @@ export const game: Game = {
       render();
     }
 
-    function runIt() {
+    async function runIt() {
       if (flow.guard()) return;
       if (flow.task < 2) return api.toast('R and W unlock in the next task.');
+      if (replayBusy()) return api.toast('Wait for this run.');
       api.move();
       const out = flow.task === 2 ? sim.checkFresh(r, w) : sim.checkOneDown(r, w);
+      res.innerHTML = '';
+      await predictAndReveal(api, res, {
+        title: `${sim.OPS} requests`,
+        simMs: 1000,
+        realMs: 1200,
+        predict: { q: `R = ${r}, W = ${w}, N = ${sim.N}${flow.task === 3 ? ', with replica C down for half the run' : ''}. Will any read return an old value?`, options: ['Yes, some reads will be stale', 'No, every read is fresh'], answer: out.q.stalePct > 0 ? 0 : 1, why: r + w > sim.N && out.q.stalePct === 0 ? `R + W = ${r + w} > ${sim.N}: every read set overlaps every write set.` : `R + W = ${r + w} is not more than ${sim.N}, so a read can miss every replica that has the newest write${flow.task === 3 ? ' (or a replica came back with old data)' : ''}.` },
+      });
       drawResult(out.q);
       if (out.ok) {
         api.hit(`R${r} W${w}`, run);

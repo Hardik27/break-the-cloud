@@ -122,6 +122,23 @@ describe('game metadata follows the walkthrough rules', () => {
       expect(m.walkthrough.length).toBeGreaterThanOrEqual(2);
       expect(new Set(m.walkthrough.map((w) => w.text)).size).toBe(m.walkthrough.length);
       expect(m.learnMore.links.length).toBeGreaterThanOrEqual(2);
+      // Teaching layer: a story line, a concept card before the tutorial, a hint ladder for every real task.
+      expect(m.pager?.length ?? 0).toBeGreaterThan(20);
+      expect(m.learn?.[0]?.frames.length ?? 0).toBeGreaterThanOrEqual(1);
+      expect(m.learn!.length).toBeLessThanOrEqual(m.tasks.length);
+      for (const c of m.learn!) {
+        if (!c) continue;
+        expect(c.frames.every((f) => f.html.length > 20)).toBe(true);
+        if (c.check) {
+          expect(c.check.answer).toBeGreaterThanOrEqual(0);
+          expect(c.check.answer).toBeLessThan(c.check.options.length);
+        }
+      }
+      for (let t = 1; t < m.tasks.length; t++) {
+        const h = m.hints?.[t];
+        expect(h, `hint for task ${t + 1}`).toBeTruthy();
+        expect(h!.nudge.length && h!.concept.length && h!.show.length).toBeTruthy();
+      }
       expect(m.learnMore.links.length).toBeLessThanOrEqual(3);
       expect(m.learnMore.diagram).toContain('<svg');
       expect(GAMES.find((g) => g.id === m.id)?.title).toBe(m.title);

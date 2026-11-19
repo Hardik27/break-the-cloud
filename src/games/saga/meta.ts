@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="11"';
 const step = (x: number, y: number, label: string, col: string) =>
@@ -49,6 +50,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['saga'].minTimeMs,
   parMs: RULES['saga'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'Hector Garcia-Molina and Kenneth Salem introduced sagas in 1987 for long-lived database transactions: split one long transaction into steps T1…Tn, each with a compensation C1…Cn. If Tk fails, run Ck-1…C1. The saga gives up <b>isolation</b>: other users can see the half-booked trip in between.',

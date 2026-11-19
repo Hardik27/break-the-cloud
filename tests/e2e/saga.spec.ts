@@ -3,7 +3,7 @@ import { meta } from '../../src/games/saga/meta';
 import { BOOK_TRIPS, FAIL_TRIPS } from '../../src/games/saga/sim';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask, answerPredict, skipReplay,
 } from './helpers';
 
 const T = meta.tasks.length;
@@ -52,12 +52,18 @@ test('solver completes every task with real mouse clicks, no console errors', as
   // Task 4: save-then-publish loses emails; outbox + dedupe passes.
   await waitTask(page, 4);
   await realClick(page, page.locator('#sg-run'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expect(page.locator('#sg-lost')).toHaveClass(/bad-pill/);
   await realClick(page, page.locator('[data-design="outbox"]'));
   await realClick(page, page.locator('#sg-run'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expect(page.locator('#sg-dup')).toHaveClass(/bad-pill/);
   await realClick(page, page.locator('#sg-dedupe'));
   await realClick(page, page.locator('#sg-run'));
+  await answerPredict(page);
+  await skipReplay(page);
 
   await expectFinished(page, T);
   await expectNoHorizontalScroll(page);

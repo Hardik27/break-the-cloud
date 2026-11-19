@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="11"';
 const dot = (x: number, y: number, label: string, v: string, col = 'var(--ink)') =>
@@ -49,6 +50,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['clock-skew'].minTimeMs,
   parMs: RULES['clock-skew'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'Leslie Lamport’s 1978 paper defined <b>happened-before</b> (→): a → b if they are on the same process and a comes first, or a is the send and b the receive of the same message, or there is a chain of these. Events with no such chain are concurrent. His logical clocks guarantee a → b implies L(a) &lt; L(b), but not the reverse.',

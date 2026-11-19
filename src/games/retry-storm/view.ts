@@ -1,6 +1,7 @@
 /** Retry Storm view. The pacing meter, tiles and policy controls are built once; frames update text and styles. */
 import { el, onPress, setText } from '../../lib/dom';
 import { makeFlow } from '../flow';
+import { predictAndReveal, replayBusy } from '../replay';
 import type { Game, GameApi } from '../types';
 import { meta } from './meta';
 import * as sim from './sim';
@@ -123,13 +124,21 @@ export const game: Game = {
       render();
     }
 
-    function runIt() {
+    async function runIt() {
       if (flow.guard()) return;
       if (flow.task < 2) return api.toast('Retry policies unlock in the next task.');
+      if (replayBusy()) return api.toast('Watch the replay first.');
       api.move();
       const r = sim.storm(policy, flow.task === 3 && jitter);
       drawResult(r);
       const ok = flow.task === 2 ? sim.backoffOk(r) : sim.jitterOk(r);
+      const outcome = r.outageLoad > sim.OUTAGE_LOAD_GOAL ? 0 : r.peakAfter > sim.PEAK_GOAL ? 1 : 2;
+      await predictAndReveal(api, res, {
+        title: 'The outage, second by second',
+        simMs: r.loadPerSec.length * 1000,
+        predict: { q: 'The API crashes, then recovers. With your retry policy, what happens?', options: ['Clients flood the API during the outage', 'Calm during the outage, but everyone retries at the same moment when it recovers', 'Calm during the outage and a smooth recovery'], answer: outcome, why: outcome === 0 ? 'Retrying immediately or at a fixed short delay multiplies traffic exactly when the API is weakest.' : outcome === 1 ? 'Backoff calms the outage, but clients that failed together retry together: synchronized waves.' : 'Growing waits calm the outage, and random jitter spreads the retries out.' },
+      });
+      if (!alive) return;
       if (ok) {
         api.hit('storm calmed', run);
         return flow.done();

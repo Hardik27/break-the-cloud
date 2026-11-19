@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { meta } from '../../src/games/blast-radius/meta';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask, answerPredict, skipReplay,
 } from './helpers';
 
 const T = meta.tasks.length;
@@ -40,10 +40,14 @@ test('solver completes every task with real mouse clicks, no console errors', as
   // Task 4: nightly backups lose a day of data; async + warm standby meets everything.
   await waitTask(page, 4);
   await realClick(page, page.locator('#br-run'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expect(page.locator('#br-rpo')).toHaveClass(/bad-pill/);
   await realClick(page, page.locator('[data-repl="async"]'));
   await realClick(page, page.locator('[data-standby="warm"]'));
   await realClick(page, page.locator('#br-run'));
+  await answerPredict(page);
+  await skipReplay(page);
 
   await expectFinished(page, T);
   await expectNoHorizontalScroll(page);

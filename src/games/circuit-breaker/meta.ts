@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="12"';
 const st = (x: number, y: number, label: string, fill: string) =>
@@ -50,6 +51,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['circuit-breaker'].minTimeMs,
   parMs: RULES['circuit-breaker'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'A circuit breaker wraps calls to a dependency and tracks failures. <b>Closed</b>: calls pass through. <b>Open</b>: calls fail immediately (or use a fallback) for a while. <b>Half-open</b>: a few trial calls go through; success closes the breaker, failure opens it again.',

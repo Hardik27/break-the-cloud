@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="11"';
 const box = (x: number, y: number, label: string, col: string) =>
@@ -50,6 +51,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['two-phase-commit'].minTimeMs,
   parMs: RULES['two-phase-commit'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'Two-phase commit was described by Jim Gray (1978) and is in every database textbook. Its safety rests on two logged promises: a participant that votes yes can always commit later, and the coordinator logs its decision before telling anyone.',

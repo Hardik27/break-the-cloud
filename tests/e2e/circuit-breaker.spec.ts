@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { meta } from '../../src/games/circuit-breaker/meta';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks, hudTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask, answerPredict, skipReplay,
 } from './helpers';
 
 const T = meta.tasks.length;
@@ -37,17 +37,25 @@ test('solver completes every task with real mouse clicks, no console errors', as
   // Task 3: tripping on 1 failure opens on blips; 5 is right.
   await waitTask(page, 3);
   await realClick(page, page.locator('#cb-run'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expect(page.locator('#cb-false')).toHaveClass(/bad-pill/);
   await realClick(page, page.locator('[data-th="5"]'));
   await realClick(page, page.locator('#cb-run'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expectTasks(page, 3, T);
 
   // Task 4: probing every second hammers the service; every 5 s is right.
   await waitTask(page, 4);
   await realClick(page, page.locator('#cb-run'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expect(page.locator('#cb-probes')).toHaveClass(/bad-pill/);
   await realClick(page, page.locator('[data-probe="5"]'));
   await realClick(page, page.locator('#cb-run'));
+  await answerPredict(page);
+  await skipReplay(page);
 
   await expectFinished(page, T);
   await expectNoHorizontalScroll(page);

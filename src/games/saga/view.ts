@@ -1,6 +1,7 @@
 /** Saga view. Turn-based: service rows and buttons are built once; render updates text and classes. */
 import { el, onPress, setText } from '../../lib/dom';
 import { makeFlow } from '../flow';
+import { predictAndReveal, replayBusy } from '../replay';
 import type { Game, GameApi } from '../types';
 import { meta } from './meta';
 import * as sim from './sim';
@@ -175,11 +176,19 @@ export const game: Game = {
       render();
     }
 
-    function runIt() {
+    async function runIt() {
       if (flow.guard()) return;
       if (flow.task < 3) return api.toast('Email designs unlock in the last task.');
+      if (replayBusy()) return api.toast('Wait for this run.');
       api.move();
       const r = sim.runOutbox(design, dedupe);
+      res.innerHTML = '';
+      await predictAndReveal(api, res, {
+        title: `${sim.BOOKINGS} bookings with crashes`,
+        simMs: 1000,
+        realMs: 1200,
+        predict: { q: 'Services crash now and then. With this design, what goes wrong?', options: ['Some customers never get an email', 'Some get an email for a trip that was never saved', 'Some get the email twice', 'Nothing: exactly one email each'], answer: r.lost ? 0 : r.ghost ? 1 : r.dup ? 2 : 3, why: r.lost ? 'Save then publish: a crash in between saves the trip but never sends the event.' : r.ghost ? 'Publish then save: a crash in between announces a trip that never got saved.' : r.dup ? 'The outbox never loses or invents events, but after a crash the relay sends one again. The consumer must skip ids it has seen.' : 'Outbox (never lost) plus deduplication (never twice) = exactly once.' },
+      });
       const pill = (n: number) => (n ? 'bad-pill' : 'ok-pill');
       res.innerHTML = `<div class="mrow"><span>Booked, but no email (lost event)</span><span class="${pill(r.lost)}" id="sg-lost">${r.lost}</span></div>
         <div class="mrow"><span>Email for a trip that was never saved</span><span class="${pill(r.ghost)}" id="sg-ghost">${r.ghost}</span></div>

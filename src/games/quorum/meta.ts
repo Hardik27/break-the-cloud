@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="12"';
 const rep = (x: number, label: string, w: boolean, r: boolean) =>
@@ -48,6 +49,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['quorum'].minTimeMs,
   parMs: RULES['quorum'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'Quorum replication goes back to David Gifford’s <b>weighted voting</b> (1979): give each copy a vote, require r votes to read and w votes to write, with r + w greater than the total. Every read quorum then intersects every write quorum.',

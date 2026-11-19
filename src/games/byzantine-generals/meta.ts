@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="11"';
 const gen = (x: number, y: number, label: string, col: string) =>
@@ -49,6 +50,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['byzantine-generals'].minTimeMs,
   parMs: RULES['byzantine-generals'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'Lamport, Shostak and Pease (1982) proved that with spoken (unsigned) messages, no algorithm reaches agreement if a third or more of the generals are traitors: N must be at least 3f + 1. Their Oral Messages algorithm OM(f) achieves it with f + 1 rounds of relaying. With <b>signed</b> messages, which a traitor can’t forge, any number of traitors can be tolerated.',
