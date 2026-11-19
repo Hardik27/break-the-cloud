@@ -48,7 +48,7 @@ export const GAMES: GameEntry[] = [
   { id: 'quorum', level: 6, title: 'Quorum', concept: 'N, R, W', blurb: 'Pick read and write quorums so every read sees the latest write.', load: () => import('./quorum') },
   { id: 'clock-skew', level: 6, title: 'Clock Skew', concept: 'Lamport and vector clocks', blurb: 'Order events when every clock is wrong.', load: () => import('./clock-skew') },
   { id: 'split-brain', level: 7, title: 'Split Brain', concept: 'Raft consensus', blurb: 'You are the network. Cut links and crash servers to make five servers disagree.', load: () => import('./split-brain') },
-  { id: 'two-phase-commit', level: 7, title: 'Two-Phase Commit', concept: 'Atomic commit', blurb: 'Crash the coordinator mid-vote and see who gets stuck holding locks.' },
+  { id: 'two-phase-commit', level: 7, title: 'Two-Phase Commit', concept: 'Atomic commit', blurb: 'Crash the coordinator mid-vote and see who gets stuck holding locks.', load: () => import('./two-phase-commit') },
   { id: 'saga', level: 7, title: 'Saga', concept: 'Compensating actions', blurb: 'Book a trip across three services and undo it cleanly when one fails.' },
   { id: 'gossip', level: 8, title: 'Gossip', concept: 'Epidemic broadcast', blurb: 'Spread a rumour to 50 nodes and find out why it takes O(log N) rounds.' },
   { id: 'byzantine-generals', level: 8, title: 'Byzantine Generals', concept: 'Traitors and 3f+1', blurb: 'Reach agreement when some of the generals lie.' },

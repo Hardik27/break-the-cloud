@@ -702,3 +702,26 @@ svg.as-chart{display:block;width:100%;height:auto;border:1px solid var(--line);b
 .ck-evval{font-family:var(--mono);font-size:11px;font-weight:600;fill:var(--ink)}
 .ck-q{border:1.5px solid var(--accent);border-radius:6px;padding:10px 12px;font-size:15px}
 .ck-lv{min-width:40px;min-height:36px;font-size:14px}
+
+/* ---------- Two-Phase Commit ---------- */
+.tp-nodes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:14px 14px 0}
+.tp-node{border:1.5px solid var(--line);border-radius:6px;padding:10px;display:grid;gap:4px;min-width:0}
+.tp-node b{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:15px}
+.tp-st{font-family:var(--mono);font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+#tp-c{border-color:var(--accent)}
+.tp-node.act{background:color-mix(in srgb,var(--accent) 8%,var(--panel))}
+.tp-node.lock{border-color:var(--vote)}.tp-node.lock .tp-st{color:var(--vote);font-weight:600}
+.tp-node.lock .tp-st::before{content:"🔒 "}
+.tp-node.ok{border-color:var(--ok)}.tp-node.ok .tp-st{color:var(--ok);font-weight:600}
+.tp-node.bad{border-color:var(--bad)}.tp-node.bad .tp-st{color:var(--bad);font-weight:600}
+.tp-node.down{border-color:var(--bad);border-style:dashed}.tp-node.down .tp-st{color:var(--bad)}
+.tp-panel{padding:14px;display:grid;gap:12px}
+.tp-panel>*{min-width:0}
+.tp-card{border:1.5px solid var(--accent);border-radius:6px;padding:12px;display:grid;gap:4px;min-height:80px}
+.tp-card p{margin:0}
+.tp-card>p:not(.eyebrow):not(.small){font-size:16px}
+.tp-log{margin:0;padding-left:22px;font-family:var(--mono);font-size:13px;display:grid;gap:3px}
+.tp-peer{border-left:3px solid var(--append);padding-left:8px;font-size:15px}
+.btn.tp-commit{border-color:var(--ok);color:var(--ok)}
+.btn.tp-abort{border-color:var(--bad);color:var(--bad)}
+@media (max-width:480px){.tp-nodes{gap:6px}.tp-node{padding:8px 6px}.tp-node b{font-size:13px}}
