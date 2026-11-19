@@ -1,5 +1,5 @@
 /** Gossip: concept cards, hints and the opening incident. */
-import { arrow, box, dot, person, server, svg, text } from '../learnkit';
+import { arrow, dot, person, server, svg, text } from '../learnkit';
 import type { Hint, LearnCard } from '../types';
 
 export const pager = '16:05 · the config server pushing updates to 5,000 nodes is at 100% CPU · half the cluster is running yesterday’s config.';
