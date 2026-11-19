@@ -541,3 +541,32 @@ svg.th-chart{display:block;width:100%;height:auto;border:1px solid var(--line);b
 #as-run{justify-self:start}
 .as-res{display:grid;gap:6px;font-family:var(--mono);font-size:12px}
 svg.as-chart{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:6px}
+
+/* ---------- Backpressure ---------- */
+.bp-panel{padding:14px;display:grid;gap:12px}
+.bp-panel>*{min-width:0}
+.bp-q{display:grid;grid-template-columns:auto auto minmax(0,1fr);grid-template-areas:"lbl val bar" "eta eta eta";gap:4px 12px;align-items:center;border:1.5px solid var(--append);border-radius:6px;padding:10px 12px}
+.bp-q .eyebrow{grid-area:lbl;margin:0}
+.bp-q b{grid-area:val;font-family:var(--display);font-stretch:112%;font-weight:900;font-size:24px;font-variant-numeric:tabular-nums;min-width:6ch}
+.bp-q .as-bar{grid-area:bar}
+.bp-q .as-bar i{background:var(--append)}
+.bp-q #bp-eta{grid-area:eta}
+.bp-q.grow{border-color:var(--bad)}.bp-q.grow .as-bar i{background:var(--bad)}
+.bp-cons{display:flex;flex-wrap:wrap;gap:6px;min-height:28px}
+.bp-c{width:24px;height:24px;border-radius:50%;border:1.5px dashed var(--line)}
+.bp-c.on{background:var(--ok);border:0}
+.bp-c.on.over{background:var(--bad)}
+.bp-db{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center}
+.bp-db .as-bar i{background:var(--vote)}
+.bp-db.hot .as-bar i{background:var(--bad)}
+.bp-consumer{padding:8px 12px;border-radius:6px;background:var(--ok);color:#fff;font-family:var(--mono);font-size:13px;font-weight:600}
+.bp-consumer.down{background:var(--bad);animation:alarm .8s infinite}
+.bp-rows{display:grid;gap:4px}
+.bp-row{display:grid;grid-template-columns:54px minmax(0,1fr) 70px;gap:8px;align-items:center;border:1px solid var(--line);background:var(--panel);border-radius:4px;padding:6px 8px;text-align:left;font-size:12px;touch-action:manipulation}
+.bp-row .id{font-family:var(--mono);font-weight:600}
+.bp-row .pl{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bp-row .rc{font-family:var(--mono);font-size:10px;color:var(--bad);text-align:right}
+.bp-row.tried{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 7%,var(--panel))}
+.bp-dlq{font-size:12px}
+.bp-dlq code{color:var(--ok)}
+.bp-dlq code.bad{color:var(--bad);text-decoration:line-through}

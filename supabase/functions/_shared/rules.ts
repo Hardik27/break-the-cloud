@@ -12,6 +12,7 @@ export interface GameRules {
 
 export const RULES: Record<string, GameRules> = {
   autoscaler: { tasks: 4, minTimeMs: [0, 28000, 2000, 2000], parMs: [0, 33000, 14000, 16000] },
+  backpressure: { tasks: 4, minTimeMs: [0, 8000, 10000, 2000], parMs: [0, 23000, 32000, 14000] },
   'cache-hit': { tasks: 4, minTimeMs: [0, 10000, 2000, 11000], parMs: [0, 28000, 18000, 16000] },
   'dns-detective': { tasks: 5, minTimeMs: [0, 4000, 5000, 3000, 2000], parMs: [0, 21000, 25000, 18000, 16000] },
   handshake: { tasks: 5, minTimeMs: [0, 3000, 2500, 4000, 2000], parMs: [0, 16000, 13000, 17000, 15000] },
