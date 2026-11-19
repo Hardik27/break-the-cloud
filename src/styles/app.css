@@ -345,3 +345,30 @@ svg.hs-ladder{display:block;width:100%;height:auto;max-width:560px;margin:4px au
 .blk-key{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 4px 0 10px;vertical-align:middle}
 .hs-head{max-width:560px;margin:0 auto;padding:0}
 .hs-head>span:first-child,.hs-head>span:last-child{width:25%;text-align:center}
+
+/* ---------- Latency Budget ---------- */
+.lb-panel{padding:14px}
+.lb-mapwrap{border:1px solid var(--line);border-radius:6px;background:var(--bg);margin-bottom:12px;overflow:hidden}
+svg.lb-map{display:block;width:100%;height:auto}
+.lb-sites{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}
+.lb-site{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:7px 8px;text-align:left;display:flex;flex-direction:column;gap:1px;touch-action:manipulation}
+.lb-site b{font-size:13px}
+.lb-site span{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.lb-site:hover{border-color:var(--ink)}
+.lb-site.origin{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.lb-site.origin span{color:var(--bg);opacity:.75}
+.lb-site.edge{background:var(--accent);color:#fff;border-color:var(--accent)}
+.lb-site.edge span{color:#fff;opacity:.8}
+.lb-users{display:grid;gap:4px}
+.lb-user{display:grid;grid-template-columns:minmax(0,92px) 34px minmax(0,1fr) 60px;gap:8px;align-items:center;border:1px solid var(--line);background:var(--panel);border-radius:4px;padding:5px 8px;text-align:left;font-size:13px;touch-action:manipulation}
+.lb-user .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-user .pp,.lb-user .ms{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.lb-user .ms{text-align:right;color:var(--bad);font-weight:600}
+.lb-user.fast .ms{color:var(--ok)}
+.lb-user .bar{height:8px;border-radius:4px;background:var(--grid);overflow:hidden}
+.lb-user .bar i{display:block;height:100%;background:var(--bad);transition:width .3s}
+.lb-user.fast .bar i{background:var(--ok)}
+.lb-req{border:1px solid var(--line);border-radius:6px;padding:10px;margin-bottom:8px;display:grid;gap:6px}
+.lb-req .path{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-family:var(--mono);font-size:13px}
+.lb-req.done{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 7%,var(--panel))}
+.lb-req .why{margin:0}
