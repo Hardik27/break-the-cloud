@@ -9,6 +9,7 @@ import { meta as dnsMeta } from '../../src/games/dns-detective/meta';
 import { meta as hsMeta } from '../../src/games/handshake/meta';
 import { meta as lbMeta } from '../../src/games/latency-budget/meta';
 import { meta as hbMeta } from '../../src/games/heartbeat/meta';
+import { meta as rlMeta } from '../../src/games/rate-limiter/meta';
 import { meta as tc } from '../../src/games/traffic-cop/meta';
 import { meta as rd } from '../../src/games/replica-diff/meta';
 import { meta as sb } from '../../src/games/split-brain/meta';
@@ -93,7 +94,7 @@ describe('curriculum registry', () => {
 });
 
 describe('game metadata follows the walkthrough rules', () => {
-  for (const m of [dnsMeta, hsMeta, lbMeta, hbMeta, tc, rd, sb]) {
+  for (const m of [dnsMeta, hsMeta, lbMeta, hbMeta, rlMeta, tc, rd, sb]) {
     it(m.id, () => {
       expect(m.tasks.length).toBeGreaterThanOrEqual(3);
       expect(m.tasks.length).toBeLessThanOrEqual(5);
