@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { meta } from '../../src/games/traffic-cop/meta';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks, hudTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask, passLearn,
 } from './helpers';
 
 const T = meta.tasks.length;
@@ -138,6 +138,7 @@ test('keyboard only: Tab to Start, Enter through the tutorial', async ({ page })
 test('skip tutorial starts the clock; mistakes cost points and show feedback', async ({ page }) => {
   await openGame(page, 'traffic-cop', 5);
   await realClick(page, page.locator('#start-btn'));
+  await passLearn(page);
   await expect(page.locator('.spot-ring')).toBeVisible();
   // Clicks on the dimmed area explain themselves (wait for the coach to finish scrolling the target into view).
   await page.waitForTimeout(400);

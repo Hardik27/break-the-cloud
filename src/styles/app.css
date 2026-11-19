@@ -926,3 +926,35 @@ svg.as-chart{display:block;width:100%;height:auto;border:1px solid var(--line);b
 .reveal-wrap{position:relative}
 .reveal-veil{position:absolute;top:0;bottom:0;right:0;left:0;background:color-mix(in srgb,var(--panel) 90%,transparent);border-left:2px solid var(--accent)}
 .playing .mrow,.playing .rl-result,.playing .as-res>p{visibility:hidden}
+
+/* ---------- Home: today, stand-up, map, deck ---------- */
+.career-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip-stat{font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--ink);text-decoration:none;background:var(--panel)}
+a.chip-stat:hover{border-color:var(--accent)}
+.today{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;margin-block:8px 18px}
+@media (max-width:880px){.today{grid-template-columns:minmax(0,1fr)}}
+.daily{display:grid;gap:8px;border-color:var(--accent)}
+.daily h2{margin:0}.daily h2 a{color:var(--ink);text-decoration:none}
+.daily .pager{margin:0}
+.standupc{display:grid;gap:8px}
+.standupc .tp-q{font-size:15px}
+.level .lv{position:relative;padding-left:22px}
+.level .lv .station{position:absolute;left:0;top:2px;width:12px;height:12px;border-radius:50%;border:2.5px solid var(--line);background:var(--bg)}
+.level .lv.started .station{border-color:var(--accent)}
+.level .lv.cleared .station{border-color:var(--ok);background:var(--ok)}
+.lvprog{display:block;margin-top:6px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.game.next{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 25%,transparent)}
+.game.next .tag{color:var(--accent);border-color:var(--accent)}
+.deckpage{padding-block:18px}
+.deckpage h1{font-family:var(--display);font-stretch:125%;font-weight:900;font-size:clamp(34px,7vw,56px);margin:0 0 8px;line-height:1}
+.deckpage h1 span{color:var(--accent)}
+.decklevel h2{font-family:var(--display);font-stretch:112%;font-weight:800;margin:26px 0 10px}
+.deckgame h3{margin:14px 0 8px}.deckgame h3 a{color:var(--ink)}
+.deckcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.dcard{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--ok);border-radius:6px;padding:10px 12px;font-size:14px}
+.dcard p{margin:0 0 6px}.dcard p:last-child{margin:0}
+.dcard.locked{border-left-color:var(--line);opacity:.7}
+@media print{.topbar,footer,#deck-print,.deckpage .eyebrow a{display:none}.dcard{break-inside:avoid}body{background:#fff}}
+.today:has(#standup[hidden]){grid-template-columns:minmax(0,1fr)}
+.daily a.btn{text-decoration:none}
+@media (max-width:600px){.tp-fig{padding:4px}.tpanel{padding:14px 14px}}

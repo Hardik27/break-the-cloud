@@ -8,7 +8,7 @@ export function renderPrivacy(app: HTMLElement): () => void {
     `<article class="card prose" id="privacy"><p class="eyebrow">Privacy &amp; data</p><h2>What this site stores</h2>
     <p>This site sets <b>no cookies</b> and runs no advertising or tracking scripts.</p>
     <h3>In your browser</h3>
-    <p>Your best score and time for each game, your sound setting, and whether you dismissed the privacy notice are kept in your browser's <b>local storage</b> (a small key-value store on your device).</p>
+    <p>Your best score and time for each game, the concept cards you have unlocked, your daily streak, today’s stand-up answer, your sound setting, and whether you dismissed the privacy notice are kept in your browser's <b>local storage</b> (a small key-value store on your device). None of it leaves your device.</p>
     <h3>On the leaderboard</h3>
     <p>When you start a game, the site signs you in <b>anonymously</b>: no email, no password, just a random account id. That sign-in session is kept in local storage; it is strictly necessary for the leaderboard to work. The leaderboard stores your runs (game, start and finish time, points, stars, mistakes, moves) linked to that anonymous id, and the nickname you choose, if you choose one. Other players see your nickname, points, stars and time, never your id. Use a nickname you are happy to show publicly; avoid your full name.</p>
     <h3>Fonts</h3>

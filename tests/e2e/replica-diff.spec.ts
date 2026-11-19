@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { meta } from '../../src/games/replica-diff/meta';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask, passLearn,
 } from './helpers';
 
 const T = meta.tasks.length;
@@ -61,6 +61,7 @@ test('coach bar text changes for each tutorial step', async ({ page }) => {
 test('a stuck student gets the right column highlighted', async ({ page }) => {
   await openGame(page, 'replica-diff', 8);
   await realClick(page, page.locator('#start-btn'));
+  await passLearn(page);
   await realClick(page, page.locator('.coach-skip'));
   await expectTasks(page, 1, T);
   await waitTask(page, 2);

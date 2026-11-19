@@ -10,7 +10,8 @@ import { esc, fmtTime } from '../lib/dom';
 import { getBackend, withTimeout, type Backend, type Range } from '../lib/leaderboard';
 import { randomSeed } from '../lib/rng';
 import { sfx } from '../lib/sfx';
-import { careerPoints, getBest, saveBest } from '../lib/storage';
+import { careerPoints, getBest, markDailyDone, markPlayedToday, saveBest, unlockLesson } from '../lib/storage';
+import { dailyGameId } from './daily';
 import { finishHeadline, GRADE_EMOJI, gradeWord } from './cheer';
 import { bindTopbar, fmtPts, footer, refreshRankChip, toast, topbar } from './chrome';
 import { createCoach } from './coach';
@@ -229,6 +230,8 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
     $('hud-time').textContent = fmtTime(run.elapsed);
     const inputs = sc.taskMs.map((t, i) => ({ ms: i === 0 ? 0 : t - sc.taskMs[i - 1], mistakes: sc.mistakes[i], comboPoints: sc.comboPts[i] }));
     const rs = scoreRun(inputs, meta.parMs);
+    const streakNow = markPlayedToday();
+    if (meta.id === dailyGameId()) markDailyDone();
     const careerBefore = careerPoints();
     const { pb, prev } = saveBest(meta.id, { ms: run.elapsed, moves: run.moves, points: rs.total, stars: rs.stars });
     const careerAfter = careerPoints();
@@ -257,6 +260,7 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
         <tr><td>Mistakes</td><td>−${fmtPts(sum('penalty'))}</td></tr>
       </tbody></table>
       ${ui.stats.predictions ? `<p class="small">🔮 Predictions called: <b>${ui.stats.called}/${ui.stats.predictions}</b>${hintsUsed ? ` · hints used: ${hintsUsed}` : ''}</p>` : hintsUsed ? `<p class="small">Hints used: ${hintsUsed}</p>` : ''}
+      <p class="small">🔥 ${streakNow.days}-day streak · <a href="#/deck">${esc(meta.title)}: ${nTasks} cards added to your concept deck</a></p>
       <p class="small">Best moment: <b>${esc(meta.tasks[bestI])}</b> in ${(inputs[bestI].ms / 1000).toFixed(1)} s (par ${(meta.parMs[bestI] / 1000).toFixed(0)} s).</p>
       <p class="small">${rank.title !== rankBefore ? `<b class="pb">Promoted to ${rank.title}!</b> ` : `Rank: <b>${rank.title}</b>. `}${rank.next ? `${fmtPts(rank.next.min - careerAfter)} pts to ${rank.next.title}.` : ''}</p>
       <div class="row" style="margin-top:10px"><button class="btn go" id="share-btn" type="button">Share score</button><button class="btn" id="again" type="button">Play again</button>
@@ -420,6 +424,7 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
     task(i) {
       if (run.finished || run.done.has(i) || i < 0 || i >= nTasks) return;
       run.done.add(i);
+      unlockLesson(meta.id, i);
       lastActivity = performance.now();
       hintsUsed += hints.used;
       hints.set(null);

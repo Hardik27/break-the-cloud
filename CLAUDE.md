@@ -55,11 +55,24 @@ interface GameApi {                // provided by the shell
   coach: Coach; toast(msg: string): void; side: HTMLElement;
   onBegin(cb: () => void): void;   // student pressed Start: the game then calls coach.tutorial(meta.walkthrough, onDone)
   readonly seed: number;           // seed for the sim's RNG; #/play/<id>?seed=N makes runs reproducible in tests
-  readonly finished: boolean }
+  readonly finished: boolean;
+  ready(t: number, go: () => void): void;      // call before starting task t: shell shows the debrief + concept card, then go()
+  predict(q: CheckQuestion): Promise<boolean>; // ask before every automatic run (no points lost)
+  playback(p: Playback): Promise<void> }       // animated replay of a run; frame(t) draws sim time t
 interface Game { mount(stage: HTMLElement, api: GameApi): () => void }   // returns unmount
 ```
 
 The full types live in `src/games/types.ts`. The shell owns the timer, moves, task list, lessons, result card and leaderboard. A game only reports events. The clock starts automatically when task 0 (the tutorial) is reported done.
+
+## Teaching layer: Learn → Play → Replay → Debrief (see docs/ux-research.md)
+
+- Every game has `meta.pager` (the incident, one line), `meta.learn[t]` (concept card before task t; learn[0] runs before the tutorial) and `meta.hints[t]` (nudge free, idea −25, show-me −50). Content lives in `src/games/<id>/learn.ts`, diagrams use `src/games/learnkit.ts`.
+- Concept cards: concrete first (an analogy), one idea per frame, the name of the idea last, then a one-question check. Assume the student has never heard the term.
+- The side panel says only **Goal** and **Your tools**. Never the answer or the strategy: that is what hints are for.
+- Every Run button: `predict` first, then an animated replay (`playback`, or `predictAndReveal` from `src/games/replay.ts` for result charts). Numbers appear after the replay.
+- The clock counts decision time only. It pauses for concept cards, predictions, replays and the task-clear debrief; the paused time is sent to the server as `pausedMs`.
+- Tasks advance only when the student presses Next on the debrief: games call `api.ready(next, start)` instead of timers.
+- Every Playwright solver uses `waitTask` (presses Next and clicks through cards), `answerPredict` and `skipReplay` from `tests/e2e/helpers.ts`.
 
 ## Walkthrough (the most important UX rule)
 

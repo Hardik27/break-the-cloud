@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { meta } from '../../src/games/heartbeat/meta';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks, hudTasks,
-  keyboardStart, openGame, realClick, watchErrors, waitTask, answerPredict, skipReplay,
+  keyboardStart, openGame, realClick, watchErrors, waitTask, answerPredict, skipReplay, passLearn,
 } from './helpers';
 
 const T = meta.tasks.length;
@@ -33,6 +33,7 @@ test('solver completes every task with real mouse clicks, no console errors', as
   await realClick(page, row(page, 0));
   await expect(page.locator('#toast')).toContainText('Press Start first');
   await realClick(page, page.locator('#start-btn'));
+  await passLearn(page);
 
   // Tutorial: evict web-3, wait for its replacement, add it back. The coach text changes at each step.
   await expect(page.locator('#coach-text')).toHaveText(meta.walkthrough[0].text);

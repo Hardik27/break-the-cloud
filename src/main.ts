@@ -2,6 +2,7 @@ import './styles/tokens.css';
 import './styles/app.css';
 import { findGame } from './games/registry';
 import { showNoticeOnce } from './shell/chrome';
+import { renderDeck } from './shell/deck';
 import { renderHome } from './shell/home';
 import { renderPlay } from './shell/play';
 import { renderPrivacy } from './shell/privacy';
@@ -19,6 +20,11 @@ async function route() {
   if (r.page === 'privacy') {
     unmount = renderPrivacy(app);
     document.title = 'Privacy · Break the Cloud';
+    return;
+  }
+  if (r.page === 'deck') {
+    unmount = renderDeck(app);
+    document.title = 'Concept deck · Break the Cloud';
     return;
   }
   if (r.page === 'play') {
