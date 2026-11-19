@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="11"';
 const diagram = `<svg viewBox="0 0 520 200" role="img" aria-label="A token bucket: tokens drip in at a fixed rate up to the bucket size. Each request takes a token; with no token left, the request gets 429 Too Many Requests.">
@@ -49,6 +50,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['rate-limiter'].minTimeMs,
   parMs: RULES['rate-limiter'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'A <b>token bucket</b> allows short bursts while enforcing an average rate: the bucket size caps the burst, the refill rate caps the long-run average. A <b>leaky bucket</b> instead smooths traffic to a constant outflow. Fixed and sliding <b>windows</b> count requests per minute; they are simpler, but allow double bursts at window edges.',

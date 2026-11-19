@@ -94,3 +94,16 @@ describe('task 4: stale data', () => {
     expect(ch.invalidate(s)).toBe('wasted');
   });
 });
+
+describe('replay steps', () => {
+  it('match the policy hit counts exactly', async () => {
+    const ch = await import('../../src/games/cache-hit/sim');
+    for (const p of ch.PATTERNS)
+      for (const pol of ['lru', 'lfu'] as const) {
+        const steps = ch.policySteps(pol, p.trace);
+        const hits = steps.slice(p.measureFrom).filter((s) => s.hit).length;
+        expect(hits / (p.trace.length - p.measureFrom)).toBeCloseTo(ch.policyRate(pol, p), 10);
+        expect(steps.every((s) => s.slots.includes(s.key))).toBe(true);
+      }
+  });
+});

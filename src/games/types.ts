@@ -25,6 +25,42 @@ export interface LearnMore {
   links: { label: string; url: string }[];
 }
 
+/** One step of a click-through explainer: an optional diagram and a short caption. */
+export interface LearnFrame {
+  /** Inline SVG (use CSS variables so it works in light and dark mode). */
+  svg?: string;
+  /** One to three short sentences. */
+  html: string;
+}
+
+/** A one-question check. No points are lost for a wrong answer; the explanation is shown either way. */
+export interface CheckQuestion {
+  q: string;
+  options: string[];
+  answer: number;
+  why: string;
+}
+
+/** A concept card shown on the stage before a task starts (the clock is paused). */
+export interface LearnCard {
+  title: string;
+  /** Click-through steps: concrete first, the name of the idea last. */
+  frames: LearnFrame[];
+  check?: CheckQuestion;
+}
+
+/** Three-step hint ladder for one task. */
+export interface Hint {
+  /** Free: where to look. */
+  nudge: string;
+  /** Costs one mistake: the idea that unlocks the task. */
+  concept: string;
+  /** Costs two mistakes: what to do. */
+  show: string;
+  /** Optional selector to highlight with the last hint. */
+  target?: string;
+}
+
 export interface GameMeta {
   id: string;
   level: number;
@@ -46,6 +82,12 @@ export interface GameMeta {
   /** "Good" time per task: at or under par earns the full speed bonus. From the shared rules. */
   parMs: number[];
   learnMore: LearnMore;
+  /** The incident that opens the game, as a pager line (the story). */
+  pager?: string;
+  /** Concept cards, indexed by task: learn[0] is shown before the tutorial, learn[t] before task t. */
+  learn?: (LearnCard | null)[];
+  /** Hint ladder per task (index = task; the tutorial needs none). */
+  hints?: (Hint | null)[];
 }
 
 export type CoachMode = 'act' | 'watch';
@@ -84,6 +126,28 @@ export interface GameApi {
   /** Seed for the game's random numbers (set with ?seed=N in the URL for tests). */
   readonly seed: number;
   readonly finished: boolean;
+  /**
+   * Call when task t is about to begin. The shell first finishes the task-clear debrief and shows
+   * the concept card for task t (clock paused), then calls go().
+   */
+  ready(t: number, go: () => void): void;
+  /** Ask the student to predict an outcome before a run. Resolves true if they called it. Clock paused. */
+  predict(q: CheckQuestion): Promise<boolean>;
+  /** Play back a run at sim speed with a scrubber; frame(t) draws the state at sim time t. Clock paused. */
+  playback(p: Playback): Promise<void>;
+}
+
+/** An animated replay of a simulated run. */
+export interface Playback {
+  /** Simulated time span (ms). */
+  durationMs: number;
+  /** How long the replay takes at 1× (ms of real time). Default 5000. */
+  realMs?: number;
+  /** Draw the state at sim time t (0..durationMs). Update existing nodes only. */
+  frame(t: number): void;
+  /** Moments worth jumping to, e.g. where it broke. */
+  marks?: { t: number; label: string; bad?: boolean }[];
+  title?: string;
 }
 
 export interface Game {

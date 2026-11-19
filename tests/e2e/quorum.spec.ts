@@ -3,11 +3,10 @@ import { meta } from '../../src/games/quorum/meta';
 import { ROUNDS } from '../../src/games/quorum/sim';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
 } from './helpers';
 
 const T = meta.tasks.length;
-const waitTask = (page: Page, n: number) => expect(page.locator('#side .eyebrow')).toHaveText(`Task ${n} of ${T}`, { timeout: 10_000 });
 const rep = (page: Page, i: number) => page.locator(`[data-rep="${i}"]`);
 
 test('solver completes every task with real mouse clicks, no console errors', async ({ page }) => {

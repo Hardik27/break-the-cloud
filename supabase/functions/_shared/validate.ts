@@ -12,6 +12,8 @@ export interface FinishPayload {
   comboPoints: number[];
   /** Time added to the clock as penalties (ms). */
   penaltyMs: number;
+  /** Time the clock was paused for explainers, predictions, replays and debriefs (ms). Older clients send none. */
+  pausedMs?: number;
   moves: number;
 }
 
@@ -30,6 +32,8 @@ export function validateRun(gameId: string, serverMs: number, p: FinishPayload):
   if (!p || !Array.isArray(p.taskMs) || !Array.isArray(p.mistakes) || !Array.isArray(p.comboPoints)) return { ok: false, reason: 'bad payload' };
   if (p.taskMs.length !== n || p.mistakes.length !== n || p.comboPoints.length !== n) return { ok: false, reason: 'wrong number of tasks' };
   if (!isInt(p.moves, 0, 5000) || !isInt(p.penaltyMs, 0, 600_000)) return { ok: false, reason: 'bad moves or penalty' };
+  const pausedMs = p.pausedMs ?? 0;
+  if (!isInt(pausedMs, 0, 3_600_000) || pausedMs > serverMs + SLACK_MS) return { ok: false, reason: 'bad paused time' };
   if (p.taskMs[0] !== 0) return { ok: false, reason: 'tutorial must end at 0' };
   for (let i = 0; i < n; i++) {
     if (!isInt(p.taskMs[i], 0, 3_600_000)) return { ok: false, reason: `bad time for task ${i + 1}` };
@@ -41,7 +45,8 @@ export function validateRun(gameId: string, serverMs: number, p: FinishPayload):
     if (durations[i] < rules.minTimeMs[i]) return { ok: false, reason: `task ${i + 1} finished impossibly fast` };
   }
   const clientMs = p.taskMs[n - 1];
-  const realClientMs = clientMs - p.penaltyMs;
+  // Wall time the client saw = clock time − penalties + time spent paused (reading, predicting, watching replays).
+  const realClientMs = clientMs - p.penaltyMs + pausedMs;
   const slack = SLACK_MS + SLACK_FRACTION * serverMs;
   if (realClientMs > serverMs + slack) return { ok: false, reason: 'client clock ran ahead of the server' };
   if (realClientMs < serverMs - slack) return { ok: false, reason: 'client reported less time than the server measured' };

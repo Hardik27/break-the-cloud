@@ -40,12 +40,14 @@ export interface ByHand {
   nextAt: number;
   window: boolean[];
   seen: Record<string, number>;
+  /** When each page was last requested (sim ms). */
+  lastUse: Record<string, number>;
   last: { key: string; hit: boolean } | null;
   frozen: boolean;
 }
 
 export function createByHand(task: number, rng: Rng): ByHand {
-  const s: ByHand = { rng, now: 0, slots: Array(SLOTS).fill(null), pending: null, pendingAt: 0, nextAt: 800, window: [], seen: Object.fromEntries(KEYS.map((k) => [k, 0])), last: null, frozen: task === 0 };
+  const s: ByHand = { rng, now: 0, slots: Array(SLOTS).fill(null), pending: null, pendingAt: 0, nextAt: 800, window: [], seen: Object.fromEntries(KEYS.map((k) => [k, 0])), lastUse: {}, last: null, frozen: task === 0 };
   if (task === 0) miss(s, 'deals');
   return s;
 }
@@ -53,6 +55,7 @@ export function createByHand(task: number, rng: Rng): ByHand {
 /** A cache miss for `key`: the student must place it (the tutorial uses this directly). */
 export function miss(s: ByHand, key: string) {
   s.seen[key]++;
+  s.lastUse[key] = s.now;
   s.window.push(false);
   if (s.window.length > WINDOW) s.window.shift();
   s.pending = key;
@@ -80,6 +83,7 @@ export function stepByHand(s: ByHand, dt: number): ByHandEvent[] {
     const key = drawKey(s.rng);
     if (s.slots.includes(key)) {
       s.seen[key]++;
+      s.lastUse[key] = s.now;
       s.window.push(true);
       if (s.window.length > WINDOW) s.window.shift();
       s.last = { key, hit: true };
@@ -175,6 +179,43 @@ export function runPolicy(policy: Policy, trace: string[], measureFrom = 0, size
   });
   return hits / (trace.length - measureFrom);
 }
+
+/** One request in a replay: the cache contents after it (fixed slot positions), and what was evicted. */
+export interface TraceStep { key: string; hit: boolean; slots: (string | null)[]; victim: string | null }
+
+/** Same rules as runPolicy, but records every step with stable slot positions (for the side-by-side replay). */
+export function policySteps(policy: Policy, trace: string[], size = SLOTS): TraceStep[] {
+  const slots: (string | null)[] = Array(size).fill(null);
+  const lastUse = new Map<string, number>();
+  const freq = new Map<string, number>();
+  return trace.map((k, t) => {
+    let hit = false;
+    let victim: string | null = null;
+    if (slots.includes(k)) {
+      hit = true;
+      freq.set(k, freq.get(k)! + 1);
+    } else {
+      let at = slots.indexOf(null);
+      if (at < 0) {
+        const cached = slots as string[];
+        victim = cached.reduce((a, b) =>
+          policy === 'lru'
+            ? lastUse.get(a)! <= lastUse.get(b)! ? a : b
+            : freq.get(a)! < freq.get(b)! || (freq.get(a) === freq.get(b) && lastUse.get(a)! <= lastUse.get(b)!) ? a : b,
+        );
+        at = slots.indexOf(victim);
+        freq.delete(victim);
+      }
+      slots[at] = k;
+      freq.set(k, 1);
+    }
+    lastUse.set(k, t);
+    return { key: k, hit, slots: [...slots], victim };
+  });
+}
+/** The window of requests shown in the replay for a pattern. */
+export const REPLAY_LEN = 40;
+export const replayStart = (p: Pattern): number => (p.measureFrom ? p.measureFrom - 4 : 20);
 
 export const policyRate = (policy: Policy, p: Pattern): number => runPolicy(policy, p.trace, p.measureFrom);
 export const bestPolicy = (p: Pattern): Policy => (policyRate('lru', p) >= policyRate('lfu', p) ? 'lru' : 'lfu');

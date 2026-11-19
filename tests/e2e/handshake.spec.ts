@@ -2,11 +2,10 @@ import { expect, test, type Page } from '@playwright/test';
 import { meta } from '../../src/games/handshake/meta';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks, hudTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
 } from './helpers';
 
 const T = meta.tasks.length;
-const waitTask = (page: Page, n: number) => expect(page.locator('#side .eyebrow')).toHaveText(`Task ${n} of ${T}`, { timeout: 10_000 });
 
 /** What a student would send, given their role and the last packet on the ladder. */
 async function nextPacket(page: Page): Promise<string> {

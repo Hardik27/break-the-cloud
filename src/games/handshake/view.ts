@@ -160,7 +160,7 @@ export const game: Game = {
       const prog = api.side.querySelector('#hs-prog');
       if (prog) prog.textContent = task <= 1 ? `Connections open: ${hs.opened} / ${hs.roles.length}` : task === 2 ? `Recovered: ${lossRound} / 3` : task === 3 ? `Messages reassembled: ${orderRound} / 2` : `Goals met: ${goal} / 2`;
       if (phase === 'play') api.coach.say(...coachLine());
-      if (phase === 'between') api.coach.say('Task clear! Read the lesson; the next task starts in a moment.', 'watch');
+      if (phase === 'between') api.coach.say('Task clear! Read the lesson; press Next above.', 'watch');
     }
 
     function coachLine(): [string, 'act' | 'watch'] {
@@ -198,12 +198,12 @@ export const game: Game = {
       if (task >= meta.tasks.length - 1) { phase = 'done'; render(); return; }
       phase = 'between';
       render();
-      betweenT = window.setTimeout(() => startTask(task + 1), 2400);
+      { const next = task + 1; api.ready(next, () => startTask(next)); }
     }
     function guard(): boolean {
       if (phase === 'pre') { api.toast('Press Start first. It is in the brief, and above the game.'); return true; }
       if (phase === 'done') { api.toast('All tasks done. Press Play again to start a new run.'); return true; }
-      if (phase === 'between') { api.toast('Task done. The next task starts in a moment.'); return true; }
+      if (phase === 'between') { api.toast('Task done. Press Next above to go on.'); return true; }
       return false;
     }
 
@@ -308,7 +308,7 @@ export const game: Game = {
         api.task(0);
         phase = 'between';
         render();
-        betweenT = window.setTimeout(() => startTask(1), 1800);
+        api.ready(1, () => startTask(1));
       });
     });
 

@@ -28,7 +28,6 @@ export interface Flow {
 }
 
 export function makeFlow(api: GameApi, meta: GameMeta, info: TaskInfo[], startTask: (t: number) => void, render: () => void): Flow {
-  let timer = 0;
   const side = (t: number) => {
     const i = info[t];
     api.side.innerHTML = `<p class="eyebrow">${t === 0 ? 'Tutorial' : `Task ${t + 1} of ${meta.tasks.length}`}</p><h2>${i.h}</h2><p style="margin:0">${i.p}</p><div class="progress" data-flow-progress></div>`;
@@ -45,18 +44,19 @@ export function makeFlow(api: GameApi, meta: GameMeta, info: TaskInfo[], startTa
       }
       f.phase = 'between';
       render();
-      timer = window.setTimeout(() => start(f.task + 1), 2400);
+      const next = f.task + 1;
+      api.ready(next, () => start(next));
     },
     guard() {
       if (f.phase === 'pre') api.toast('Press Start first. It is in the brief, and above the game.');
       else if (f.phase === 'done') api.toast('All tasks done. Press Play again to start a new run.');
-      else if (f.phase === 'between') api.toast('Task done. The next task starts in a moment.');
+      else if (f.phase === 'between') api.toast('Task done. Press Next above to go on.');
       else return false;
       return true;
     },
     coachBetween() {
       if (f.phase !== 'between') return false;
-      api.coach.say('Task clear! Read the lesson; the next task starts in a moment.', 'watch');
+      api.coach.say('Task clear! Read what just happened, then press <b>Next</b>.', 'watch');
       return true;
     },
     progress(text, win = false) {
@@ -65,9 +65,7 @@ export function makeFlow(api: GameApi, meta: GameMeta, info: TaskInfo[], startTa
       if (p.textContent !== text) p.textContent = text;
       p.classList.toggle('win', win || f.phase === 'between' || f.phase === 'done');
     },
-    dispose() {
-      clearTimeout(timer);
-    },
+    dispose() {},
   };
   function start(t: number) {
     f.task = t;
@@ -82,7 +80,7 @@ export function makeFlow(api: GameApi, meta: GameMeta, info: TaskInfo[], startTa
       api.task(0);
       f.phase = 'between';
       render();
-      timer = window.setTimeout(() => start(1), 1800);
+      api.ready(1, () => start(1));
     });
   });
   return f;

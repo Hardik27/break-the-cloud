@@ -28,9 +28,22 @@ describe('task 3: CDN edges', () => {
   it('the origin alone only serves New York fast', () => {
     expect(lb.fastCities([])).toEqual(['newyork']);
   });
-  it('7 well-placed edges get every city under 150 ms, and fewer never can', () => {
-    expect(lb.allFast(['sa-east', 'eu-west', 'af-west', 'ap-south', 'ap-southeast', 'ap-northeast', 'ap-sydney'])).toBe(true);
-    expect(lb.allFast(['sa-east', 'eu-west', 'ap-south', 'ap-southeast', 'ap-northeast', 'ap-sydney'])).toBe(false);
+  it('round 1: three edges reach the goal only by covering the biggest slow cities', () => {
+    const r = lb.EDGE_ROUNDS[0];
+    expect(lb.bestCoverage(r)).toBe(r.goal);
+    expect(lb.edgeRoundOk(['eu-west', 'ap-south', 'ap-northeast'], r)).toBe(true);
+    // "One edge per continent" misses the goal.
+    expect(lb.edgeRoundOk(['sa-east', 'af-west', 'ap-sydney'], r)).toBe(false);
+  });
+  it('round 2: São Paulo triples, so one edge has to move there', () => {
+    const r = lb.EDGE_ROUNDS[1];
+    expect(lb.bestCoverage(r)).toBe(r.goal);
+    expect(lb.edgeRoundOk(['eu-west', 'ap-south', 'ap-northeast'], r)).toBe(false);
+    expect(lb.edgeRoundOk(['sa-east', 'ap-south', 'ap-northeast'], r)).toBe(true);
+  });
+  it('an edge reaches about 2,500 km within 150 ms', () => {
+    expect(lb.EDGE_REACH_KM).toBeGreaterThan(2000);
+    expect(lb.EDGE_REACH_KM).toBeLessThan(3000);
   });
   it('Lagos has no fast cloud region: only an edge in Lagos itself gets it under the goal', () => {
     const others = lb.SITES.filter((s) => s.id !== 'af-west').map((s) => s.id);

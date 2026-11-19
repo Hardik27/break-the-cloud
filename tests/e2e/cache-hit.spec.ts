@@ -2,11 +2,10 @@ import { expect, test, type Page } from '@playwright/test';
 import { meta } from '../../src/games/cache-hit/meta';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks, hudTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask, skipReplay,
 } from './helpers';
 
 const T = meta.tasks.length;
-const waitTask = (page: Page, n: number) => expect(page.locator('#side .eyebrow')).toHaveText(`Task ${n} of ${T}`, { timeout: 10_000 });
 
 /** On each miss, evict the cached page seen least often (or skip if the new page is even rarer). */
 async function beTheCache(page: Page) {
@@ -52,13 +51,19 @@ test('solver completes every task with real mouse clicks, no console errors', as
 
   // Task 3: try the wrong policy once, then the right ones.
   await waitTask(page, 3);
-  await realClick(page, page.locator('[data-pat="0"][data-pol="lru"]'));
-  await realClick(page, page.locator('[data-run="0"]'));
-  await expect(page.locator('[data-out="0"]')).toContainText('only');
-  await realClick(page, page.locator('[data-pat="0"][data-pol="lfu"]'));
-  await realClick(page, page.locator('[data-run="0"]'));
-  await realClick(page, page.locator('[data-pat="1"][data-pol="lru"]'));
-  await realClick(page, page.locator('[data-run="1"]'));
+  // Story 1 (the nightly report): LRU first is a mistake; the replay plays both caches side by side.
+  await realClick(page, page.locator('[data-pol="lru"]'));
+  await expect(page.locator('#ch-duel')).toBeVisible();
+  await expect(page.locator('#hud-time-wrap')).toHaveClass(/held/);
+  await expect(page.locator('#ch-ticker')).toContainText('request');
+  await skipReplay(page);
+  await expect(page.locator('#ch-verdict')).toContainText('Pick again');
+  await realClick(page, page.locator('[data-pol="lfu"]'));
+  await skipReplay(page);
+  // Story 2 (Black Friday): LRU.
+  await expect(page.locator('#ch-pat')).toContainText('Black Friday');
+  await realClick(page, page.locator('[data-pol="lru"]'));
+  await skipReplay(page);
   await expectTasks(page, 3, T);
 
   // Task 4: invalidate whenever the cached price is stale.

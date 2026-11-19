@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { meta } from '../../src/games/traffic-cop/meta';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks, hudTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
 } from './helpers';
 
 const T = meta.tasks.length;
@@ -20,10 +20,6 @@ function bestFit(list: Srv[], size: number): number {
     if (f >= size && f > bf) { bf = f; best = i; }
   });
   return best;
-}
-
-async function waitTask(page: Page, n: number) {
-  await expect(page.locator('#side .eyebrow')).toHaveText(`Task ${n} of ${T}`, { timeout: 10_000 });
 }
 
 /** Loops `act` until the HUD shows `untilTasks` done. */
@@ -64,6 +60,7 @@ test('solver completes every task with real mouse clicks; scores, posts and shar
   await realClick(page, page.locator('#start-btn'));
   await playTutorial(page, meta.walkthrough);
   await expectTasks(page, 1, T);
+  await waitTask(page, 2);
   await expect(page.locator('#hud-points')).toHaveText('100'); // tutorial bonus
   await expect(page.locator('#hud-time')).not.toHaveText('0:00.0'); // clock starts after the tutorial
 
@@ -123,10 +120,11 @@ test('solver completes every task with real mouse clicks; scores, posts and shar
 
 test('coach bar text changes for each tutorial step', async ({ page }) => {
   await openGame(page, 'traffic-cop', 5);
-  await expect(page.locator('#coach-text')).toContainText('press Start');
+  await expect(page.locator('#coach-text')).toContainText('Press Start');
   await realClick(page, page.locator('#coach-start'));
   await playTutorial(page, meta.walkthrough);
-  await expect(page.locator('#lesson')).toContainText(meta.tasks[0]);
+  // The task-clear debrief shows the lesson on the stage.
+  await expect(page.locator('#debrief')).toContainText(meta.tasks[0]);
 });
 
 test('keyboard only: Tab to Start, Enter through the tutorial', async ({ page }) => {

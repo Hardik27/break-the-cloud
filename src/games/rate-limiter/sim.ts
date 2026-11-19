@@ -173,31 +173,59 @@ export function task3Traffic(): Client[] {
 
 export interface LimitConfig { scope: 'global' | 'client'; rate: number; burst: number; freeRate?: number }
 
+export interface TraceEvent { t: number; cid: string; ok: boolean; why: 'bucket' | 'api' | null }
+export interface BucketTrace { rate: number; burst: number; samples: { t: number; v: number }[] }
+export interface SimTrace { events: TraceEvent[]; buckets: Map<string, BucketTrace>; keyOf: (c: Client) => string }
+
 /** Replays traffic through the limiter; requests over the API capacity per second fail too. */
 export function simulate(clients: Client[], cfg: LimitConfig): SimResult {
+  return run(clients, cfg).result;
+}
+/** Same as simulate, plus every request and every bucket level over time (for the replay). */
+export function simulateTrace(clients: Client[], cfg: LimitConfig): SimTrace & { result: SimResult } {
+  return run(clients, cfg);
+}
+
+function run(clients: Client[], cfg: LimitConfig): SimTrace & { result: SimResult } {
   const buckets = new Map<string, Bucket>();
+  const traces = new Map<string, BucketTrace>();
+  const keyOf = (c: Client) => (cfg.scope === 'global' ? 'all' : c.tenant);
   const bucketFor = (c: Client) => {
-    const key = cfg.scope === 'global' ? 'all' : c.tenant;
+    const key = keyOf(c);
     if (!buckets.has(key)) {
       const rate = cfg.scope === 'client' && c.tier === 'free' && cfg.freeRate !== undefined ? cfg.freeRate : cfg.rate;
-      buckets.set(key, new Bucket(rate, cfg.scope === 'global' ? Math.max(cfg.burst, cfg.rate) : cfg.burst));
+      const b = new Bucket(rate, cfg.scope === 'global' ? Math.max(cfg.burst, cfg.rate) : cfg.burst);
+      buckets.set(key, b);
+      traces.set(key, { rate: b.rate, burst: b.burst, samples: [{ t: 0, v: b.tokens }] });
     }
     return buckets.get(key)!;
   };
+  clients.forEach(bucketFor);
   const events = clients.flatMap((c) => c.times.map((t) => ({ t, c }))).sort((a, b) => a.t - b.t);
   const stats = new Map(clients.map((c) => [c.id, { id: c.id, name: c.name, kind: c.kind, sent: 0, ok: 0 }]));
   const loadPerSec = Array(Math.ceil(DURATION_MS / 1000)).fill(0);
+  const out: TraceEvent[] = [];
   let lastT = 0;
   for (const { t, c } of events) {
     for (const b of buckets.values()) b.refill(t - lastT);
     lastT = t;
     const st = stats.get(c.id)!;
     st.sent++;
-    if (!bucketFor(c).take()) continue;
+    const b = bucketFor(c);
+    const took = b.take();
+    traces.get(keyOf(c))!.samples.push({ t, v: b.tokens });
+    if (!took) {
+      out.push({ t, cid: c.id, ok: false, why: 'bucket' });
+      continue;
+    }
     const sec = Math.floor(t / 1000);
-    if (loadPerSec[sec] >= BUCKET_CAP) continue; // the API itself is full
+    if (loadPerSec[sec] >= BUCKET_CAP) {
+      out.push({ t, cid: c.id, ok: false, why: 'api' });
+      continue; // the API itself is full
+    }
     loadPerSec[sec]++;
     st.ok++;
+    out.push({ t, cid: c.id, ok: true, why: null });
   }
   const per = [...stats.values()];
   const legit = per.filter((p) => p.kind !== 'bot');
@@ -206,15 +234,36 @@ export function simulate(clients: Client[], cfg: LimitConfig): SimResult {
   const peakDemand = Math.max(...loadPerSec);
   const bot = per.find((p) => p.kind === 'bot');
   return {
-    perClient: per,
-    loadPerSec,
-    peak: peakDemand,
-    overloaded: peakDemand >= BUCKET_CAP,
-    legitOkPct: pct(legit),
-    paidOkPct: pct(paid),
-    botOkPerSec: bot ? bot.ok / (DURATION_MS / 1000) : 0,
+    events: out,
+    buckets: traces,
+    keyOf,
+    result: {
+      perClient: per,
+      loadPerSec,
+      peak: peakDemand,
+      overloaded: peakDemand >= BUCKET_CAP,
+      legitOkPct: pct(legit),
+      paidOkPct: pct(paid),
+      botOkPerSec: bot ? bot.ok / (DURATION_MS / 1000) : 0,
+    },
   };
 }
+
+/** Bucket level at time t (it refills continuously between requests). */
+export function tokensAt(b: BucketTrace, t: number): number {
+  let lo = 0, hi = b.samples.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (b.samples[mid].t <= t) lo = mid;
+    else hi = mid - 1;
+  }
+  const s = b.samples[lo];
+  return Math.min(b.burst, s.v + (b.rate * (t - s.t)) / 1000);
+}
+
+/** Task 2, step 1: only Ana’s page loads. */
+export const anaTraffic = (): Client[] => task2Traffic().filter((c) => c.id === 'user1');
+export const anaOk = (r: SimResult): boolean => r.legitOkPct >= 99;
 
 export const RATES = [1, 2, 5, 20] as const;
 export const BURSTS = [1, 3, 6, 20] as const;

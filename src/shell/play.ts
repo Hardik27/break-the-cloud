@@ -14,6 +14,7 @@ import { careerPoints, getBest, saveBest } from '../lib/storage';
 import { finishHeadline, GRADE_EMOJI, gradeWord } from './cheer';
 import { bindTopbar, fmtPts, footer, refreshRankChip, toast, topbar } from './chrome';
 import { createCoach } from './coach';
+import { createHints, createStageUi } from './stageui';
 
 const titleHtml = (t: string) => {
   const i = t.lastIndexOf(' ');
@@ -24,6 +25,8 @@ const legendHtml = (items: LegendItem[]) =>
   `<ul class="legend">${items.map((l) => `<li><span class="sw ${l.shape}" style="background:${l.color};--c:${l.color}"></span><span>${l.label}</span></li>`).join('')}</ul>`;
 
 const starsHtml = (n: number) => `<span class="stars big" aria-label="${n} of 3 stars">${[1, 2, 3].map((i) => `<span class="${i <= n ? 'on' : 'off'}" style="animation-delay:${i * 0.18}s">★</span>`).join('')}</span>`;
+
+const STUCK_MS = 20_000;
 
 export interface PlayHandle {
   unmount(): void;
@@ -43,19 +46,19 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
       <span class="hud-pts">points<b id="hud-points">0</b><em id="hud-combo" class="combo" hidden></em></span>
       <span>tasks<b id="hud-tasks">0/${nTasks}</b></span></div></div>
     <div class="bench">
-      <div class="stagecol" id="stagecol"><div id="coach-slot"></div><section class="card stage" id="stage" aria-label="${esc(meta.title)} game"></section>
+      <div class="stagecol" id="stagecol"><div id="coach-slot"></div><div id="teach-slot"></div><section class="card stage" id="stage" aria-label="${esc(meta.title)} game"></section>
         <div class="fx-layer" id="fx" aria-hidden="true"></div><div class="banner" id="banner" role="status" aria-live="polite"></div></div>
       <aside>
         <div class="card result" id="result" hidden></div>
         <div class="card brief" id="brief"><details id="brief-details" open><summary class="eyebrow" style="cursor:pointer;margin:0 0 8px">Brief</summary>
-          <h2>${esc(meta.concept)}</h2><p>${meta.intro}</p>
+          ${meta.pager ? `<p class="pager">📟 ${meta.pager}</p>` : ''}<h2>${esc(meta.concept)}</h2><p>${meta.intro}</p>
           <p class="eyebrow">On screen</p>${legendHtml(meta.legend)}
           <p class="eyebrow">How to play</p><ul>${meta.howTo.map((x) => `<li>${x}</li>`).join('')}</ul>
           <p class="eyebrow">How you score</p><p class="small" style="margin:0 0 12px">Each task: 200 for clearing it, up to 300 for speed, 100 if flawless, plus combo points for good moves in a row. Each mistake costs ${MISTAKE_POINTS}. Clean, fast runs earn ★★★.</p></details>
-          <div class="row" id="start-row"><button class="btn go" id="start-btn" type="button">Start</button><span class="small">A short tutorial comes first. The clock starts after it.</span></div>
+          <div class="row" id="start-row"><button class="btn go" id="start-btn" type="button">Start</button><span class="small">A short explainer and a guided tutorial come first. The clock starts after them.</span></div>
         </div>
         <div class="card" id="side"></div>
-        <div class="card" id="lesson-card" hidden aria-live="polite"><p class="eyebrow" id="lesson-title">Lesson</p><div class="lesson" id="lesson"></div></div>
+        <div class="card hints" id="hints" hidden></div>
         <div class="card"><p class="eyebrow">Tasks</p><ol class="tasks" id="tasks"></ol></div>
         <div class="card" id="board"><div class="boardhead"><p class="eyebrow" style="margin:0">Leaderboard</p>
           <div class="tabs" role="tablist"><button class="chip" type="button" role="tab" data-range="all" aria-selected="true">All time</button><button class="chip" type="button" role="tab" data-range="week" aria-selected="false">This week</button></div></div>
@@ -90,7 +93,26 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
     for (let i = 0; i < nTasks; i++) if (!run.done.has(i)) return i;
     return nTasks - 1;
   };
-  const clock = () => (run.t0 === null ? 0 : performance.now() - run.t0);
+  const clk = { depth: 0, pausedAt: null as number | null, pausedTotal: 0 };
+  const clock = () => (run.t0 === null ? 0 : (clk.pausedAt ?? performance.now()) - run.t0);
+  /** The clock counts decision time only: explainers, predictions, replays and debriefs pause it. */
+  function pauseClock() {
+    if (clk.depth++ === 0 && run.t0 !== null && !run.finished) clk.pausedAt = performance.now();
+    app.querySelector('#hud-time-wrap')?.classList.add('held');
+  }
+  function resumeClock() {
+    if (clk.depth === 0) return;
+    if (--clk.depth === 0) {
+      if (clk.pausedAt !== null && run.t0 !== null) {
+        const d = performance.now() - clk.pausedAt;
+        run.t0 += d;
+        clk.pausedTotal += d;
+      }
+      clk.pausedAt = null;
+      app.querySelector('#hud-time-wrap')?.classList.remove('held');
+    }
+  }
+  let lastActivity = performance.now();
 
   // ---------- backend ----------
   let runId: Promise<string | null> = Promise.resolve(null);
@@ -145,12 +167,17 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
     if (running()) {
       run.elapsed = clock();
       $('hud-time').textContent = fmtTime(run.elapsed);
-    }
+      if (clk.depth === 0 && performance.now() - lastActivity > STUCK_MS) {
+        lastActivity = performance.now();
+        hints.nudge();
+      }
+    } else lastActivity = performance.now();
   }, 100);
 
   function startClock() {
     if (run.t0 === null && !run.finished) {
       run.t0 = performance.now();
+      if (clk.depth > 0) clk.pausedAt = run.t0;
       $('hud-time-wrap').classList.remove('paused');
       runId = backendReady.then((b) => withTimeout(b.startRun(meta.id), 6000, null));
     }
@@ -173,27 +200,27 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
     while (layer.childElementCount > 12) layer.firstElementChild?.remove();
   }
 
-  let bannerT = 0;
-  function banner(title: string, pts: string, detail: string, kind: 'task' | 'tutorial' = 'task') {
-    const b = $('banner');
-    b.innerHTML = `<div class="banner-in ${kind}"><p class="eyebrow">${kind === 'tutorial' ? 'Tutorial done' : 'Task clear'}</p><div class="banner-title">${esc(title)}</div><div class="banner-pts">${pts}</div><p class="small">${detail}</p></div>`;
-    b.classList.add('show');
-    clearTimeout(bannerT);
-    bannerT = window.setTimeout(() => b.classList.remove('show'), 2200);
-  }
-
   function shake() {
     stage.classList.remove('shake');
     void stage.offsetWidth;
     stage.classList.add('shake');
   }
 
-  function showLesson(i: number) {
-    const card = $('lesson-card');
-    card.hidden = false;
-    $('lesson-title').textContent = `Lesson · task ${i + 1} done`;
-    $('lesson').innerHTML = `<p><b>${esc(meta.tasks[i])}</b></p><p>${meta.lessons[i]}</p>`;
-  }
+  // ---------- teaching layer ----------
+  const ui = createStageUi({ slot: $('teach-slot'), stage, pause: pauseClock, resume: resumeClock });
+  const hints = createHints({
+    card: $('hints'),
+    toast,
+    charge(n) {
+      if (!n || !running()) return;
+      const i = curTask();
+      sc.mistakes[i] += n;
+      sc.combo = 0;
+      popup(`−${n * MISTAKE_POINTS} hint`, 'bad', $('hints'));
+      renderPoints();
+    },
+  });
+  let hintsUsed = 0;
 
   // ---------- finish ----------
   function finish() {
@@ -229,6 +256,7 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
         <tr><td>Combos</td><td>+${fmtPts(sum('combo'))}</td></tr>
         <tr><td>Mistakes</td><td>−${fmtPts(sum('penalty'))}</td></tr>
       </tbody></table>
+      ${ui.stats.predictions ? `<p class="small">🔮 Predictions called: <b>${ui.stats.called}/${ui.stats.predictions}</b>${hintsUsed ? ` · hints used: ${hintsUsed}` : ''}</p>` : hintsUsed ? `<p class="small">Hints used: ${hintsUsed}</p>` : ''}
       <p class="small">Best moment: <b>${esc(meta.tasks[bestI])}</b> in ${(inputs[bestI].ms / 1000).toFixed(1)} s (par ${(meta.parMs[bestI] / 1000).toFixed(0)} s).</p>
       <p class="small">${rank.title !== rankBefore ? `<b class="pb">Promoted to ${rank.title}!</b> ` : `Rank: <b>${rank.title}</b>. `}${rank.next ? `${fmtPts(rank.next.min - careerAfter)} pts to ${rank.next.title}.` : ''}</p>
       <div class="row" style="margin-top:10px"><button class="btn go" id="share-btn" type="button">Share score</button><button class="btn" id="again" type="button">Play again</button>
@@ -274,7 +302,7 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
     }
     status()!.textContent = 'Posting your score…';
     const r = await withTimeout(
-      b.finishRun(id, { taskMs, mistakes: sc.mistakes, comboPoints: sc.comboPts.map((x) => Math.min(COMBO_CAP_PER_TASK, Math.round(x))), penaltyMs: Math.round(sc.penaltyMs), moves: run.moves }),
+      b.finishRun(id, { taskMs, mistakes: sc.mistakes, comboPoints: sc.comboPts.map((x) => Math.min(COMBO_CAP_PER_TASK, Math.round(x))), penaltyMs: Math.round(sc.penaltyMs), pausedMs: Math.round(clk.pausedTotal), moves: run.moves }),
       8000,
       { ok: false, reason: 'the leaderboard did not answer in time' },
     );
@@ -385,30 +413,61 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
   const api: GameApi = {
     start: startClock,
     move(n = 1) {
+      lastActivity = performance.now();
       if (!running()) return;
       run.moves += n;
     },
     task(i) {
       if (run.finished || run.done.has(i) || i < 0 || i >= nTasks) return;
       run.done.add(i);
+      lastActivity = performance.now();
+      hintsUsed += hints.used;
+      hints.set(null);
+      let title: string, pts: string, detail: string;
       if (i === 0) {
         sc.tutorialPts = TUTORIAL_POINTS;
         startClock();
-        banner('Ready for real', `+${TUTORIAL_POINTS}`, 'The clock is running. Go!', 'tutorial');
+        title = 'Ready for real';
+        pts = `+${TUTORIAL_POINTS}`;
+        detail = 'The clock starts when you press Next. It pauses for explainers and replays.';
       } else {
         sc.taskMs[i] = Math.round(clock());
         const ms = sc.taskMs[i] - sc.taskMs[i - 1];
         const s = scoreTask({ ms, mistakes: sc.mistakes[i], comboPoints: sc.comboPts[i] }, meta.parMs[i]);
         sc.scores[i] = s;
-        const parts = [`${(ms / 1000).toFixed(1)} s`, s.speed ? `speed +${s.speed}` : '', s.flawless ? `flawless +${s.flawless}` : '', s.combo ? `combo +${s.combo}` : '', s.penalty ? `mistakes −${s.penalty}` : ''].filter(Boolean);
-        banner(`${gradeWord(s.grade, seed + i)} Grade ${s.grade}`, `+${fmtPts(s.total)}`, parts.join(' · '));
+        title = `${gradeWord(s.grade, seed + i)} Grade ${s.grade}`;
+        pts = `+${fmtPts(s.total)}`;
+        detail = [`${(ms / 1000).toFixed(1)} s`, s.speed ? `speed +${s.speed}` : '', s.flawless ? `flawless +${s.flawless}` : '', s.combo ? `combo +${s.combo}` : '', s.penalty ? `mistakes −${s.penalty}` : ''].filter(Boolean).join(' · ');
       }
       sfx.task();
       renderTasks();
       renderPoints();
-      showLesson(i);
-      if (run.done.size >= nTasks) finish();
+      const last = run.done.size >= nTasks;
+      const nextI = i + 1;
+      ui.debrief({
+        kicker: i === 0 ? 'Tutorial done' : `Task ${i + 1} of ${nTasks} clear`,
+        title,
+        pts,
+        detail,
+        lesson: `<p><b>${esc(meta.tasks[i])}</b></p><p>${meta.lessons[i]}</p>`,
+        next: last ? 'See your results →' : `Next: ${esc(meta.tasks[nextI])} →`,
+      });
+      coach.shellSay(last ? 'All tasks done! Press <b>See your results</b>.' : 'Task clear! Read what just happened, then press <b>Next</b>.', 'act');
+      if (last) ui.whenClear(() => finish());
     },
+    ready(t, go) {
+      ui.whenClear(() => {
+        ui.closeReplay();
+        void ui.learn(meta.learn?.[t], t === 0 ? 'Before you play' : `Before task ${t + 1}`).then(() => {
+          if (!alive) return;
+          hints.set(meta.hints?.[t]);
+          lastActivity = performance.now();
+          go();
+        });
+      });
+    },
+    predict: (q) => ui.predict(q),
+    playback: (pb) => ui.playback(pb),
     penalty(ms) {
       if (running()) {
         run.t0! -= ms;
@@ -416,6 +475,7 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
       }
     },
     hit(label, at) {
+      lastActivity = performance.now();
       if (run.finished) return;
       if (!running()) {
         popup(label ?? 'Nice!', 'good', at);
@@ -432,6 +492,7 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
       renderPoints();
     },
     mistake(label, at) {
+      lastActivity = performance.now();
       if (run.finished) return;
       if (!running()) {
         popup(label ?? 'Oops', 'bad', at);
@@ -465,7 +526,7 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
   coachStart.id = 'coach-start';
   coachStart.textContent = 'Start';
   coach.actions.prepend(coachStart);
-  coach.shellSay('Read the brief, then press <b>Start</b>.', 'act');
+  coach.shellSay('Press <b>Start</b>. A one-minute explainer comes first, then a guided tutorial.', 'act');
 
   function begin() {
     if (run.begun) return;
@@ -475,8 +536,12 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
     coachStart.remove();
     ($('brief-details') as HTMLDetailsElement).open = false;
     renderTasks();
-    coach.shellSay('Get ready…', 'watch');
-    beginCbs.forEach((cb) => cb());
+    coach.shellSay('Read the explainer below. Click through it at your own pace.', 'watch');
+    void ui.learn(meta.learn?.[0], 'Before you play').then(() => {
+      if (!alive) return;
+      coach.shellSay('Get ready…', 'watch');
+      beginCbs.forEach((cb) => cb());
+    });
   }
   $('start-btn').addEventListener('click', begin);
   coachStart.addEventListener('click', begin);
@@ -487,7 +552,6 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
     unmount() {
       alive = false;
       clearInterval(timer);
-      clearTimeout(bannerT);
       cancelAnimationFrame(ptsRaf);
       coach.destroy();
       unmountGame();

@@ -2,11 +2,10 @@ import { expect, test, type Page } from '@playwright/test';
 import { meta } from '../../src/games/blast-radius/meta';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
 } from './helpers';
 
 const T = meta.tasks.length;
-const waitTask = (page: Page, n: number) => expect(page.locator('#side .eyebrow')).toHaveText(`Task ${n} of ${T}`, { timeout: 10_000 });
 const placeIn = (page: Page, c: string, az: string) => realClick(page, page.locator(`[data-place="${c}-${az}"]`));
 
 test('solver completes every task with real mouse clicks, no console errors', async ({ page }) => {

@@ -3,7 +3,7 @@ import { meta } from '../../src/games/dns-detective/meta';
 import { DOMAINS } from '../../src/games/dns-detective/sim';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks, hudTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
 } from './helpers';
 
 const T = meta.tasks.length;
@@ -39,21 +39,21 @@ test('solver completes every task with real mouse clicks, no console errors', as
   await playTutorial(page, meta.walkthrough);
   await expectTasks(page, 1, T);
 
-  await expect(page.locator('#side .eyebrow')).toHaveText(`Task 2 of ${T}`);
+  await waitTask(page, 2);
   // A wrong hop is a mistake with an explanation.
   await realClick(page, node(page, 'root'));
   await expect(page.locator('#toast')).toContainText('resolver');
   await expect(page.locator('.pop.bad')).toBeVisible();
   await solveLookups(page, `2/${T}`, false);
 
-  await expect(page.locator('#side .eyebrow')).toHaveText(`Task 3 of ${T}`, { timeout: 10_000 });
+  await waitTask(page, 3);
   await solveLookups(page, `3/${T}`, true);
 
-  await expect(page.locator('#side .eyebrow')).toHaveText(`Task 4 of ${T}`, { timeout: 10_000 });
+  await waitTask(page, 4);
   await expect(page.locator('#dns-notice')).toBeVisible();
   await solveLookups(page, `4/${T}`, true);
 
-  await expect(page.locator('#side .eyebrow')).toHaveText(`Task 5 of ${T}`, { timeout: 10_000 });
+  await waitTask(page, 5);
   // Too short a TTL fails, then the right answers for each scenario.
   await realClick(page, page.locator('[data-ttl="60"]'));
   await realClick(page, page.locator('#dns-run'));

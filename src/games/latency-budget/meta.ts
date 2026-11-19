@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="12"';
 const diagram = `<svg viewBox="0 0 520 210" role="img" aria-label="Without a CDN, a user in Sydney makes three long round trips to Virginia. With a CDN, the same three round trips go to a nearby edge, and only cache misses travel to the origin.">
@@ -36,13 +37,13 @@ export const meta: GameMeta = {
   tasks: [
     'Tutorial: measure a user, move the server',
     'Place one server for the whole world',
-    'Get every city under 150 ms with CDN edges',
+    'Three CDN edges: cover the most people',
     'Sort requests: edge or origin?',
   ],
   lessons: [
     'Distance is time. Light in fibre covers about 200 km per millisecond, and a page needs about 3 round trips, so a user 10,000 km away waits well over 300 ms before anything appears. No faster server fixes the speed of light.',
     'With one server, someone is always far away. Ireland reached the most people because it sits between North America, Europe and Africa. Many companies start with one region in the US or Europe, and it is never enough for a global product.',
-    'A <b>CDN</b> (content delivery network) keeps copies of static files on edge servers in hundreds of cities. Users fetch from the nearest edge, so their round trips are short. Cloudflare, Akamai and Amazon CloudFront all work this way. Notice Lagos: no cloud region was close, but a CDN edge was.',
+    'A <b>CDN</b> (content delivery network) keeps copies of static files on edge servers in hundreds of cities. Users fetch from the nearest edge, so their round trips are short. Cloudflare, Akamai and Amazon CloudFront all work this way. With a budget you place edges where the <b>users</b> are, and you move them when your users move: that is exactly how CDN capacity is planned.',
     'Edges only help with content that is the same for everyone, or safe to reuse for a while. Personalised, private, live and write requests still travel to the origin. Teams speed those up with regional servers and database replicas, which raises the next problem: keeping copies in sync.',
   ],
   walkthrough: [
@@ -52,6 +53,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['latency-budget'].minTimeMs,
   parMs: RULES['latency-budget'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'Latency has a floor set by physics: about 5 ms per 1,000 km of fibre, each way, plus routing detours. Bandwidth keeps improving; that floor does not. For most web pages, the number of round trips matters more than the size of the files.',

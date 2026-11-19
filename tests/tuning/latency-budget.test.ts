@@ -29,21 +29,15 @@ describe('Latency Budget difficulty', () => {
     expect(med).toBeGreaterThanOrEqual(10);
     expect(med).toBeLessThanOrEqual(40);
   });
-  it('task 3: edges (one per slow city) vs. edges in the biggest regions only', () => {
-    const correct = ['sa-east', 'eu-west', 'af-west', 'ap-south', 'ap-southeast', 'ap-northeast', 'ap-sydney'];
-    const ms = READ + correct.length * 2200;
-    // Wrong: "put edges in the big cloud regions" (Oregon, Frankfurt, Ireland, Tokyo, Singapore, Sydney, Mumbai).
-    const wrong = ['us-west', 'eu-central', 'eu-west', 'ap-northeast', 'ap-southeast', 'ap-sydney', 'ap-south'];
-    let wasted = 0;
-    const placed: string[] = [];
-    for (const id of wrong) {
-      if (!lb.edgeGains(placed, id).length) wasted++;
-      placed.push(id);
-    }
-    report('latency-budget', 'task 3 (wrong: big regions only)', ms / 1000, 1, wasted >= 1 && !lb.allFast(placed) ? 1 : 0);
+  it('task 3: three edges in two rounds vs. one edge per continent', () => {
+    // Round 1: 3 placements; round 2: remove one, place one. Plus reading the map.
+    const ms = READ * 2 + 5 * 2600;
+    const r = lb.EDGE_ROUNDS[0];
+    const continents = ['sa-east', 'af-west', 'ap-sydney'];
+    report('latency-budget', 'task 3 (wrong: one edge per continent)', ms / 1000, 1, lb.edgeRoundOk(continents, r) ? 0 : 1);
     expect(ms / 1000).toBeGreaterThanOrEqual(10);
-    expect(wasted).toBeGreaterThanOrEqual(1);
-    expect(lb.allFast(placed)).toBe(false);
+    expect(ms / 1000).toBeLessThanOrEqual(40);
+    expect(lb.edgeRoundOk(continents, r)).toBe(false);
   });
   it('task 4: sorting 8 requests', () => {
     const ms = 3000 + lb.REQUESTS.length * 2000;

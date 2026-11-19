@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { meta } from '../../src/games/replica-diff/meta';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
 } from './helpers';
 
 const T = meta.tasks.length;
@@ -26,6 +26,7 @@ test('solver completes every task with real mouse clicks, no console errors', as
   await realClick(page, page.locator('#start-btn'));
   await playTutorial(page, meta.walkthrough);
   await expectTasks(page, 1, T);
+  await waitTask(page, 2);
 
   for (let round = 1; round < T; round++) {
     await expect(page.locator('#rd-round')).toHaveText(`${round + 1}/${T}`);
@@ -42,7 +43,7 @@ test('solver completes every task with real mouse clicks, no console errors', as
     }
     for (const i of diffs) await realClick(page, page.locator(`[data-row="src-${i}"]`), { offsetX: 40 });
     await expectTasks(page, round + 1, T);
-    if (round < T - 1) await realClick(page, page.locator('#rd-next'));
+    if (round < T - 1) await waitTask(page, round + 2);
   }
   await expectFinished(page, T);
   await expectNoHorizontalScroll(page);
@@ -53,6 +54,7 @@ test('coach bar text changes for each tutorial step', async ({ page }) => {
   await openGame(page, 'replica-diff', 3);
   await realClick(page, page.locator('#coach-start'));
   await playTutorial(page, meta.walkthrough);
+  await waitTask(page, 2);
   await expect(page.locator('#coach-text')).toContainText('etag');
 });
 
@@ -61,6 +63,7 @@ test('a stuck student gets the right column highlighted', async ({ page }) => {
   await realClick(page, page.locator('#start-btn'));
   await realClick(page, page.locator('.coach-skip'));
   await expectTasks(page, 1, T);
+  await waitTask(page, 2);
   await expect(page.locator('.hintcol').first()).toBeVisible({ timeout: 16_000 });
   await expect(page.locator('#coach-text')).toContainText('etag');
 });

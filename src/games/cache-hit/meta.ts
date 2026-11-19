@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="12"';
 const diagram = `<svg viewBox="0 0 520 200" role="img" aria-label="Cache-aside: the app asks the cache first. On a hit it answers in 2 ms. On a miss it reads the database in 300 ms and stores the answer in the cache. On a write it updates the database and deletes the cached copy.">
@@ -23,7 +24,7 @@ export const meta: GameMeta = {
     { color: 'var(--ok)', shape: 'square', label: 'Hit: answered from the cache in 2 ms' },
     { color: 'var(--bad)', shape: 'square', label: 'Miss: went to the database, 300 ms' },
     { color: 'var(--ink)', shape: 'square', label: 'A cache slot (4 of them)' },
-    { color: 'var(--vote)', shape: 'line', label: '“Seen” count: how often each page was asked for' },
+    { color: 'var(--vote)', shape: 'line', label: 'Bars: how often each page was asked for' },
   ],
   howTo: [
     'A short tutorial shows you how to store a page in the cache. The clock starts after it.',
@@ -33,12 +34,12 @@ export const meta: GameMeta = {
   tasks: [
     'Tutorial: put two pages in the cache',
     'Be the cache: reach a 70% hit rate',
-    'Pick LRU or LFU for two traffic patterns',
+    'Pick LRU or LFU for two traffic stories',
     'Never show a stale price',
   ],
   lessons: [
     'This is <b>cache-aside</b>: the app checks the cache, and on a miss reads the database and stores the answer. It is how most apps use Redis or Memcached.',
-    'You kept the popular pages and threw out the rare ones. A few keys get most of the traffic on real sites, so a small cache can serve most requests. Your hit rate turns 300 ms reads into 2 ms reads.',
+    'You just invented an <b>eviction policy</b>: a rule for what to throw out. If you threw out the page used <i>longest ago</i>, that rule is called <b>LRU</b>; if you threw out the page used <i>fewest times</i>, it is <b>LFU</b>. On real sites a few pages get most of the traffic, so a small cache with a good rule turns most 300 ms reads into 2 ms reads.',
     '<b>LRU</b> (least recently used) evicts what was used longest ago: great when popularity shifts, but a one-off scan flushes everything. <b>LFU</b> (least frequently used) evicts what is used least: great against scans, but yesterday’s favourites hang around. Redis offers both (allkeys-lru, allkeys-lfu).',
     'A cache cannot know the database changed. The standard fix is to <b>delete the cached key when you write</b>, so the next read fetches the fresh value. Facebook’s memcache paper describes exactly this, plus the races that make it tricky at scale.',
   ],
@@ -48,6 +49,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['cache-hit'].minTimeMs,
   parMs: RULES['cache-hit'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'A cache works because access is skewed: on most sites a few percent of items get most of the reads. The <b>hit rate</b> decides everything: at 90% hits, average latency is 0.9 × 2 + 0.1 × 300 = 32 ms; at 50% it is 151 ms.',

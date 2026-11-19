@@ -11,9 +11,9 @@ type Phase = 'pre' | 'tutorial' | 'play' | 'between' | 'done';
 
 const INFO = [
   { h: 'Tutorial: distance is time', p: 'Follow the highlighted steps. The clock starts after the tutorial.' },
-  { h: 'One server for the world', p: `You can afford one server. Move it (click a data center) until at least <b>${sim.ONE_SERVER_GOAL_PEOPLE} of ${sim.TOTAL_PEOPLE}</b> people load the page in under <b>${sim.ONE_SERVER_GOAL_MS} ms</b>. The number next to each city is how many people (in millions) live there.` },
-  { h: 'CDN edges', p: `The origin stays in Virginia. Add CDN edges (click a data center) so static pages load in under <b>${sim.EDGE_GOAL_MS} ms</b> in every city. Budget: <b>${sim.EDGE_BUDGET} edges</b>. Click an edge again to remove it.` },
-  { h: 'What can an edge keep?', p: 'Edges are fast, but they can only answer with a stored copy. For each request, decide: can an edge serve it, or must it go to the origin?' },
+  { h: 'One server for the world', p: `<b>Goal:</b> at least ${sim.ONE_SERVER_GOAL_PEOPLE}M of ${sim.TOTAL_PEOPLE}M people load the page in under ${sim.ONE_SERVER_GOAL_MS} ms.<br><b>Your tools:</b> click a data center to move your only server there. Click a city to see how its time adds up.` },
+  { h: 'Three CDN edges', p: `<b>Goal:</b> as many people as possible load static pages in under ${sim.EDGE_GOAL_MS} ms. Two rounds.<br><b>Your tools:</b> click a data center to put an edge there (the ring shows its ${sim.EDGE_GOAL_MS} ms reach), click it again to remove it. Budget: ${sim.EDGE_BUDGET} edges. The origin stays in Virginia.` },
+  { h: 'What can an edge keep?', p: '<b>Goal:</b> sort every request.<br><b>Your tools:</b> for each one, choose “Edge can serve it” or “Must go to origin”.' },
 ];
 
 // Map: equirectangular, lon -180..180 → x 0..720, lat 70..-50 → y 0..360.
@@ -37,6 +37,8 @@ export const game: Game = {
     let origin = 'us-east';
     let edges: string[] = [];
     let bestPeople = 0;
+    let er = 0;
+    const round = () => sim.EDGE_ROUNDS[Math.min(er, sim.EDGE_ROUNDS.length - 1)];
     const answered = new Set<number>();
     let betweenT = 0;
 
@@ -49,6 +51,9 @@ export const game: Game = {
     LAND.forEach((poly) => svgEl('polygon', { points: poly.map(([lo, la]) => `${X(lo)},${Y(la)}`).join(' '), fill: 'var(--grid)', stroke: 'var(--line)', 'stroke-width': 1.2 }, svg));
     const gLines = svgEl('g', {}, svg);
     const lines = sim.USERS.map(() => svgEl('line', { stroke: 'var(--muted)', 'stroke-width': 1.2, 'stroke-dasharray': '3 4' }, gLines));
+    const gRings = svgEl('g', {}, svg);
+    const DEG = sim.EDGE_REACH_KM / 111;
+    const rings = sim.SITES.map((s) => svgEl('ellipse', { cx: X(s.lon), cy: Y(s.lat), rx: (2 * DEG) / Math.cos((s.lat * Math.PI) / 180), ry: 3 * DEG, fill: 'var(--accent)', 'fill-opacity': 0.12, stroke: 'var(--accent)', 'stroke-width': 1.5, 'stroke-dasharray': '4 3', class: 'lb-ring', visibility: 'hidden' }, gRings));
     const siteMarks = sim.SITES.map((s) => svgEl('rect', { x: X(s.lon) - 5, y: Y(s.lat) - 5, width: 10, height: 10, rx: 2, fill: 'var(--panel)', stroke: 'var(--muted)', 'stroke-width': 1.5 }, svg));
     const userMarks = sim.USERS.map((u) => {
       const c = svgEl('circle', { cx: X(u.lon), cy: Y(u.lat), r: 9, fill: 'var(--ok)', stroke: 'var(--panel)', 'stroke-width': 2 }, svg);
@@ -104,8 +109,9 @@ export const game: Game = {
         s1.innerHTML = `server <b>${sim.site(origin).name}</b>`;
         s2.innerHTML = `under ${g} ms <b>${fp} / ${sim.TOTAL_PEOPLE}M people</b>`;
       } else if (task === 2) {
-        s1.innerHTML = `edges <b>${edges.length} / ${sim.EDGE_BUDGET}</b>`;
-        s2.innerHTML = `cities under ${g} ms <b>${sim.fastCities(edges).length} / ${sim.USERS.length}</b>`;
+        const r = round();
+        s1.innerHTML = `${r.title} · edges <b>${edges.length} / ${sim.EDGE_BUDGET}</b>`;
+        s2.innerHTML = `fast <b>${sim.coveredPeople(edges, r)}M</b> of ${sim.roundPeople(r)}M · goal ${r.goal}M`;
       } else {
         s1.innerHTML = `sorted <b>${answered.size} / ${sim.REQUESTS.length}</b>`;
         s2.innerHTML = '';
@@ -115,7 +121,7 @@ export const game: Game = {
         const fast = sv.ms < g;
         const m = userMarks[i];
         setAttr(m.c, 'fill', fast ? 'var(--ok)' : 'var(--bad)');
-        setText(m.t, `${sv.ms}`);
+        setText(m.t, task === 2 ? `${round().people[u.id]}M` : `${sv.ms}`);
         const sp = sim.site(sv.from);
         setAttr(lines[i], 'x1', X(u.lon));
         setAttr(lines[i], 'y1', Y(u.lat));
@@ -124,6 +130,7 @@ export const game: Game = {
         setAttr(lines[i], 'stroke', fast ? 'var(--ok)' : 'var(--muted)');
         const r = userRows[i];
         r.b.classList.toggle('fast', fast);
+        if (task === 2) setText(r.b.querySelector('.pp')!, `${round().people[u.id]}M`);
         r.bar.style.width = `${Math.min(100, (100 * sv.ms) / 900)}%`;
         r.ms.textContent = `${sv.ms} ms`;
         r.b.setAttribute('aria-label', `${u.name}, ${u.people} million people, ${sv.ms} ms from ${sim.site(sv.from).name}. Activate for details.`);
@@ -142,17 +149,21 @@ export const game: Game = {
         setAttr(siteMarks[i], 'x', X(s.lon) - (isOrigin || isEdge ? 7 : 5));
         setAttr(siteMarks[i], 'y', Y(s.lat) - (isOrigin || isEdge ? 7 : 5));
       });
+      sim.SITES.forEach((s, i) => setAttr(rings[i], 'visibility', task === 2 && edges.includes(s.id) ? 'visible' : 'hidden'));
       const prog = api.side.querySelector('#lb-prog');
-      if (prog) prog.textContent = task <= 1 ? `People under ${sim.ONE_SERVER_GOAL_MS} ms: ${sim.fastPeople(origin)}M / goal ${sim.ONE_SERVER_GOAL_PEOPLE}M` : task === 2 ? `Cities under ${sim.EDGE_GOAL_MS} ms: ${sim.fastCities(edges).length} / ${sim.USERS.length}` : `Sorted: ${answered.size} / ${sim.REQUESTS.length}`;
+      if (prog) prog.textContent = task <= 1 ? `People under ${sim.ONE_SERVER_GOAL_MS} ms: ${sim.fastPeople(origin)}M / goal ${sim.ONE_SERVER_GOAL_PEOPLE}M` : task === 2 ? `Round ${er + 1} of 2 · ${round().title}: ${sim.coveredPeople(edges, round())}M fast / goal ${round().goal}M` : `Sorted: ${answered.size} / ${sim.REQUESTS.length}`;
       if (phase === 'play') api.coach.say(...coachLine());
-      if (phase === 'between') api.coach.say('Task clear! Read the lesson; the next task starts in a moment.', 'watch');
+      if (phase === 'between') api.coach.say('Task clear! Read the lesson; press Next above.', 'watch');
     }
 
     function coachLine(): [string, 'act' | 'watch'] {
       if (task === 1) return [`Click a data center to move the only server. Goal: ${sim.ONE_SERVER_GOAL_PEOPLE}M people under ${sim.ONE_SERVER_GOAL_MS} ms (now ${sim.fastPeople(origin)}M).`, 'act'];
       if (task === 2) {
-        const slow = sim.USERS.filter((u) => sim.staticLoad(u, sim.EDGE_ORIGIN, edges).ms >= sim.EDGE_GOAL_MS).map((u) => u.name);
-        return [`Add an edge near a red city (${edges.length} of ${sim.EDGE_BUDGET} used). Still slow: <b>${slow.join(', ')}</b>.`, 'act'];
+        const r = round();
+        const need = r.goal - sim.coveredPeople(edges, r);
+        return edges.length < sim.EDGE_BUDGET
+          ? [`${r.title}: place an edge (${edges.length} of ${sim.EDGE_BUDGET} used). ${need}M more people to reach the goal.`, 'act']
+          : [`All ${sim.EDGE_BUDGET} edges used, ${need}M people short. <b>Move one</b>: click an edge to remove it, then place it somewhere better.`, 'act'];
       }
       if (task === 3) return ['For each request: can an edge serve a stored copy, or must it go to the origin?', 'act'];
       return ['', 'watch'];
@@ -169,6 +180,7 @@ export const game: Game = {
       phase = t === 0 ? 'tutorial' : 'play';
       origin = 'us-east';
       edges = [];
+      er = 0;
       bestPeople = sim.fastPeople(origin);
       renderSide();
       render();
@@ -178,12 +190,12 @@ export const game: Game = {
       if (task >= meta.tasks.length - 1) { phase = 'done'; render(); return; }
       phase = 'between';
       render();
-      betweenT = window.setTimeout(() => startTask(task + 1), 2400);
+      { const next = task + 1; api.ready(next, () => startTask(next)); }
     }
     function guard(): boolean {
       if (phase === 'pre') { api.toast('Press Start first. It is in the brief, and above the game.'); return true; }
       if (phase === 'done') { api.toast('All tasks done. Press Play again to start a new run.'); return true; }
-      if (phase === 'between') { api.toast('Task done. The next task starts in a moment.'); return true; }
+      if (phase === 'between') { api.toast('Task done. Press Next above to go on.'); return true; }
       return false;
     }
 
@@ -237,16 +249,24 @@ export const game: Game = {
         render();
         return;
       }
-      if (edges.length >= sim.EDGE_BUDGET) return api.toast(`The budget is ${sim.EDGE_BUDGET} edges. Remove one first (click it again).`);
+      if (edges.length >= sim.EDGE_BUDGET) return api.toast(`The budget is ${sim.EDGE_BUDGET} edges. Click one of yours to remove it first.`);
+      const r = round();
       const gains = sim.edgeGains(edges, id);
       edges = [...edges, id];
-      if (gains.length) api.hit(`+${gains.map((g) => sim.user(g).name).join(', ')}`, b);
+      const ppl = gains.reduce((a, g) => a + r.people[g], 0);
+      if (gains.length) api.hit(`+${ppl}M ${gains.map((g) => sim.user(g).name).join(', ')}`, b);
       else {
-        api.mistake('no city gained', b);
-        api.toast(`An edge in ${sim.site(id).name} gets no new city under ${sim.EDGE_GOAL_MS} ms. Click it again to free up the budget.`);
+        api.mistake('nobody new', b);
+        api.toast(`No city is within ${sim.EDGE_GOAL_MS} ms of ${sim.site(id).name} that isn’t fast already. Click it again to get the edge back.`);
       }
       render();
-      if (sim.allFast(edges)) taskDone();
+      if (sim.edgeRoundOk(edges, r)) {
+        if (er === 0) {
+          er = 1;
+          api.toast(`${sim.coveredPeople(edges, r)}M people are fast. Round 2: São Paulo just tripled to 30M users.`);
+          render();
+        } else taskDone();
+      }
     }
 
     function answer(i: number, edge: boolean) {
@@ -277,7 +297,7 @@ export const game: Game = {
         api.task(0);
         phase = 'between';
         render();
-        betweenT = window.setTimeout(() => startTask(1), 1800);
+        api.ready(1, () => startTask(1));
       });
     });
 

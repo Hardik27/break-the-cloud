@@ -3,11 +3,10 @@ import { meta } from '../../src/games/saga/meta';
 import { BOOK_TRIPS, FAIL_TRIPS } from '../../src/games/saga/sim';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
 } from './helpers';
 
 const T = meta.tasks.length;
-const waitTask = (page: Page, n: number) => expect(page.locator('#side .eyebrow')).toHaveText(`Task ${n} of ${T}`, { timeout: 10_000 });
 const doStep = (page: Page, i: number) => realClick(page, page.locator(`[data-do="${i}"]`));
 const undo = (page: Page, i: number) => realClick(page, page.locator(`[data-undo="${i}"]`));
 

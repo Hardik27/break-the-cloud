@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="11"';
 const ticks = (y: number, from: number, to: number, step: number, col: string) => {
@@ -52,6 +53,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['heartbeat'].minTimeMs,
   parMs: RULES['heartbeat'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'A <b>failure detector</b> turns silence into a decision. The simplest one is a fixed timeout: “no heartbeat for T seconds means dead”. Pick T from the longest normal silence you see in production (GC pauses, network blips), plus a margin, and accept that detection takes about T.',

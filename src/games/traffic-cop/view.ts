@@ -19,7 +19,6 @@ export const game: Game = {
   mount(stage: HTMLElement, api: GameApi) {
     const s = sim.create(mulberry32(api.seed));
     let phase: Phase = 'pre';
-    let nextStageAt = 0;
     let alive = true;
     let lastToast = 0;
     const toastSoon = (msg: string) => {
@@ -117,7 +116,7 @@ export const game: Game = {
     function onTutorialDone() {
       api.task(0);
       phase = 'between';
-      nextStageAt = s.now + 1800;
+      api.ready(1, () => startStage(1));
     }
 
     function startStage(n: number) {
@@ -134,7 +133,7 @@ export const game: Game = {
       const b = srvEls[i].b;
       if (phase === 'pre') return api.toast('Press Start first. It is in the brief, and above the game.');
       if (phase === 'done') return api.toast('All tasks done. Press Play again to start a new run.');
-      if (phase === 'between') return api.toast('Task done. The next task starts in a moment.');
+      if (phase === 'between') return api.toast('Task done. Press Next above to go on.');
       if (phase === 'tutorial') {
         const want = TUTORIAL_SERVER[api.coach.step ?? ''];
         if (want !== i) return api.toast(`Tutorial: click ${s.servers[want ?? 0].name}, the highlighted server.`);
@@ -179,7 +178,7 @@ export const game: Game = {
       if (phase === 'pre') return 'Press Start first.';
       if (phase === 'tutorial') return 'Finish the tutorial first: click the highlighted server (or Skip tutorial).';
       if (phase === 'done') return 'All tasks done. Press Play again to start a new run.';
-      if (phase === 'between') return 'The next task starts in a moment.';
+      if (phase === 'between') return 'Press Next above to go on.';
       if (s.stage === 1 && k !== 'manual') return 'Rush hour is by hand. Algorithms unlock in the next task.';
       if (s.stage === 2 && k === 'least') return 'Least loaded unlocks in the boss wave. Use round robin here.';
       if (s.stage === 3) return 'This task keeps round robin on. Beat it by clicking a server when a heavy request waits.';
@@ -217,7 +216,8 @@ export const game: Game = {
           if (e.stage >= sim.LAST_STAGE) phase = 'done';
           else {
             phase = 'between';
-            nextStageAt = s.now + 2600;
+            const next = e.stage + 1;
+            api.ready(next, () => startStage(next));
           }
         }
       }
@@ -225,7 +225,7 @@ export const game: Game = {
 
     // ---------- coach ----------
     function coachLine(): [string, 'act' | 'watch'] {
-      if (phase === 'between') return ['Task clear! Read the lesson; the next task starts in a moment.', 'watch'];
+      if (phase === 'between') return ['Task clear! Read what just happened, then press <b>Next</b>.', 'watch'];
       const q = s.queue;
       const deadIn = s.servers.find((x) => !x.up && x.inRotation);
       const backOut = s.servers.find((x) => x.up && !x.inRotation);
@@ -338,7 +338,6 @@ export const game: Game = {
       last = t;
       if (phase === 'tutorial' || phase === 'play' || phase === 'between') {
         handle(sim.step(s, dt));
-        if (phase === 'between' && s.now >= nextStageAt) startStage(s.stage + 1);
       }
       draw();
       raf = requestAnimationFrame(frame);

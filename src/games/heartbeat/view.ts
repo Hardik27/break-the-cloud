@@ -11,9 +11,9 @@ const TICKS = 16;
 
 const INFO = [
   { h: 'Tutorial: evict and replace', p: 'Follow the highlighted steps. The clock starts after the tutorial.' },
-  { h: 'You are the failure detector', p: `Watch the heartbeat timelines. When a server <b>crashes</b>, evict it (click it). Some servers only <b>pause</b> for a moment and then carry on: evicting those is a mistake. Catch <b>${sim.CRASHES_TO_CATCH} crashes</b>. Put replacements back when they are ready.` },
-  { h: 'Too eager', p: 'An automatic detector now evicts any server that misses heartbeats. It is set to evict after 1 missed beat at 0.5 s: it keeps evicting healthy servers during GC pauses. Change the settings and press <b>Run 30 s</b> until there are <b>no false evictions</b>.' },
-  { h: 'Fast and safe', p: `Now it is too slow: it takes far too long to notice a real crash. Find settings that catch the crash within <b>${sim.DETECT_GOAL_MS / 1000} s</b>, still with <b>no false evictions</b>.` },
+  { h: 'You are the failure detector', p: `<b>Goal:</b> catch ${sim.CRASHES_TO_CATCH} crashes without evicting a healthy server.<br><b>Your tools:</b> click a server to evict it (users stop being sent there); click a ready replacement to add it back. Each row counts how long the server has been silent. In this cluster a pause never lasts longer than 2 s.` },
+  { h: 'An automatic detector', p: '<b>Goal:</b> a 30 s test with no false evictions.<br><b>Your tools:</b> how often servers send a heartbeat, and how many missed beats in a row mean “dead”. Together they set the <b>timeout</b>.' },
+  { h: 'Fast and safe', p: `<b>Goal:</b> catch the crash within ${sim.DETECT_GOAL_MS / 1000} s, still with no false evictions.<br><b>Your tools:</b> the same two settings.` },
 ];
 
 export const game: Game = {
@@ -83,7 +83,7 @@ export const game: Game = {
         const sil = sim.silence(s, i);
         const booting = !srv.inPool && srv.replaceAt !== null;
         const ready = !srv.inPool && srv.replaceAt === null && srv.state !== 'dead';
-        setText(r.st, booting ? 'replacement booting…' : sil < 900 ? `beat ${(sil / 1000).toFixed(1)} s ago` : `silent ${(sil / 1000).toFixed(1)} s`);
+        setText(r.st, booting ? 'replacement booting…' : !srv.inPool ? 'out of the pool' : sil < 900 ? `beat ${(sil / 1000).toFixed(1)} s ago` : `silent ${(sil / 1000).toFixed(1)} s of 2.5`);
         setText(r.pool, srv.inPool ? 'in pool' : booting ? 'evicted' : ready ? 'ready: click to add' : 'evicted');
         r.b.classList.toggle('warn', srv.inPool && sil >= 900 && sil < 2500);
         r.b.classList.toggle('alarm', srv.inPool && sil >= 2500);
@@ -110,7 +110,7 @@ export const game: Game = {
       }
       const prog = api.side.querySelector('#hb-prog');
       if (prog) prog.textContent = task === 1 ? `Crashes caught: ${s.evictedDead} / ${sim.CRASHES_TO_CATCH}` : task >= 2 ? 'Run the 30 s test when ready.' : '';
-      if (phase === 'between') api.coach.say('Task clear! Read the lesson; the next task starts in a moment.', 'watch');
+      if (phase === 'between') api.coach.say('Task clear! Read the lesson; press Next above.', 'watch');
       else if (phase === 'play') api.coach.say(...coachLine());
       frameRender();
     }
@@ -119,9 +119,10 @@ export const game: Game = {
       if (task === 1) {
         const ready = s.servers.find((x) => !x.inPool && x.replaceAt === null && x.state !== 'dead');
         if (ready) return [`${ready.name}’s replacement is ready. Click it to <b>add it back</b>.`, 'act'];
-        const quiet = s.servers.map((x, i) => ({ x, i, sil: sim.silence(s, i) })).filter((o) => o.x.inPool && o.sil > 1000).sort((a, b) => b.sil - a.sil)[0];
-        if (quiet) return [`<b>${quiet.x.name}</b> has been silent for ${(quiet.sil / 1000).toFixed(1)} s. Crashed, or just pausing? Evict it when you are sure.`, 'act'];
-        return ['Watch the timelines. Evict a server that stays silent, but not one that is only pausing.', 'watch'];
+        const quiet = s.servers.map((x, i) => ({ x, i, sil: sim.silence(s, i) })).filter((o) => o.x.inPool && o.sil > 900).sort((a, b) => b.sil - a.sil)[0];
+        if (quiet && quiet.sil >= 2500) return [`<b>${quiet.x.name}</b> has been silent for ${(quiet.sil / 1000).toFixed(1)} s: longer than any pause. Evict it.`, 'act'];
+        if (quiet) return [`<b>${quiet.x.name}</b> went quiet. A pause ends within 2 s. Wait: will it come back?`, 'watch'];
+        return ['Watch the timelines. A crashed server never beats again; a paused one comes back.', 'watch'];
       }
       if (task >= 2) return ['Pick a heartbeat interval and how many missed beats to allow, then press <b>Run 30 s</b>.', 'act'];
       return ['', 'watch'];
@@ -149,12 +150,12 @@ export const game: Game = {
       if (task >= meta.tasks.length - 1) { phase = 'done'; render(); return; }
       phase = 'between';
       render();
-      betweenT = window.setTimeout(() => startTask(task + 1), 2400);
+      { const next = task + 1; api.ready(next, () => startTask(next)); }
     }
     function guard(): boolean {
       if (phase === 'pre') { api.toast('Press Start first. It is in the brief, and above the game.'); return true; }
       if (phase === 'done') { api.toast('All tasks done. Press Play again to start a new run.'); return true; }
-      if (phase === 'between') { api.toast('Task done. The next task starts in a moment.'); return true; }
+      if (phase === 'between') { api.toast('Task done. Press Next above to go on.'); return true; }
       return false;
     }
 
@@ -175,7 +176,7 @@ export const game: Game = {
         if (phase === 'tutorial') api.coach.did('evict');
       } else if (r.kind === 'evicted-paused') {
         api.mistake('false eviction', b);
-        api.toast(`${srv.name} was only in a GC pause. It is healthy, but now out of the pool. Click it again to return it.`);
+        api.toast(`${srv.name} was only paused (silent ${(sim.silence(s, i) / 1000).toFixed(1)} s): its heartbeats came back. Pauses here last up to 2 s, so wait for 2.5 s of silence. Click it again to return it.`);
       } else if (r.kind === 'evicted-healthy') {
         api.mistake('it was healthy', b);
         api.toast(`${srv.name} was healthy and beating fine. Click it again to return it.`);
@@ -196,12 +197,42 @@ export const game: Game = {
       render();
     }
 
-    function runIt() {
+    let busy = false;
+    async function runIt() {
       if (guard()) return;
       if (task < 2) return api.toast('The automatic detector unlocks in the next task.');
+      if (busy) return api.toast('Watch this run first.');
       api.move();
+      busy = true;
       const r = sim.runDetector(cfg.interval, cfg.threshold);
+      const tSec = (cfg.interval * cfg.threshold) / 1000;
+      const outcome = r.falseEvictions.length ? 0 : r.detectMs !== null && r.detectMs <= sim.DETECT_GOAL_MS ? 1 : 2;
+      await api.predict({
+        q: `Your detector evicts a server after ${tSec} s of silence. In the test, web-2 pauses for 1.5 s, web-4 pauses for 2.4 s, and web-1 really crashes. What happens?`,
+        options: ['A paused (healthy) server gets evicted', 'Only web-1 is evicted, within 5 s', 'Only web-1 is evicted, but it takes over 5 s'],
+        answer: outcome,
+        why: outcome === 0 ? `A ${tSec} s timeout is shorter than a 2.4 s pause, so the detector can’t tell the pause from a crash.` : outcome === 1 ? `${tSec} s is longer than the longest pause (2.4 s) but short enough to catch the crash fast.` : `${tSec} s is safe against pauses, but users hit the dead server for that whole time.`,
+      });
       drawResult(r);
+      result.classList.add('playing');
+      const W = 600;
+      const marks = [...r.evictions.map((e) => ({ t: e.at, label: `${sim.NAMES[e.server]} evicted${e.false ? ' (it was only paused!)' : ''}`, bad: e.false })), { t: sim.SCENARIO.crash.at, label: 'web-1 crashes', bad: false }].sort((a, b) => a.t - b.t);
+      await api.playback({
+        title: '30 s test',
+        durationMs: sim.SCENARIO.end,
+        realMs: 9000,
+        marks,
+        frame: (t) => {
+          const x = 70 + (W * t) / sim.SCENARIO.end;
+          const veil = result.querySelector('#hb-veil');
+          const cur = result.querySelector('#hb-cursor');
+          if (veil) { veil.setAttribute('x', x.toFixed(1)); veil.setAttribute('width', Math.max(0, W + 70 - x).toFixed(1)); }
+          if (cur) { cur.setAttribute('x1', x.toFixed(1)); cur.setAttribute('x2', x.toFixed(1)); }
+        },
+      });
+      result.classList.remove('playing');
+      busy = false;
+      if (!alive) return;
       if (sim.detectorOk(task, r)) {
         api.hit(r.detectMs !== null ? `caught in ${r.detectMs / 1000} s` : 'clean', run);
         taskDone();
@@ -209,7 +240,7 @@ export const game: Game = {
       }
       if (r.falseEvictions.length) {
         api.mistake('false eviction', run);
-        api.toast(`${r.falseEvictions.map((i) => sim.NAMES[i]).join(' and ')} ${r.falseEvictions.length > 1 ? 'were' : 'was'} evicted during a GC pause. The timeout (${r.timeout / 1000} s) is shorter than a normal pause.`);
+        api.toast(`${r.falseEvictions.map((i) => sim.NAMES[i]).join(' and ')} ${r.falseEvictions.length > 1 ? 'were' : 'was'} evicted during a GC pause. The timeout (${r.timeout / 1000} s) is shorter than a pause.`);
       } else {
         api.mistake('too slow', run);
         api.toast(`No false evictions, but the crash took ${(r.detectMs ?? 0) / 1000} s to catch. Users saw errors all that time. Aim for ${sim.DETECT_GOAL_MS / 1000} s or less.`);
@@ -230,6 +261,7 @@ export const game: Game = {
         if (i === sim.SCENARIO.crash.server) svg += `<line x1="${70 + x(sim.SCENARIO.crash.at)}" y1="${y - 9}" x2="${70 + x(sim.SCENARIO.crash.at)}" y2="${y + 9}" stroke="var(--bad)" stroke-width="2"/>`;
         r.evictions.filter((e) => e.server === i).forEach((e) => (svg += `<text x="${70 + x(e.at)}" y="${y + 5}" text-anchor="middle" font-size="14" font-weight="700" fill="${e.false ? 'var(--bad)' : 'var(--ok)'}">✕</text>`));
       }
+      svg += `<rect id="hb-veil" x="70" y="0" width="${W}" height="${sim.N * rowH + 4}" fill="var(--panel)" opacity=".88"/><line id="hb-cursor" x1="70" x2="70" y1="0" y2="${sim.N * rowH + 4}" stroke="var(--accent)" stroke-width="2"/>`;
       svg += `<text x="70" y="${sim.N * rowH + 20}" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">0 s</text><text x="${W + 70}" y="${sim.N * rowH + 20}" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">30 s</text></svg>`;
       result.innerHTML = `${svg}<div class="mrow"><span>False evictions (healthy servers removed)</span><span class="${r.falseEvictions.length ? 'bad-pill' : 'ok-pill'}" id="hb-false">${r.falseEvictions.length}</span></div>
         <div class="mrow"><span>Time to catch the crash</span><span class="${r.detectMs !== null && (task === 2 || r.detectMs <= sim.DETECT_GOAL_MS) ? 'ok-pill' : 'bad-pill'}" id="hb-detect">${r.detectMs === null ? 'missed' : (r.detectMs / 1000).toFixed(1) + ' s'}</span></div>
@@ -267,7 +299,7 @@ export const game: Game = {
         api.task(0);
         phase = 'between';
         render();
-        betweenT = window.setTimeout(() => startTask(1), 1800);
+        api.ready(1, () => startTask(1));
       });
     });
 

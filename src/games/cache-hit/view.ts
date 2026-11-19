@@ -8,9 +8,9 @@ import * as sim from './sim';
 
 const INFO = [
   { h: 'Tutorial: fill the cache', p: 'Follow the highlighted steps. The clock starts after the tutorial.' },
-  { h: 'You are the cache', p: `Requests keep coming. Hits are served automatically. On a <b>miss</b>, click a slot to keep that page (evicting whatever is there), or press Skip. Reach a <b>${sim.HIT_GOAL * 100}% hit rate</b> over the last ${sim.WINDOW} requests. Watch the “seen” counts: they tell you which pages are popular.` },
-  { h: 'LRU or LFU?', p: 'Real caches evict automatically. <b>LRU</b> throws out the page used longest ago; <b>LFU</b> throws out the page used least often. Read each traffic pattern, pick the policy that keeps the most hits, and press <b>Run</b>.' },
-  { h: 'Stale prices', p: `The cache holds the price of shoes for an hour. Three times, an admin changes the price in the database. Each time, <b>invalidate</b> (delete) the cached price before a shopper reads the old one.` },
+  { h: 'You are the cache', p: `<b>Goal:</b> a ${sim.HIT_GOAL * 100}% hit rate over the last ${sim.WINDOW} requests.<br><b>Your tools:</b> on a miss, click a slot to keep the new page there (the page in it is thrown out), or Skip. Each slot shows how often its page was asked for and how long ago.` },
+  { h: 'Pick a rule', p: '<b>Goal:</b> for each traffic story, choose the eviction rule that keeps more hits.<br><b>Your tools:</b> click LRU or LFU. Then watch both caches handle the same requests side by side.' },
+  { h: 'Stale prices', p: `<b>Goal:</b> no shopper ever sees an old price.<br><b>Your tools:</b> the Invalidate button deletes the cached price, so the next read fetches it fresh from the database.` },
 ];
 
 export const game: Game = {
@@ -18,8 +18,6 @@ export const game: Game = {
     const rng = mulberry32(api.seed);
     let bh = sim.createByHand(0, rng);
     let st = sim.createStale(rng);
-    const chosen: (sim.Policy | null)[] = [null, null];
-    const solved = [false, false];
     let alive = true;
 
     // ---------- build once ----------
@@ -50,25 +48,31 @@ export const game: Game = {
     const cells = Array.from({ length: sim.WINDOW }, () => strip.appendChild(el('span')));
     p1.append(reqRow, el('div', { class: 'ch-cachebox' }), keyBars, strip);
     p1.querySelector('.ch-cachebox')!.append(el('p', { class: 'eyebrow', style: 'margin:0 0 6px' }, 'Cache (4 slots · 2 ms)'), slotsBox, db);
-    // task 2
+    // task 2: pick a rule, then a side-by-side replay of both caches
     const p2 = el('div', { class: 'ch-panel', hidden: true });
-    const patUi = sim.PATTERNS.map((pat, i) => {
-      const card = el('div', { class: 'ch-pat' }, `<h3>${pat.title}</h3><p class="small">${pat.text}</p>`);
-      const row = el('div', { class: 'row' });
-      const pol = (['lru', 'lfu'] as sim.Policy[]).map((p) => {
-        const b = el('button', { class: 'chip', type: 'button', 'data-pat': i, 'data-pol': p, 'aria-pressed': 'false' }, p.toUpperCase());
-        b.addEventListener('click', () => pick(i, p));
-        row.appendChild(b);
-        return b;
-      });
-      const run = el('button', { class: 'btn go', type: 'button', 'data-run': i }, 'Run');
-      run.addEventListener('click', () => runPat(i));
-      row.appendChild(run);
-      const out = el('p', { class: 'ch-out', 'data-out': i });
-      card.append(row, out);
-      p2.appendChild(card);
-      return { card, pol, run, out };
+    let pi = 0;
+    const solved = [false, false];
+    const patCard = el('div', { class: 'ch-pat', id: 'ch-pat' });
+    const polRow = el('div', { class: 'row' });
+    const polBtns = (['lru', 'lfu'] as sim.Policy[]).map((p) => {
+      const b = el('button', { class: 'btn ghost as-btn', type: 'button', 'data-pol': p }, p === 'lru' ? 'LRU: out goes the least <b>recently</b> used' : 'LFU: out goes the least <b>frequently</b> used');
+      onPress(b, () => pickRule(p));
+      polRow.appendChild(b);
+      return b;
     });
+    const duel = el('div', { class: 'ch-duel', id: 'ch-duel', hidden: true });
+    const ticker = el('div', { class: 'ch-ticker', id: 'ch-ticker' });
+    const lanes = (['lru', 'lfu'] as sim.Policy[]).map((p) => {
+      const lane = el('div', { class: 'ch-lane', 'data-lane': p }, `<b class="ch-lname">${p.toUpperCase()}</b>`);
+      const cellsL = Array.from({ length: sim.SLOTS }, () => lane.appendChild(el('span', { class: 'ch-mini' })));
+      const score = el('span', { class: 'ch-lscore' });
+      lane.appendChild(score);
+      duel.appendChild(lane);
+      return { p, lane, cells: cellsL, score };
+    });
+    duel.prepend(ticker);
+    const verdict = el('p', { class: 'ch-out', id: 'ch-verdict' });
+    p2.append(patCard, polRow, duel, verdict);
     // task 3
     const p3 = el('div', { class: 'ch-panel', hidden: true });
     const stCache = el('div', { class: 'ch-stbox' }, `<p class="eyebrow">Cache</p><div class="big" id="ch-cprice"></div>`);
@@ -86,6 +90,7 @@ export const game: Game = {
     // ---------- flow ----------
     const flow = makeFlow(api, meta, INFO, (t) => {
       if (t <= 1) bh = sim.createByHand(t, rng);
+      if (t === 2) { pi = 0; solved[0] = solved[1] = false; duel.hidden = true; verdict.innerHTML = ''; }
       if (t === 3) st = sim.createStale(rng);
     }, render);
 
@@ -103,13 +108,11 @@ export const game: Game = {
         drawByHand();
         flow.progress(`Hit rate: ${Math.round(hr * 100)}% over the last ${bh.window.length} / ${sim.WINDOW} requests (goal ${sim.HIT_GOAL * 100}%)`);
       } else if (t === 2) {
-        s1.innerHTML = `patterns solved <b>${solved.filter(Boolean).length}/2</b>`;
+        const pat = sim.PATTERNS[Math.min(pi, sim.PATTERNS.length - 1)];
+        patCard.innerHTML = `<p class="eyebrow" style="margin:0">Story ${Math.min(pi + 1, 2)} of 2</p><h3>${pat.title}</h3><p class="small">${pat.text}</p>`;
+        s1.innerHTML = `stories solved <b>${solved.filter(Boolean).length}/2</b>`;
         s2.innerHTML = '';
-        patUi.forEach((u, i) => {
-          u.pol.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.pol === chosen[i])));
-          u.card.classList.toggle('done', solved[i]);
-        });
-        flow.progress(`Patterns solved: ${solved.filter(Boolean).length} / 2`);
+        flow.progress(`Stories solved: ${solved.filter(Boolean).length} / 2`);
       } else {
         s1.innerHTML = `price changes <b>${st.updatesDone}/${sim.PRICE_UPDATES}</b>`;
         s2.innerHTML = `stale reads <b>${st.staleReads}</b>`;
@@ -119,12 +122,13 @@ export const game: Game = {
       if (!flow.coachBetween() && flow.phase === 'play') api.coach.say(...coachLine());
     }
 
+    const ago = (t: number | undefined) => (t === undefined ? '' : bh.now - t < 1000 ? 'just now' : `${Math.round((bh.now - t) / 1000)} s ago`);
     function drawByHand() {
       const maxSeen = Math.max(1, ...Object.values(bh.seen));
       slotBtns.forEach((b, i) => {
         const k = bh.slots[i];
         setText(b.querySelector('.k')!, k ?? 'empty');
-        setText(b.querySelector('.n')!, k ? `seen ${bh.seen[k]}×` : '');
+        setText(b.querySelector('.n')!, k ? `used ${bh.seen[k]}× · ${ago(bh.lastUse[k])}` : '');
         b.classList.toggle('empty', !k);
         b.classList.toggle('pick', !!bh.pending);
         b.classList.toggle('lit', !!bh.last?.hit && bh.last.key === k && !bh.pending);
@@ -159,7 +163,7 @@ export const game: Game = {
     function coachLine(): [string, 'act' | 'watch'] {
       const t = flow.task;
       if (t === 1) return bh.pending ? [`MISS: <b>${bh.pending}</b>. Click a slot to keep it (evicting the page there), or Skip. Keep the popular pages!`, 'act'] : ['Requests keep coming. Hits are served from the cache in 2 ms.', 'watch'];
-      if (t === 2) return ['For each traffic pattern, pick <b>LRU</b> or <b>LFU</b>, then press <b>Run</b>.', 'act'];
+      if (t === 2) return replaying ? ['Watch both caches handle the same requests. Which one keeps the hot pages?', 'watch'] : ['Read the story. Which rule keeps more hits: <b>LRU</b> or <b>LFU</b>?', 'act'];
       if (t === 3) return st.cached !== null && st.cached !== st.dbPrice ? ['The database changed but the cache still has the old price. <b>Invalidate it now!</b>', 'act'] : ['Shoppers are reading the shoe price. Watch for changes in the database.', 'watch'];
       return ['', 'watch'];
     }
@@ -195,35 +199,61 @@ export const game: Game = {
       render();
     }
 
-    function pick(i: number, p: sim.Policy) {
-      if (flow.guard()) return;
-      if (flow.task !== 2) return api.toast('Policies come in the next task.');
-      chosen[i] = p;
-      render();
+    let replaying = false;
+    function drawDuel(steps: Record<sim.Policy, sim.TraceStep[]>, from: number, upto: number) {
+      const k = from + upto;
+      const cur = steps.lru[k];
+      ticker.innerHTML = `request ${upto + 1}/${sim.REPLAY_LEN}: <b>${cur.key}</b>`;
+      lanes.forEach((l) => {
+        const st = steps[l.p][k];
+        l.cells.forEach((c, i) => {
+          setText(c, st.slots[i] ?? '·');
+          c.className = `ch-mini${st.slots[i] === cur.key ? (st.hit ? ' hit' : ' miss') : ''}`;
+        });
+        let hits = 0;
+        for (let j = from; j <= k; j++) if (steps[l.p][j].hit) hits++;
+        setText(l.score, `${hits}/${upto + 1} hits${st.victim ? ` · threw out ${st.victim}` : ''}`);
+        l.lane.classList.toggle('flash-miss', !st.hit);
+      });
     }
 
-    function runPat(i: number) {
+    async function pickRule(p: sim.Policy) {
       if (flow.guard()) return;
-      if (flow.task !== 2) return api.toast('Policies come in the next task.');
-      if (solved[i]) return api.toast('Already solved. Try the other pattern.');
-      const p = chosen[i];
-      if (!p) return api.toast('Pick LRU or LFU first.');
+      if (flow.task !== 2) return api.toast('Eviction rules come in the next task.');
+      if (replaying) return api.toast('Watch the replay first.');
       api.move();
-      const pat = sim.PATTERNS[i];
-      const rate = sim.policyRate(p, pat);
+      const pat = sim.PATTERNS[pi];
       const best = sim.bestPolicy(pat);
-      const u = patUi[i];
+      const from = sim.replayStart(pat);
+      const steps = { lru: sim.policySteps('lru', pat.trace), lfu: sim.policySteps('lfu', pat.trace) };
+      replaying = true;
+      duel.hidden = false;
+      verdict.innerHTML = `You picked <b>${p.toUpperCase()}</b>. Watch both…`;
+      render();
+      const stepMs = 250;
+      await api.playback({
+        title: pat.title,
+        durationMs: (sim.REPLAY_LEN - 1) * stepMs,
+        realMs: 9000,
+        frame: (t) => drawDuel(steps, from, Math.min(sim.REPLAY_LEN - 1, Math.floor(t / stepMs))),
+      });
+      replaying = false;
+      const rate = (q: sim.Policy) => Math.round(sim.policyRate(q, pat) * 100);
+      const btn = polBtns[p === 'lru' ? 0 : 1];
       if (p === best) {
-        solved[i] = true;
-        u.out.innerHTML = `<b class="okc">${p.toUpperCase()}: ${Math.round(rate * 100)}% hits.</b> The other policy gets ${Math.round(sim.policyRate(p === 'lru' ? 'lfu' : 'lru', pat) * 100)}%.`;
-        api.hit(`${Math.round(rate * 100)}% hits`, u.run);
-        render();
-        if (solved.every(Boolean)) flow.done();
-        return;
+        solved[pi] = true;
+        verdict.innerHTML = `<b class="okc">${p.toUpperCase()} keeps ${rate(p)}% hits; ${p === 'lru' ? 'LFU' : 'LRU'} only ${rate(p === 'lru' ? 'lfu' : 'lru')}%.</b> ${pat.id === 'scan' ? 'LFU ignores the one-off archive pages: they are used once, so they are thrown out first.' : 'LRU drops yesterday’s pages as soon as nobody asks for them.'}`;
+        api.hit(`${rate(p)}% hits`, btn);
+        pi++;
+        if (pi >= sim.PATTERNS.length) {
+          render();
+          return flow.done();
+        }
+        api.toast('Next story.');
+      } else {
+        api.mistake('fewer hits', btn);
+        verdict.innerHTML = `<b class="badc">${p.toUpperCase()}: ${rate(p)}% hits. The other rule gets ${rate(best)}%.</b> ${pat.id === 'scan' ? 'LRU treats every archive page as “just used”, so the one-off scan pushes the hot pages out.' : 'LFU keeps yesterday’s pages because they were used so often; the new sale pages never stay long enough to count.'} Pick again.`;
       }
-      u.out.innerHTML = `<b class="badc">${p.toUpperCase()}: only ${Math.round(rate * 100)}% hits.</b>`;
-      api.mistake('wrong policy', u.run);
-      api.toast(pat.id === 'scan' ? 'LRU treats every archive page as “recently used”, so the one-off scan pushes the hot pages out.' : 'LFU keeps yesterday’s pages because they were used so often; the new sale pages never stay long enough to count.');
       render();
     }
 

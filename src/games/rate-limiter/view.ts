@@ -13,9 +13,9 @@ const LABEL: Record<sim.Kind, string> = { paid: 'PAID', free: 'FREE', bot: 'BOT'
 
 const INFO = [
   { h: 'Tutorial: your first block', p: 'Follow the highlighted steps. The clock starts after the tutorial.' },
-  { h: 'Be the bouncer', p: `Requests fly toward the API. It can take <b>${sim.API_CAP} per second</b>; more than that and everyone gets errors. Tap red <b>bot</b> requests to block them. Block <b>${sim.BOTS_TO_BLOCK} bots</b>. Never block green or grey: those are real people.` },
-  { h: 'One bucket per client', p: `Three people load pages (6 requests at once, every few seconds) while a bot sends 15 requests a second. The API takes ${sim.BUCKET_CAP} per second. Give every client a token bucket: pick a <b>rate</b> and a <b>burst</b>, then press <b>Run 20 s</b>. Goal: people get 99%+ through, the bot gets at most ${sim.BOT_MAX_PER_SEC} per second, and the API never fills up.` },
-  { h: 'The noisy tenant', p: 'Your API now serves companies (tenants). Freebie, on the free tier, runs a batch job at 30 requests a second. With one shared limit, paying customers get 429s. Change how the limit works, then press <b>Run 20 s</b>. Goal: paying tenants never see a 429, and the API never fills up.' },
+  { h: 'Be the bouncer', p: `<b>Goal:</b> block ${sim.BOTS_TO_BLOCK} bot requests before they reach the API (it takes ${sim.API_CAP} per second).<br><b>Your tools:</b> tap a red BOT request to send it a 429. Green and grey ones are real people.` },
+  { h: 'Tune a token bucket', p: `<b>Step 1:</b> Ana loads a page: 6 requests at once, every 3 seconds. Pick a <b>rate</b> and a <b>burst</b> so all of them get through.<br><b>Step 2:</b> Ben, Chen and a bot (15 requests a second) join, with the same settings. People must still get through, the bot at most ${sim.BOT_MAX_PER_SEC} a second, and the API (${sim.BUCKET_CAP} a second) must never fill up.` },
+  { h: 'The noisy tenant', p: '<b>Goal:</b> paying tenants never see a 429, and the API never fills up.<br><b>Your tools:</b> choose whether all tenants share one limit or each has its own, and the rate for each tier. Then press <b>Run 20 s</b>.' },
 ];
 
 export const game: Game = {
@@ -24,10 +24,12 @@ export const game: Game = {
     let task = 0;
     let phase: Phase = 'pre';
     let lane = sim.createLane(0, rng);
-    const cfg2 = { rate: 20, burst: 20 };
+    const cfg2 = { rate: 1, burst: 1 };
     const cfg3 = { scope: 'global' as 'global' | 'client', paid: 20, free: 20 };
     let alive = true;
     let betweenT = 0;
+    let step2: 'ana' | 'all' = 'ana';
+    let busy = false;
 
     // ---------- build once ----------
     stage.innerHTML = '';
@@ -69,7 +71,19 @@ export const game: Game = {
     const cfgNote = el('span', { class: 'small', id: 'rl-note' });
     runRow.append(run, cfgNote);
     const result = el('div', { class: 'rl-result', id: 'rl-result' });
-    cfgPanel.append(t2rate.r, t2burst.r, t3scope.r, t3paid.r, t3free.r, runRow, result);
+    // Replay: one row per client with its bucket level and its recent requests (built once, frames update it).
+    const viz = el('div', { class: 'rl-viz', id: 'rl-viz', hidden: true });
+    const vizApi = el('div', { class: 'rl-vapi' }, '<span class="small">API this second</span><span class="meter"><i id="rl-vmeter"></i></span><b id="rl-vload"></b>');
+    const STRIP = 16;
+    const vizRows = Array.from({ length: 4 }, () => {
+      const r = el('div', { class: 'rl-vrow' }, '<b class="nm"></b><span class="rl-bucket"><i></i><em></em></span><span class="rl-reqs"></span>');
+      const reqs = r.querySelector('.rl-reqs')!;
+      const cellsR = Array.from({ length: STRIP }, () => reqs.appendChild(el('i')));
+      viz.appendChild(r);
+      return { r, nm: r.querySelector<HTMLElement>('.nm')!, fill: r.querySelector<HTMLElement>('.rl-bucket i')!, tk: r.querySelector<HTMLElement>('.rl-bucket em')!, cells: cellsR };
+    });
+    viz.append(vizApi, el('p', { class: 'small', style: 'margin:0' }, 'Orange bar: tokens left in each bucket. Squares: latest requests (green through, red 429, dark red: API full).'));
+    cfgPanel.append(t2rate.r, t2burst.r, t3scope.r, t3paid.r, t3free.r, runRow, viz, result);
     stage.append(status, lanePanel, cfgPanel);
 
     // ---------- render ----------
@@ -120,13 +134,13 @@ export const game: Game = {
           b.setAttribute('aria-pressed', String(Number(b.dataset.free) === cfg3.free));
           b.setAttribute('aria-disabled', String(cfg3.scope === 'global'));
         });
-        s1.innerHTML = task === 2 ? `bucket <b>${cfg2.rate}/s, burst ${cfg2.burst}</b>` : `limit <b>${cfg3.scope === 'global' ? `shared ${cfg3.paid}/s` : `paid ${cfg3.paid}/s · free ${cfg3.free}/s`}</b>`;
+        s1.innerHTML = task === 2 ? `${step2 === 'ana' ? 'step 1: Ana alone' : 'step 2: everyone + the bot'} · bucket <b>${cfg2.rate}/s, burst ${cfg2.burst}</b>` : `limit <b>${cfg3.scope === 'global' ? `shared ${cfg3.paid}/s` : `paid ${cfg3.paid}/s · free ${cfg3.free}/s`}</b>`;
         s2.innerHTML = `API capacity <b>${sim.BUCKET_CAP}/s</b>`;
         cfgNote.textContent = task === 3 && cfg3.scope === 'global' ? 'Shared by all: one bucket at the paid-tier rate for everyone.' : '';
       }
       const prog = api.side.querySelector('#rl-prog');
-      if (prog) prog.textContent = task === 1 ? `Bots blocked: ${lane.blockedBots} / ${sim.BOTS_TO_BLOCK}` : task >= 2 ? 'Run the 20 s test when ready.' : '';
-      if (phase === 'between') api.coach.say('Task clear! Read the lesson; the next task starts in a moment.', 'watch');
+      if (prog) prog.textContent = task === 1 ? `Bots blocked: ${lane.blockedBots} / ${sim.BOTS_TO_BLOCK}` : task === 2 ? (step2 === 'ana' ? 'Step 1 of 2: get all of Ana’s requests through.' : 'Step 2 of 2: people through, bot held back, API never full.') : task === 3 ? 'Run the 20 s test when ready.' : '';
+      if (phase === 'between') api.coach.say('Task clear! Read the lesson; press Next above.', 'watch');
       else if (phase === 'play') api.coach.say(...coachLine());
     }
 
@@ -135,7 +149,8 @@ export const game: Game = {
         const bots = lane.chips.filter((c) => c && c.kind === 'bot' && c.state === 'flying').length;
         return bots ? [`${bots} bot request${bots > 1 ? 's' : ''} incoming. <b>Tap the red ones</b> before they reach the API.`, 'act'] : ['Watch the lane. Tap red bot requests; let green and grey ones through.', 'watch'];
       }
-      if (task === 2) return ['Pick a <b>rate</b> and a <b>burst</b> for each client’s bucket, then press <b>Run 20 s</b>.', 'act'];
+      if (busy) return ['Watch the buckets: tokens drip in at the <b>rate</b>, and the bucket holds at most <b>burst</b> tokens.', 'watch'];
+      if (task === 2) return step2 === 'ana' ? ['Ana sends 6 requests at once. Pick a <b>rate</b> and a <b>burst</b>, then press <b>Run 20 s</b>.', 'act'] : ['The bot is here. Adjust if you need to, then press <b>Run 20 s</b>.', 'act'];
       if (task === 3) return ['Decide how the limit is shared, and how much each tier gets. Then press <b>Run 20 s</b>.', 'act'];
       return ['', 'watch'];
     }
@@ -150,7 +165,7 @@ export const game: Game = {
       task = t;
       phase = t === 0 ? 'tutorial' : 'play';
       if (t <= 1) lane = sim.createLane(t, rng);
-      if (t >= 2) result.innerHTML = '';
+      if (t >= 2) { result.innerHTML = ''; viz.hidden = true; step2 = 'ana'; }
       renderSide();
       render();
     }
@@ -159,12 +174,12 @@ export const game: Game = {
       if (task >= meta.tasks.length - 1) { phase = 'done'; render(); return; }
       phase = 'between';
       render();
-      betweenT = window.setTimeout(() => startTask(task + 1), 2400);
+      { const next = task + 1; api.ready(next, () => startTask(next)); }
     }
     function guard(): boolean {
       if (phase === 'pre') { api.toast('Press Start first. It is in the brief, and above the game.'); return true; }
       if (phase === 'done') { api.toast('All tasks done. Press Play again to start a new run.'); return true; }
-      if (phase === 'between') { api.toast('Task done. The next task starts in a moment.'); return true; }
+      if (phase === 'between') { api.toast('Task done. Press Next above to go on.'); return true; }
       return false;
     }
 
@@ -196,14 +211,81 @@ export const game: Game = {
       render();
     }
 
-    function runIt() {
+    async function runIt() {
       if (guard()) return;
       if (task < 2) return api.toast('Rate limit settings unlock in the next task.');
+      if (busy) return api.toast('Watch this run first.');
       api.move();
-      const r = task === 2
-        ? sim.simulate(sim.task2Traffic(), { scope: 'client', rate: cfg2.rate, burst: cfg2.burst })
-        : sim.simulate(sim.task3Traffic(), { scope: cfg3.scope, rate: cfg3.paid, burst: cfg3.paid, freeRate: cfg3.free });
+      const clients = task === 2 ? (step2 === 'ana' ? sim.anaTraffic() : sim.task2Traffic()) : sim.task3Traffic();
+      const cfg: sim.LimitConfig = task === 2 ? { scope: 'client', rate: cfg2.rate, burst: cfg2.burst } : { scope: cfg3.scope, rate: cfg3.paid, burst: cfg3.paid, freeRate: cfg3.free };
+      const tr = sim.simulateTrace(clients, cfg);
+      const r = tr.result;
+      busy = true;
+      result.innerHTML = '';
+      if (task === 2 && step2 === 'all') {
+        await api.predict({
+          q: `The bot sends 15 requests a second into its own bucket (refilling at ${cfg2.rate} a second). About how many get through each second?`,
+          options: ['None', `About ${Math.min(cfg2.rate, 15)}: the rate`, 'All 15'],
+          answer: cfg2.rate >= 15 ? 2 : 1,
+          why: `Once the bot’s bucket is empty, only the tokens that drip back in can be spent: ${cfg2.rate} a second. The burst only matters for the first moment.`,
+        });
+      } else if (task === 3) {
+        await api.predict({
+          q: cfg3.scope === 'global' ? 'All three tenants share one bucket. Freebie sends 30 a second. What happens to Acme and Globex?' : 'Each tenant has its own bucket now. What happens to Acme and Globex when Freebie sends 30 a second?',
+          options: ['They get through fine', 'They get 429s too'],
+          answer: cfg3.scope === 'global' || !sim.task3Ok(r) ? 1 : 0,
+          why: cfg3.scope === 'global' ? 'One shared bucket is drained by whoever sends the most: Freebie spends the tokens, so paying tenants get 429s.' : sim.task3Ok(r) ? 'Separate buckets isolate tenants: Freebie can only empty its own.' : 'Separate buckets help, but the total the tiers allow is above what the API can take, so the API itself fills up.',
+        });
+      }
+      viz.hidden = false;
+      const rows = clients.map((c, i) => ({ c, u: vizRows[i], b: tr.buckets.get(tr.keyOf(c))!, ev: tr.events.filter((e) => e.cid === c.id) }));
+      vizRows.forEach((u, i) => (u.r.hidden = i >= clients.length));
+      rows.forEach(({ c, u }) => setText(u.nm, c.name));
+      const okTimes = tr.events.filter((e) => e.ok).map((e) => e.t);
+      const firstFull = r.loadPerSec.findIndex((v) => v >= sim.BUCKET_CAP);
+      render();
+      await api.playback({
+        title: task === 2 ? (step2 === 'ana' ? 'Ana’s bucket' : 'Everyone’s buckets') : 'Tenants’ buckets',
+        durationMs: sim.DURATION_MS,
+        realMs: 9000,
+        marks: firstFull >= 0 ? [{ t: firstFull * 1000 + 500, label: 'API full', bad: true }] : [],
+        frame: (t) => {
+          rows.forEach(({ u, b, ev }) => {
+            const v = sim.tokensAt(b, t);
+            u.fill.style.width = `${(100 * v) / b.burst}%`;
+            setText(u.tk, `${v.toFixed(1)} / ${b.burst}`);
+            let hi = ev.length;
+            while (hi > 0 && ev[hi - 1].t > t) hi--;
+            const recent = ev.slice(Math.max(0, hi - u.cells.length), hi);
+            u.cells.forEach((cell, k) => {
+              const e = recent[k - (u.cells.length - recent.length)];
+              const cls = !e ? '' : e.ok ? 'ok' : e.why === 'api' ? 'full' : 'no';
+              if (cell.className !== cls) cell.className = cls;
+            });
+          });
+          const sec = Math.floor(t / 1000) * 1000;
+          const load = okTimes.filter((x) => x >= sec && x <= t).length;
+          (stage.querySelector('#rl-vmeter') as HTMLElement).style.width = `${Math.min(100, (100 * load) / sim.BUCKET_CAP)}%`;
+          setText(stage.querySelector('#rl-vload')!, `${load}/${sim.BUCKET_CAP}`);
+          vizApi.classList.toggle('hot', load >= sim.BUCKET_CAP);
+        },
+      });
+      busy = false;
+      if (!alive) return;
       drawResult(r);
+      if (task === 2 && step2 === 'ana') {
+        if (sim.anaOk(r)) {
+          api.hit('Ana’s pages load', run);
+          step2 = 'all';
+          api.toast('All of Ana’s requests got through. Now Ben, Chen and a bot join, with the same settings.');
+          render();
+          return;
+        }
+        api.mistake('Ana got 429s', run);
+        api.toast(`Only ${r.legitOkPct.toFixed(0)}% of Ana’s requests got through. ${cfg2.burst < 6 ? `She sends 6 at once, but the bucket holds only ${cfg2.burst} tokens.` : `The bucket refills too slowly to be full again for her next page load.`}`);
+        render();
+        return;
+      }
       const ok = task === 2 ? sim.task2Ok(r) : sim.task3Ok(r);
       if (ok) {
         api.hit('protected', run);
@@ -232,7 +314,8 @@ export const game: Game = {
         .map((p) => {
           const pct = p.sent ? (100 * p.ok) / p.sent : 100;
           const good = p.kind === 'bot' ? p.ok / (sim.DURATION_MS / 1000) <= sim.BOT_MAX_PER_SEC : p.kind === 'paid' ? pct >= 99 : true;
-          return `<tr><td>${esc(p.name)}</td><td>${p.ok}/${p.sent} through</td><td class="${good ? 'okc' : 'badc'}">${pct.toFixed(0)}%</td></tr>`;
+          const note = p.kind === 'bot' ? (good ? ' · held back ✓' : ' · too many') : p.kind === 'free' ? ' · throttled, as intended' : good ? ' ✓' : ' · got 429s';
+          return `<tr><td>${esc(p.name)}</td><td>${p.ok}/${p.sent} through</td><td class="${good ? 'okc' : 'badc'}">${pct.toFixed(0)}%${note}</td></tr>`;
         })
         .join('')}</tbody></table>
         <p class="eyebrow" style="margin:8px 0 4px">API load per second (top = full)</p><div class="rl-bars" id="rl-bars">${bars}</div>`;
@@ -271,7 +354,7 @@ export const game: Game = {
         api.task(0);
         phase = 'between';
         render();
-        betweenT = window.setTimeout(() => startTask(1), 1800);
+        api.ready(1, () => startTask(1));
       });
     });
 

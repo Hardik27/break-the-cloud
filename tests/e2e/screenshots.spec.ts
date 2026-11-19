@@ -1,7 +1,7 @@
 /** Light and dark screenshots of every page, saved to tests/e2e/__screenshots__/ for review. */
 import { expect, test } from '@playwright/test';
 import { builtGames } from '../../src/games/registry';
-import { realClick } from './helpers';
+import { passLearn, realClick } from './helpers';
 
 const dir = 'tests/e2e/__screenshots__';
 const pages = [
@@ -23,6 +23,10 @@ for (const scheme of ['light', 'dark'] as const) {
       if (p.name.startsWith('game-')) {
         // Mid-tutorial, with the spotlight on.
         await realClick(page, page.locator('#coach-start'));
+        // The concept card that opens every game.
+        await expect(page.locator('#learn-ov')).toBeVisible();
+        await page.screenshot({ path: `${dir}/${info.project.name}-${scheme}-${p.name}-learn.png` });
+        await passLearn(page);
         await expect(page.locator('.spot-ring')).toBeVisible();
         await page.waitForTimeout(300);
         await page.screenshot({ path: `${dir}/${info.project.name}-${scheme}-${p.name}-tutorial.png` });

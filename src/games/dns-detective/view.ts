@@ -101,7 +101,7 @@ export const game: Game = {
       logLines.forEach((d, i) => setText(d, s.log[i] ?? ''));
       // coach
       if (phase === 'play') api.coach.say(...coachLine());
-      if (phase === 'between') api.coach.say('Task clear! Read the lesson; the next task starts in a moment.', 'watch');
+      if (phase === 'between') api.coach.say('Task clear! Read the lesson; press Next above.', 'watch');
       const prog = api.side.querySelector('#dns-prog');
       if (prog) prog.textContent = task === 4 ? `Records set: ${scenario} / ${sim.SCENARIOS.length}` : `Answered: ${s.done} / ${s.total}`;
     }
@@ -155,7 +155,7 @@ export const game: Game = {
       }
       phase = 'between';
       render();
-      betweenT = window.setTimeout(() => startTask(task + 1), 2400);
+      { const next = task + 1; api.ready(next, () => startTask(next)); }
     }
 
     const STEP_FOR_HOP = ['resolver', 'root', 'tld', 'auth'];
@@ -164,7 +164,7 @@ export const game: Game = {
       const b = btn[id]!;
       if (phase === 'pre') return api.toast('Press Start first. It is in the brief, and above the game.');
       if (phase === 'done') return api.toast('All tasks done. Press Play again to start a new run.');
-      if (phase === 'between') return api.toast('Task done. The next task starts in a moment.');
+      if (phase === 'between') return api.toast('Task done. Press Next above to go on.');
       if (task === 1 && id === 'cache') return api.toast('The cache unlocks in the next task.');
       if (phase === 'tutorial') {
         const want = sim.expected(s);
@@ -230,7 +230,7 @@ export const game: Game = {
         api.task(0);
         phase = 'between';
         render();
-        betweenT = window.setTimeout(() => startTask(1), 1800);
+        api.ready(1, () => startTask(1));
       });
     });
 

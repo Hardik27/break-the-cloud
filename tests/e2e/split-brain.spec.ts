@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { meta } from '../../src/games/split-brain/meta';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks, hudTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
 } from './helpers';
 
 const T = meta.tasks.length;
@@ -13,10 +13,6 @@ const roleIndex = (page: Page, role: string) =>
     const g = document.querySelector(`[data-role="${r}"]`);
     return g ? Number(g.getAttribute('data-node')) : -1;
   }, role);
-
-async function waitTask(page: Page, n: number) {
-  await expect(page.locator('#side .eyebrow')).toHaveText(`Task ${n} of ${T}`, { timeout: 10_000 });
-}
 
 async function toggleLink(page: Page, a: number, b: number, cut: boolean) {
   const l = link(page, a, b);

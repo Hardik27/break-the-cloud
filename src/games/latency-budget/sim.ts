@@ -75,17 +75,35 @@ export const TOTAL_PEOPLE = USERS.reduce((a, u) => a + u.people, 0);
 export const fastPeople = (origin: string): number => USERS.filter((u) => loadMs(u, site(origin)) < ONE_SERVER_GOAL_MS).reduce((a, u) => a + u.people, 0);
 export const oneServerOk = (origin: string): boolean => fastPeople(origin) >= ONE_SERVER_GOAL_PEOPLE;
 
-// ---------- task 2: CDN edges ----------
+// ---------- task 2: CDN edges (a coverage puzzle) ----------
 export const EDGE_ORIGIN = 'us-east';
 export const EDGE_GOAL_MS = 150;
-export const EDGE_BUDGET = 7;
-export const allFast = (edges: string[]): boolean => USERS.every((u) => staticLoad(u, EDGE_ORIGIN, edges).ms < EDGE_GOAL_MS);
+export const EDGE_BUDGET = 3;
+/** Distance (km) within which an edge loads a page under the goal: 3 × RTT + server time < 150 ms. */
+export const EDGE_REACH_KM = Math.floor((((EDGE_GOAL_MS - SERVER_MS) / ROUND_TRIPS - 2) * 200) / 2 / 1.6);
+
+export interface EdgeRound { title: string; story: string; people: Record<string, number>; goal: number }
+const basePeople = Object.fromEntries(USERS.map((u) => [u.id, u.people]));
+export const EDGE_ROUNDS: EdgeRound[] = [
+  { title: 'Launch day', story: 'Three edges, eight cities. Cover as many people as you can.', people: basePeople, goal: 62 },
+  { title: 'Brazil goes viral', story: 'A campaign in Brazil worked: São Paulo now has 30M users. Same budget: three edges.', people: { ...basePeople, saopaulo: 30 }, goal: 78 },
+];
 export const fastCities = (edges: string[]): string[] => USERS.filter((u) => staticLoad(u, EDGE_ORIGIN, edges).ms < EDGE_GOAL_MS).map((u) => u.id);
+export const coveredPeople = (edges: string[], round: EdgeRound): number => fastCities(edges).reduce((a, id) => a + round.people[id], 0);
+export const roundPeople = (round: EdgeRound): number => Object.values(round.people).reduce((a, b) => a + b, 0);
+export const edgeRoundOk = (edges: string[], round: EdgeRound): boolean => edges.length <= EDGE_BUDGET && coveredPeople(edges, round) >= round.goal;
 /** Cities that an edge at `id` would bring under the goal that are not under it yet. */
 export const edgeGains = (edges: string[], id: string): string[] => {
   const before = new Set(fastCities(edges));
   return fastCities([...edges, id]).filter((c) => !before.has(c));
 };
+/** Best possible coverage with the budget (for tests and tuning). */
+export function bestCoverage(round: EdgeRound): number {
+  const ids = SITES.map((x) => x.id);
+  let best = 0;
+  for (let a = 0; a < ids.length; a++) for (let b = a + 1; b < ids.length; b++) for (let c = b + 1; c < ids.length; c++) best = Math.max(best, coveredPeople([ids[a], ids[b], ids[c]], round));
+  return best;
+}
 
 // ---------- task 3: what can an edge cache? ----------
 export interface Req { path: string; detail: string; edge: boolean; why: string }

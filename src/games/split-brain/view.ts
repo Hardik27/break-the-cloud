@@ -23,7 +23,6 @@ export const game: Game = {
     const r = new sim.Raft(mulberry32(api.seed));
     let phase: Phase = 'pre';
     let task = 0;
-    let betweenUntil = 0;
     let speed = 1;
     let alive = true;
     const theme = themeColors();
@@ -136,7 +135,7 @@ export const game: Game = {
       });
       api.side.querySelector('#sb-heal')!.addEventListener('click', () => {
         if (phase === 'tutorial') return api.toast('Finish the tutorial first, or press Skip tutorial.');
-        if (phase === 'between') return api.toast('The next task starts in a moment with a fresh cluster.');
+        if (phase === 'between') return api.toast('Press Next above for the next task (fresh cluster).');
         r.healAll();
         api.move();
         api.toast('All links restored and all servers restarted.');
@@ -151,7 +150,7 @@ export const game: Game = {
       api.coach.tutorial(meta.walkthrough, () => {
         api.task(0);
         phase = 'between';
-        betweenUntil = performance.now() + 1500;
+        api.ready(1, () => enterTask(1));
       });
     });
 
@@ -196,7 +195,7 @@ export const game: Game = {
         return true;
       }
       if (phase === 'between') {
-        api.toast('Task done. The next task starts in a moment with a fresh cluster.');
+        api.toast('Task done. Press Next above for the next task (fresh cluster).');
         return true;
       }
       return false;
@@ -241,7 +240,7 @@ export const game: Game = {
 
     // ---------- coach ----------
     function coachLine(): [string, 'act' | 'watch'] {
-      if (phase === 'between') return ['Task done. Read the lesson; the next task starts in a moment with a fresh cluster.', 'watch'];
+      if (phase === 'between') return ['Task done. Read what just happened, then press <b>Next</b>.', 'watch'];
       const L = r.leaders()[0];
       const down = r.nodes.find((n) => !n.alive);
       if (task === 1) {
@@ -448,10 +447,10 @@ export const game: Game = {
           api.side.innerHTML = `<p class="eyebrow">Free play</p><h2>Break anything</h2><p style="margin:0">All tasks are done. The cluster is yours: cut, crash and heal as you like, and watch the safety monitor. It should never show a violation.</p>`;
         } else {
           phase = 'between';
-          betweenUntil = t + 2500;
+          const next = task + 1;
+          api.ready(next, () => enterTask(next));
         }
       }
-      if (phase === 'between' && t >= betweenUntil) enterTask(task + 1);
       render();
       if (t - lastPanel > 120) {
         lastPanel = t;

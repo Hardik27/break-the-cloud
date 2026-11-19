@@ -174,6 +174,7 @@ export const game: Game = {
       api.task(round.task);
       phase = round.task >= sim.ROUNDS.length - 1 ? 'done' : 'solved';
       update();
+      if (phase === 'solved') api.ready(round.task + 1, nextRound);
     }
 
     function nextRound() {
@@ -188,7 +189,7 @@ export const game: Game = {
 
     function onTutorialDone() {
       api.task(0);
-      nextRound();
+      api.ready(1, nextRound);
     }
 
     next.addEventListener('click', () => {
@@ -196,7 +197,7 @@ export const game: Game = {
         if (api.coach.step === 'next') api.coach.did('next');
         return;
       }
-      if (phase === 'solved') nextRound();
+      if (phase === 'solved') api.toast('Press Next above to go on.');
     });
 
     api.onBegin(() => {

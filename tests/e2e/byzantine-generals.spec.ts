@@ -1,13 +1,12 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { meta } from '../../src/games/byzantine-generals/meta';
 import { MAX_TRAITORS, NEED_FOR_3, ROUNDS1, ROUNDS2, decide2 } from '../../src/games/byzantine-generals/sim';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
 } from './helpers';
 
 const T = meta.tasks.length;
-const waitTask = (page: Page, n: number) => expect(page.locator('#side .eyebrow')).toHaveText(`Task ${n} of ${T}`, { timeout: 10_000 });
 const flipV = (v: 'A' | 'R') => (v === 'A' ? 'R' : 'A');
 
 test('solver completes every task with real mouse clicks, no console errors', async ({ page }) => {

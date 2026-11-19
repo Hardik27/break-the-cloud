@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { meta } from '../../src/games/heartbeat/meta';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks, hudTasks,
-  keyboardStart, openGame, realClick, watchErrors,
+  keyboardStart, openGame, realClick, watchErrors, waitTask, answerPredict, skipReplay,
 } from './helpers';
 
 const T = meta.tasks.length;
@@ -42,24 +42,32 @@ test('solver completes every task with real mouse clicks, no console errors', as
   await realClick(page, row(page, 2));
   await expectTasks(page, 1, T);
 
-  await expect(page.locator('#side .eyebrow')).toHaveText(`Task 2 of ${T}`, { timeout: 10_000 });
+  await waitTask(page, 2);
   await detectByHand(page);
 
   // Task 3: the starting setting falsely evicts; a 1 s × 5 detector does not.
-  await expect(page.locator('#side .eyebrow')).toHaveText(`Task 3 of ${T}`, { timeout: 10_000 });
+  await waitTask(page, 3);
   await realClick(page, page.locator('#hb-run'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expect(page.locator('#hb-false')).toHaveText('2');
   await realClick(page, page.locator('[data-int="1000"]'));
   await realClick(page, page.locator('[data-thr="5"]'));
   await realClick(page, page.locator('#hb-run'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expectTasks(page, 3, T);
 
   // Task 4: starts too slow (2 s × 5); 2 s × 3 is fast and safe.
-  await expect(page.locator('#side .eyebrow')).toHaveText(`Task 4 of ${T}`, { timeout: 10_000 });
+  await waitTask(page, 4);
   await realClick(page, page.locator('#hb-run'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expect(page.locator('#hb-detect')).toHaveText('9.0 s');
   await realClick(page, page.locator('[data-thr="3"]'));
   await realClick(page, page.locator('#hb-run'));
+  await answerPredict(page);
+  await skipReplay(page);
 
   await expectFinished(page, T);
   await expectNoHorizontalScroll(page);
