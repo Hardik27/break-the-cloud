@@ -38,7 +38,7 @@ export const GAMES: GameEntry[] = [
   { id: 'cache-hit', level: 3, title: 'Cache Hit', concept: 'Caching and eviction', blurb: 'A tiny cache, a stream of requests. Keep the hit rate up and the data fresh.', load: () => import('./cache-hit') },
   { id: 'replica-diff', level: 3, title: 'Replica Diff', concept: 'Replication verification', blurb: 'Two copies of a bucket. Find what is different, including what checksums miss.', load: () => import('./replica-diff') },
   { id: 'thundering-herd', level: 3, title: 'Thundering Herd', concept: 'Cache stampedes', blurb: 'One hot key expires and a thousand requests hit the database at once.', load: () => import('./thundering-herd') },
-  { id: 'the-ring', level: 4, title: 'The Ring', concept: 'Consistent hashing', blurb: 'Add a server and move as little data as possible.' },
+  { id: 'the-ring', level: 4, title: 'The Ring', concept: 'Consistent hashing', blurb: 'Add a server and move as little data as possible.', load: () => import('./the-ring') },
   { id: 'autoscaler', level: 4, title: 'Autoscaler', concept: 'Scaling policies and cost', blurb: 'Meet the morning spike without burning the budget.' },
   { id: 'backpressure', level: 4, title: 'Backpressure', concept: 'Queues and dead-letter queues', blurb: 'Drain a backlog, then find the poison message that crashes every consumer.' },
   { id: 'retry-storm', level: 5, title: 'Retry Storm', concept: 'Timeouts, backoff and jitter', blurb: 'A slow dependency plus naive retries triples the load. Calm it down.' },

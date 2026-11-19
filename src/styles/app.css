@@ -487,3 +487,30 @@ svg.hb-run{display:block;width:100%;height:auto;border:1px solid var(--line);bor
 #th-refresh.pulse{animation:boxpulse 1s infinite}
 .th-res{display:grid;gap:6px;font-family:var(--mono);font-size:12px}
 svg.th-chart{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:6px}
+
+/* ---------- The Ring ---------- */
+.rg-key{margin:12px 14px 0;padding:10px 12px;border:1.5px solid var(--accent);border-radius:6px;font-size:14px;min-height:44px;background:color-mix(in srgb,var(--accent) 6%,var(--panel))}
+.rg-key:empty{display:none}
+.rg-panel{padding:14px;display:grid;gap:12px}
+.rg-panel>*{min-width:0}
+#rg-add{justify-self:start}
+.rg-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.rg-srv{border:1.5px solid var(--ink);background:var(--panel);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:6px;text-align:left;min-height:120px;touch-action:manipulation}
+.rg-srv b{font-family:var(--display);font-stretch:112%;font-weight:900;font-size:20px}
+.rg-srv .keys{display:flex;flex-wrap:wrap;gap:4px}
+.rg-srv .keys span{font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:999px;border:1px solid var(--append);color:var(--append)}
+.rg-srv .keys span.moved{border-color:var(--accent);color:var(--accent);font-weight:600}
+.rg-ring{max-width:320px;margin:0 auto;width:100%}
+.rg-ring svg,.rg-vnring svg{display:block;width:100%;height:auto}
+.rg-rsrv{flex:1 1 70px;border:2px solid var(--c);background:var(--panel);border-radius:6px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:2px;touch-action:manipulation}
+.rg-rsrv b{font-family:var(--display);font-stretch:112%;font-weight:900;font-size:20px;color:var(--c)}
+.rg-rsrv span{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.rg-movers{display:flex;flex-wrap:wrap;gap:6px}
+.rg-movers [aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.rg-vnout{display:grid;grid-template-columns:minmax(0,200px) minmax(0,1fr);gap:16px;align-items:center}
+@media (max-width:520px){.rg-vnout{grid-template-columns:minmax(0,1fr)}.rg-vnring{max-width:220px;margin:0 auto;width:100%}}
+.rg-shares{display:grid;gap:6px;font-family:var(--mono);font-size:12px}
+.rg-shares .mrow{display:grid;grid-template-columns:70px minmax(0,1fr) 40px;gap:8px;align-items:center}
+.rg-shares .mrow:last-child{display:flex}
+.rg-bar{height:10px;border-radius:5px;background:var(--grid);overflow:hidden}
+.rg-bar i{display:block;height:100%}
