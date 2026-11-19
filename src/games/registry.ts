@@ -33,7 +33,7 @@ export const GAMES: GameEntry[] = [
   { id: 'handshake', level: 1, title: 'Handshake', concept: 'TCP', blurb: 'Open a connection packet by packet, drop one, and put the rest back in order.', load: () => import('./handshake') },
   { id: 'latency-budget', level: 1, title: 'Latency Budget', concept: 'RTT, CDNs and edge caching', blurb: 'Move servers around the planet and place CDN edges until every city loads fast.', load: () => import('./latency-budget') },
   { id: 'traffic-cop', level: 2, title: 'Traffic Cop', concept: 'Load balancing', blurb: 'Route requests across servers by hand, then let an algorithm do it and watch it fail.', load: () => import('./traffic-cop') },
-  { id: 'heartbeat', level: 2, title: 'Heartbeat', concept: 'Health checks and failover', blurb: 'Spot dead servers fast, without evicting healthy ones that are only slow.' },
+  { id: 'heartbeat', level: 2, title: 'Heartbeat', concept: 'Health checks and failover', blurb: 'Spot dead servers fast, without evicting healthy ones that are only slow.', load: () => import('./heartbeat') },
   { id: 'rate-limiter', level: 2, title: 'Rate Limiter', concept: 'Token buckets and 429s', blurb: 'A bot floods your API. Protect paying users with a token bucket.' },
   { id: 'cache-hit', level: 3, title: 'Cache Hit', concept: 'Caching and eviction', blurb: 'A tiny cache, a stream of requests. Keep the hit rate up and the data fresh.' },
   { id: 'replica-diff', level: 3, title: 'Replica Diff', concept: 'Replication verification', blurb: 'Two copies of a bucket. Find what is different, including what checksums miss.', load: () => import('./replica-diff') },

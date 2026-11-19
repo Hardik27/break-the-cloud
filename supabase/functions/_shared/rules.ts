@@ -13,6 +13,7 @@ export interface GameRules {
 export const RULES: Record<string, GameRules> = {
   'dns-detective': { tasks: 5, minTimeMs: [0, 4000, 5000, 3000, 2000], parMs: [0, 21000, 25000, 18000, 16000] },
   handshake: { tasks: 5, minTimeMs: [0, 3000, 2500, 4000, 2000], parMs: [0, 16000, 13000, 17000, 15000] },
+  heartbeat: { tasks: 4, minTimeMs: [0, 12000, 2000, 2000], parMs: [0, 19000, 12000, 14000] },
   'latency-budget': { tasks: 4, minTimeMs: [0, 2000, 5000, 6000], parMs: [0, 17000, 19000, 19000] },
   'traffic-cop': { tasks: 5, minTimeMs: [0, 7000, 12000, 6000, 7000], parMs: [0, 11000, 18000, 12000, 18000] },
   'replica-diff': { tasks: 5, minTimeMs: [0, 1500, 1500, 1500, 3000], parMs: [0, 15000, 15000, 15000, 28000] },
