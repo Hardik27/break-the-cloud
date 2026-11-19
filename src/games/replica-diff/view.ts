@@ -1,0 +1,172 @@
+/** Replica Diff view. No animation loop: rows are built once per round and only their classes change. */
+import { el, esc, onActivateKey } from '../../lib/dom';
+import { mulberry32 } from '../../lib/rng';
+import type { Game, GameApi } from '../types';
+import { meta } from './meta';
+import * as sim from './sim';
+
+type Phase = 'pre' | 'tutorial' | 'play' | 'solved' | 'done';
+
+const INFO = [
+  { h: 'Something is missing', p: 'The replica should hold every object in the source. One did not make it across.' },
+  { h: 'Same size, different bytes', p: 'One copy has the right name and size but different contents. Sizes match, so look at the checksum (etag).' },
+  { h: 'Same bytes, different permissions', p: 'Every checksum matches now. But one object’s tags differ, and in S3 tags can decide who may read an object.' },
+  { h: 'The lock that disappeared', p: 'One replica lost its retention lock. Its bytes and tags are fine, but it can now be deleted.' },
+  { h: 'Speed round', p: 'Fourteen objects, three problems of different kinds. Find all three. Wrong clicks still cost 5 seconds.' },
+];
+
+const COACH = [
+  '',
+  'Compare the <b>etag</b> column row by row and click the copy that differs.',
+  'All etags match. Compare the <b>tags</b> column and click the row that differs.',
+  'Compare the <b>retention</b> column and click the row whose replica lost its lock.',
+  'Find all three differences, in any column.',
+];
+
+const fmtSize = (kb: number) => (kb > 1024 ? (kb / 1024).toFixed(1) + ' MB' : kb + ' KB');
+
+export const game: Game = {
+  mount(stage: HTMLElement, api: GameApi) {
+    const rng = mulberry32(api.seed);
+    let round = sim.makeRound(0, rng);
+    let phase: Phase = 'pre';
+
+    stage.innerHTML = '';
+    const status = el(
+      'div',
+      { class: 'statusbar' },
+      `<span>round <b id="rd-round"></b></span><span>problems left <b id="rd-left"></b></span><span id="rd-hint">click a row in either bucket to flag that object</span>`,
+    );
+    const next = el('button', { class: 'btn go', id: 'rd-next', type: 'button', hidden: true, style: 'margin-left:auto' }, 'Next round →');
+    status.appendChild(next);
+    const head = `<thead><tr><th>#</th><th>key</th><th>size</th><th>etag</th><th>tags</th><th>retention</th></tr></thead>`;
+    const wrap = el(
+      'div',
+      { class: 'diffwrap' },
+      `<div class="bucket"><h3>Source · us-west</h3><div class="scroll"><table class="objtbl">${head}<tbody id="rd-src"></tbody></table></div></div>
+       <div class="bucket"><h3>Replica · eu-central</h3><div class="scroll"><table class="objtbl">${head}<tbody id="rd-dst"></tbody></table></div></div>`,
+    );
+    stage.append(status, wrap);
+    const $ = (id: string) => stage.querySelector<HTMLElement>('#' + id)!;
+    const srcBody = $('rd-src');
+    const dstBody = $('rd-dst');
+
+    let rowEls: { src: HTMLTableRowElement; dst: HTMLTableRowElement }[] = [];
+
+    function buildRows() {
+      const row = (o: sim.Obj, i: number, side: 'src' | 'dst') =>
+        `<tr data-row="${side}-${i}" tabindex="0" aria-label="${side === 'src' ? 'Source' : 'Replica'} row ${i + 1}: ${esc(o.key)}. Activate to flag as different."><td class="n">${i + 1}</td><td>${esc(o.key)}</td><td>${fmtSize(o.size)}</td><td>${o.etag}</td><td>${o.tags}</td><td>${o.ret}</td></tr>`;
+      srcBody.innerHTML = round.src.map((o, i) => row(o, i, 'src')).join('');
+      dstBody.innerHTML = round.dst
+        .map((o, i) =>
+          o
+            ? row(o, i, 'dst')
+            : `<tr class="miss" data-row="dst-${i}" tabindex="0" aria-label="Replica row ${i + 1}: no object. Activate to flag as different."><td class="n">${i + 1}</td><td colspan="5">(no object)</td></tr>`,
+        )
+        .join('');
+      rowEls = round.src.map((_, i) => ({
+        src: srcBody.querySelector<HTMLTableRowElement>(`[data-row="src-${i}"]`)!,
+        dst: dstBody.querySelector<HTMLTableRowElement>(`[data-row="dst-${i}"]`)!,
+      }));
+      rowEls.forEach((r, i) => {
+        for (const tr of [r.src, r.dst]) {
+          tr.addEventListener('click', () => flagRow(i));
+          onActivateKey(tr, () => flagRow(i));
+        }
+      });
+    }
+
+    function renderSide() {
+      const t = round.task;
+      const info = INFO[t];
+      api.side.innerHTML = `<p class="eyebrow">${t === 0 ? 'Tutorial' : `Task ${t + 1} of ${meta.tasks.length}`}</p><h2>${info.h}</h2><p style="margin:0">${info.p}</p><div class="progress" id="rd-prog"></div>`;
+    }
+
+    function update() {
+      $('rd-round').textContent = `${round.task + 1}/${sim.ROUNDS.length}`;
+      $('rd-left').textContent = String(sim.left(round));
+      next.hidden = !(phase === 'solved' || (phase === 'tutorial' && sim.solved(round)));
+      const prog = api.side.querySelector<HTMLElement>('#rd-prog');
+      if (prog) {
+        const done = sim.solved(round);
+        prog.textContent = done ? 'Round done.' : `Problems left: ${sim.left(round)}`;
+        prog.classList.toggle('win', done);
+      }
+      if (phase === 'solved') api.coach.say('Read the lesson, then click <b>Next round</b>.', 'act');
+      else if (phase === 'play') {
+        const leftTxt = round.task === 4 ? ` ${sim.left(round)} left.` : '';
+        api.coach.say(COACH[round.task] + leftTxt, 'act');
+      }
+    }
+
+    function flagRow(i: number) {
+      const rows = rowEls[i];
+      if (phase === 'pre') return api.toast('Press Start first. It is in the brief, and above the game.');
+      if (phase === 'done') return api.toast('All tasks done. Press Play again to start a new run.');
+      if (phase === 'solved') return api.toast('This round is done. Click Next round to continue.');
+      if (phase === 'tutorial') {
+        if (api.coach.step === 'next') return api.toast('Tutorial: click Next round (highlighted).');
+        if (i !== sim.TUTORIAL_ROW) return api.toast(`Tutorial: click row ${sim.TUTORIAL_ROW + 1}, the highlighted one.`);
+      }
+      const res = sim.flag(round, i);
+      if (res === 'again') return api.toast(sim.solved(round) ? 'Already flagged.' : 'Already flagged. Look for another difference.');
+      api.move();
+      if (res === 'wrong') {
+        api.penalty(sim.PENALTY_MS);
+        api.toast(`Row ${i + 1}: those two copies match. +5 s`);
+        for (const tr of [rows.src, rows.dst]) {
+          tr.classList.add('wrong');
+          setTimeout(() => tr.classList.remove('wrong'), 600);
+        }
+        return;
+      }
+      rows.src.classList.add('flag');
+      rows.dst.classList.add('flag');
+      if (!sim.solved(round)) {
+        api.toast(`Row ${i + 1} flagged. ${sim.left(round)} to go.`);
+        update();
+        return;
+      }
+      if (phase === 'tutorial') {
+        update();
+        api.coach.did('flag-missing');
+        return;
+      }
+      api.task(round.task);
+      phase = round.task >= sim.ROUNDS.length - 1 ? 'done' : 'solved';
+      update();
+    }
+
+    function nextRound() {
+      round = sim.makeRound(round.task + 1, rng);
+      phase = 'play';
+      buildRows();
+      renderSide();
+      update();
+    }
+
+    function onTutorialDone() {
+      api.task(0);
+      nextRound();
+    }
+
+    next.addEventListener('click', () => {
+      if (phase === 'tutorial') {
+        if (api.coach.step === 'next') api.coach.did('next');
+        return;
+      }
+      if (phase === 'solved') nextRound();
+    });
+
+    api.onBegin(() => {
+      phase = 'tutorial';
+      renderSide();
+      update();
+      api.coach.tutorial(meta.walkthrough, onTutorialDone);
+    });
+
+    buildRows();
+    update();
+    return () => {};
+  },
+};

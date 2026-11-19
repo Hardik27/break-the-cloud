@@ -1,0 +1,777 @@
+<title>Break the Cloud</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,700..900&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: an operator's bench on graph paper. Home = a course map in four levels; each game = stage + mission sidebar (tasks, timer, leaderboard). */
+:root{
+  --bg:#E9EDF1; --grid:#DCE2E9; --panel:#F7F9FB; --ink:#132033; --muted:#58677D; --line:#BFC9D5;
+  --accent:#D9480F; --vote:#C77700; --ok:#1F8A5B; --append:#2563C9; --reply:#7B8BA3; --bad:#C81E3A;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D141E; --grid:#16202D; --panel:#121B27; --ink:#E3E9F1; --muted:#8C9BB1; --line:#2B394B;
+  --accent:#FF7036; --vote:#F2A93B; --ok:#3CC487; --append:#5B95F5; --reply:#6E7F98; --bad:#FF5470; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D141E; --grid:#16202D; --panel:#121B27; --ink:#E3E9F1; --muted:#8C9BB1; --line:#2B394B;
+  --accent:#FF7036; --vote:#F2A93B; --ok:#3CC487; --append:#5B95F5; --reply:#6E7F98; --bad:#FF5470; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 48px;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:28px 28px}
+a{color:inherit}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.topbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px 18px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.brand{font-family:var(--display);font-stretch:125%;font-weight:900;font-size:18px;color:var(--ink);text-decoration:none;letter-spacing:-.01em}
+.brand span{color:var(--accent)}
+.topbar nav{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.nick{display:flex;align-items:center;gap:6px}
+.nick input{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:4px 8px;width:140px}
+h1{font-family:var(--display);font-stretch:125%;font-weight:900;font-size:clamp(42px,8vw,92px);line-height:.88;letter-spacing:-.025em;margin:0;text-wrap:balance}
+h1 span{color:var(--accent)}
+h2{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:24px;line-height:1.1;margin:0 0 6px;text-wrap:balance}
+h3{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:19px;line-height:1.15;margin:0}
+.lede{max-width:58ch;color:var(--muted);font-size:17px;margin:12px 0 0}
+.lede b{color:var(--ink);font-weight:600}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
+.btn{border:1px solid var(--ink);background:var(--ink);color:var(--bg);border-radius:4px;padding:8px 14px;font-size:14px;font-weight:600}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:5px 11px;font-family:var(--mono);font-size:12px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* home */
+.hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px;align-items:end;padding-block:18px 6px}
+@media (max-width:820px){.hero{grid-template-columns:1fr}}
+.howto{display:grid;gap:8px;font-size:14px}
+.howto div{display:flex;gap:10px;align-items:baseline}
+.howto b{font-family:var(--mono);font-size:12px;color:var(--accent);flex:none;width:22px}
+.level{display:grid;grid-template-columns:200px minmax(0,1fr);gap:16px;padding-block:16px;border-top:1px solid var(--line)}
+@media (max-width:720px){.level{grid-template-columns:1fr}}
+.level .lv{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.level .lv b{display:block;font-family:var(--display);font-stretch:112%;font-weight:800;font-size:22px;color:var(--ink);line-height:1.1;margin-top:2px}
+.games{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.game{display:flex;flex-direction:column;gap:6px;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;text-decoration:none;color:var(--ink)}
+a.game:hover{border-color:var(--ink)}
+.game p{margin:0;font-size:13px;color:var(--muted)}
+.game .meta{display:flex;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:auto;padding-top:6px}
+.game.soon{opacity:.6;border-style:dashed}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid var(--line);width:max-content}
+.tag.live{border-color:var(--accent);color:var(--accent)}
+.tag.done{border-color:var(--ok);color:var(--ok)}
+
+/* play view */
+.playhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px 20px}
+.playhead h1{font-size:clamp(34px,5.5vw,60px)}
+.hud{display:flex;gap:18px;font-family:var(--mono);font-size:13px;color:var(--muted);align-items:baseline}
+.hud b{display:block;font-size:24px;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.bench{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:880px){.bench{grid-template-columns:1fr}}
+aside{display:flex;flex-direction:column;gap:12px;min-width:0}
+.tasks{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.tasks li{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.tasks li .box{width:18px;height:18px;border:1.5px solid var(--line);border-radius:3px;flex:none;margin-top:2px;display:grid;place-items:center;font-size:12px;font-family:var(--mono)}
+.tasks li.cur{font-weight:600}
+.tasks li.cur .box{border-color:var(--accent)}
+.tasks li.ok{color:var(--muted)}
+.tasks li.ok .box{background:var(--ok);border-color:var(--ok);color:var(--panel)}
+.lb{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+.lb td{padding:4px 0;border-bottom:1px solid var(--grid)}
+.lb td:last-child,.lb td:nth-child(3){text-align:right;font-variant-numeric:tabular-nums}
+.lb tr.me td{color:var(--accent);font-weight:600}
+.small{font-size:12px;color:var(--muted)}
+.intro{display:grid;gap:12px;max-width:68ch}
+.intro p{margin:0}
+.lesson{margin:10px 0 0;font-size:14px;padding:10px 12px;border-left:3px solid var(--ok);background:color-mix(in srgb,var(--ok) 8%,transparent)}
+.progress{font-family:var(--mono);font-size:13px;padding:8px 10px;border-radius:4px;background:var(--bg);border:1px dashed var(--line)}
+.progress.win{border-style:solid;border-color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--panel))}
+.result{border:2px solid var(--ok)}
+.result .big{font-family:var(--display);font-stretch:112%;font-weight:900;font-size:40px;line-height:1}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);font-size:13px;padding:9px 14px;border-radius:4px;max-width:min(560px,calc(100vw - 32px));opacity:0;transition:opacity .25s;pointer-events:none;z-index:6}
+.toast.show{opacity:1}
+.notice{position:fixed;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));max-width:620px;margin:0 auto;background:var(--panel);border:1px solid var(--ink);border-radius:6px;padding:12px 14px;font-size:13px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;z-index:7;box-shadow:0 8px 30px rgba(0,0,0,.15)}
+.notice p{margin:0;flex:1 1 280px}
+.prose{max-width:68ch}
+.prose h3{margin-top:18px}
+.prose p,.prose li{color:var(--ink)}
+footer{color:var(--muted);font-size:13px;display:flex;gap:16px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px}
+
+/* load balancer */
+.lbstage{display:grid;grid-template-columns:110px 1fr;gap:16px;padding:18px;align-items:center}
+@media (max-width:520px){.lbstage{grid-template-columns:1fr}}
+.queue{display:flex;flex-direction:column;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center}
+.reqbox{width:64px;height:64px;border:2px dashed var(--line);border-radius:8px;display:grid;place-items:center}
+.pkt{border-radius:50%;background:var(--append)}
+.pkt.heavy{background:var(--vote)}
+.servers{display:grid;gap:12px}
+.srv{display:grid;grid-template-columns:76px 1fr 70px;gap:12px;align-items:center;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:var(--panel);text-align:left}
+.srv.down{opacity:.5;border-style:dashed}
+.srv .nm{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:18px}
+.bar{height:16px;border-radius:3px;background:var(--grid);position:relative;overflow:hidden}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--ok);transition:width .15s}
+.bar i.hot{background:var(--vote)}.bar i.full{background:var(--bad)}
+.srv .st{font-family:var(--mono);font-size:12px;text-align:right}
+.lbctl{display:flex;flex-wrap:wrap;gap:8px 16px;padding:0 18px 16px;align-items:center;font-size:13px}
+.lbstats{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 18px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--muted)}
+.lbstats b{color:var(--ink)}
+.coach{margin:12px 18px 0;padding:10px 12px;border-radius:4px;font-size:14px;background:var(--bg);border:1px dashed var(--line)}
+.coach.go{border:1.5px solid var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--panel))}
+.srv.pickable{border-color:var(--accent);cursor:pointer}
+.srv.pickable:hover{box-shadow:inset 0 0 0 1px var(--accent)}
+.srv.hit{background:color-mix(in srgb,var(--accent) 15%,var(--panel))}
+.reqbox.waiting{border-color:var(--accent);border-style:solid;animation:pulse 1s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 20%,transparent)}}
+.strip{display:flex;gap:3px;padding:0 18px 14px;overflow:hidden}
+.strip span{width:10px;height:10px;border-radius:2px;flex:none;background:var(--ok)}
+.strip span.x{background:var(--bad)}
+
+/* replica diff */
+.diffwrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:14px}
+@media (max-width:700px){.diffwrap{grid-template-columns:minmax(0,1fr)}}
+.bucket{min-width:0}
+.bucket h3{font-size:15px;margin-bottom:6px}
+.objtbl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11.5px}
+.objtbl th{text-align:left;color:var(--muted);font-weight:400;padding:3px 4px;border-bottom:1px solid var(--line)}
+.objtbl td{padding:5px 4px;border-bottom:1px solid var(--grid);white-space:nowrap}
+.objtbl tbody tr{cursor:pointer}
+.objtbl tbody tr:hover td{background:var(--grid)}
+.objtbl tr.flag td{background:color-mix(in srgb,var(--ok) 18%,transparent)}
+.objtbl tr.wrong td{background:color-mix(in srgb,var(--bad) 18%,transparent)}
+.objtbl tr.miss td{color:var(--muted);font-style:italic}
+.scroll{overflow-x:auto}
+
+/* split brain */
+.statusbar{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 14px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--muted)}
+.statusbar b{color:var(--ink);font-weight:600}
+svg.net g:focus:not(:focus-visible){outline:none}
+svg.net{display:block;width:100%;height:auto;max-width:100%;touch-action:manipulation;user-select:none}
+.stagefoot{display:flex;flex-wrap:wrap;gap:6px 14px;padding:8px 14px 12px;font-size:12px;color:var(--muted);align-items:center}
+.key{display:inline-flex;align-items:center;gap:6px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.reqs{display:flex;gap:3px;flex-wrap:nowrap;overflow:hidden;padding:0 14px 12px}
+.req{width:10px;height:10px;border-radius:2px;flex:none;background:var(--line)}
+.req.ok{background:var(--ok)}.req.fail{background:var(--bad)}.req.pend{background:transparent;border:1.5px solid var(--append)}
+.missions{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px}
+.mission{border:1px solid var(--line);background:transparent;border-radius:4px;padding:8px 4px;font-family:var(--mono);font-size:12px;line-height:1.2;display:flex;flex-direction:column;align-items:center;gap:2px}
+.mission small{font-size:10px;color:var(--muted)}
+.mission[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.mission.done{background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.monitor{display:grid;gap:6px;font-family:var(--mono);font-size:12px}
+.mrow{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.mrow span:first-child{color:var(--muted)}
+.ok-pill{padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok);font-weight:600}
+.bad-pill{padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad);font-weight:600}
+.feed{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:3px;min-height:6em}
+.feed div:first-child{color:var(--ink)}
+.tapehead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;align-items:baseline;margin-bottom:8px}
+.tapehead p{margin:0;font-size:13px;color:var(--muted)}
+.logs{overflow-x:auto;display:flex;flex-direction:column;gap:5px;padding-bottom:4px}
+.lrow{display:flex;align-items:center;gap:8px}
+.lname{font-family:var(--mono);font-size:12px;width:62px;flex:none;color:var(--muted)}
+.lname b{color:var(--ink)}
+.cells{display:flex;gap:3px}
+.cell{width:46px;height:30px;flex:none;border-radius:3px;font-family:var(--mono);font-size:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;color:#fff}
+.cell i{font-style:normal;font-size:9px;opacity:.85}
+.cell.unc{background:transparent!important;border:1.5px dashed var(--c);color:var(--ink)}
+.cell.idx{background:transparent;color:var(--muted);height:16px;font-size:10px}
+.cell.empty{background:transparent;border:1px solid var(--grid)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast" role="status"></div>
+<div class="notice" id="notice" hidden>
+  <p><b>No cookies here.</b> Your nickname, progress and best times are saved in your own browser. If you post a score, your nickname and time are shown on the shared leaderboard. <a href="#privacy">Privacy &amp; cookies</a></p>
+  <button class="btn" id="noticeOk">Got it</button>
+</div>
+
+<script>
+(()=>{
+"use strict";
+/* ================= storage (per-browser) ================= */
+const LS={get(k,d){try{const v=localStorage.getItem('btc:'+k);return v===null?d:JSON.parse(v)}catch(e){return d}},
+  set(k,v){try{localStorage.setItem('btc:'+k,JSON.stringify(v))}catch(e){}}};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=ms=>{const s=ms/1000;const m=Math.floor(s/60);return `${m}:${(s%60).toFixed(1).padStart(4,'0')}`};
+let toastT=0;
+function toast(s){const t=$('toast');t.textContent=s;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),3400);}
+
+/* ================= curriculum ================= */
+const LEVELS=[
+ {n:1,name:'Foundations',sub:'How one service stays up.'},
+ {n:2,name:'Data',sub:'Copies, caches and where data lives.'},
+ {n:3,name:'Scale',sub:'Growing without falling over.'},
+ {n:4,name:'Consensus',sub:'Agreeing when the network lies.'},
+];
+const GAMES=[
+ {id:'balancer',level:1,title:'Traffic Cop',concept:'Load balancing',blurb:'Route requests across servers. Then let an algorithm do it, and watch it fail.',live:true},
+ {id:'health',level:1,title:'Heartbeat',concept:'Health checks & failover',blurb:'Spot dead servers before your users do.',live:false},
+ {id:'diff',level:2,title:'Replica Diff',concept:'Replication & verification',blurb:'Two copies of a bucket. Find what is different, including what checksums miss.',live:true},
+ {id:'cache',level:2,title:'Cache Hit',concept:'Caching & eviction',blurb:'A tiny cache, a stream of requests. Keep the hit rate up.',live:false},
+ {id:'ring',level:3,title:'The Ring',concept:'Consistent hashing',blurb:'Add a server and move as little data as possible.',live:false},
+ {id:'autoscale',level:3,title:'Autoscaler',concept:'Autoscaling & cost',blurb:'Meet the traffic spike without burning the budget.',live:false},
+ {id:'raft',level:4,title:'Split Brain',concept:'Raft consensus',blurb:'You are the network. Cut links, crash servers, try to make five servers disagree.',live:true},
+ {id:'2pc',level:4,title:'Two-Phase Commit',concept:'Distributed transactions',blurb:'Crash the coordinator mid-vote and see who gets stuck.',live:false},
+ {id:'clocks',level:4,title:'Clock Skew',concept:'Lamport & vector clocks',blurb:'Order events when every clock is wrong.',live:false},
+];
+const G=id=>GAMES.find(g=>g.id===id);
+
+/* ================= leaderboard (shared db when available) ================= */
+let LBready=null;
+function lbInit(){
+  if(LBready) return LBready;
+  LBready=(async()=>{
+    try{
+      const c=window.claude; if(!c||!c.use) return null;
+      const [db,user]=await Promise.all([c.use('db'),c.use('user')]);
+      if(!db||!user) return null;
+      const id=await user.id(); if(!id) return null;
+      return {db,id};
+    }catch(e){return null}
+  })();
+  return LBready;
+}
+async function lbTop(game){
+  const L=await lbInit(); if(!L) return null;
+  try{const s=await L.db.collection('lb_'+game).orderBy('ms','asc').limit(10).get();
+    return {rows:s.docs.map(d=>({id:d.id,...d.data()})),me:L.id};}catch(e){return null}
+}
+async function lbSubmit(game,nick,ms,moves){
+  const L=await lbInit(); if(!L) return {ok:false,why:'offline'};
+  try{
+    const ref=L.db.collection('lb_'+game).doc(L.id);
+    const cur=await ref.get();
+    const prev=cur.exists?cur.data():null;
+    if(prev&&typeof prev.ms==='number'&&prev.ms<=ms) return {ok:true,kept:true};
+    await ref.set({nick:String(nick).slice(0,24),ms:Math.round(ms),moves:moves|0,at:new Date().toISOString()});
+    return {ok:true};
+  }catch(e){return {ok:false,why:(e&&e.code)||'error'}}
+}
+
+/* ================= router ================= */
+let current=null; // {unmount}
+function route(){
+  if(current&&current.unmount) current.unmount(); current=null;
+  const h=(location.hash||'').slice(1);
+  if(h==='privacy') return viewPrivacy();
+  const g=G(h); if(g&&g.live) return viewPlay(g);
+  viewHome();
+}
+window.addEventListener('hashchange',()=>{route();window.scrollTo(0,0)});
+
+function topbar(){
+  return `<div class="topbar"><a class="brand" href="#">Break the <span>Cloud</span></a>
+  <nav><label class="nick" for="nickIn">Nickname <input id="nickIn" maxlength="24" placeholder="anonymous" value="${esc(LS.get('nick',''))}"></label>
+  <a href="#privacy">Privacy &amp; cookies</a></nav></div>`;
+}
+function bindTop(){const n=$('nickIn'); if(n) n.addEventListener('input',()=>LS.set('nick',n.value.trim()));}
+
+function viewHome(){
+  const best=LS.get('best',{});
+  const done=Object.keys(best).length, live=GAMES.filter(g=>g.live).length;
+  let h=topbar()+`<section class="hero"><div><h1>Break the <span>Cloud</span></h1>
+   <p class="lede">Learn how cloud systems work by <b>breaking them on purpose</b>. Each game is a short series of tasks, from your first load balancer to Raft consensus. Every run is timed, and the fastest runs make the leaderboard.</p></div>
+   <div class="card howto"><p class="eyebrow">How it works</p>
+    <div><b>01</b><span>Read a 30-second explainer of the concept.</span></div>
+    <div><b>02</b><span>Press start. The clock runs until you finish every task.</span></div>
+    <div><b>03</b><span>Each task ends with the lesson it was built to teach.</span></div>
+    <div><b>04</b><span>Post your time. Beat it later.</span></div>
+    <p class="small" style="margin:6px 0 0">${done} of ${live} games completed in this browser.</p></div></section>`;
+  for(const L of LEVELS){
+    h+=`<section class="level"><div class="lv">Level ${L.n}<b>${L.name}</b>${L.sub}</div><div class="games">`;
+    for(const g of GAMES.filter(x=>x.level===L.n)){
+      const b=best[g.id];
+      if(g.live) h+=`<a class="game" href="#${g.id}"><span class="tag ${b?'done':'live'}">${b?'completed':'play'}</span><h3>${g.title}</h3><p>${g.concept}. ${g.blurb}</p><div class="meta"><span>${g.concept}</span><span>${b?'best '+fmt(b.ms):'not played'}</span></div></a>`;
+      else h+=`<div class="game soon" aria-disabled="true"><span class="tag">coming soon</span><h3>${g.title}</h3><p>${g.concept}. ${g.blurb}</p></div>`;
+    }
+    h+=`</div></section>`;
+  }
+  h+=footer();
+  $('app').innerHTML=h; bindTop();
+}
+function footer(){return `<footer><span>Break the Cloud: free, open, built for students and engineers.</span><a href="#privacy">Privacy &amp; cookies</a></footer>`}
+
+function viewPrivacy(){
+  $('app').innerHTML=topbar()+`<article class="card prose"><p class="eyebrow">Privacy &amp; cookies</p><h2>What this site stores</h2>
+  <p>This site sets <b>no cookies</b> and uses no advertising or tracking scripts.</p>
+  <h3>In your browser</h3>
+  <p>Your nickname, which games you have finished, your best times, and whether you dismissed the notice are kept in your browser's local storage. They never leave your device unless you post a score. You can clear them at any time:</p>
+  <p><button class="btn ghost" id="clearLocal">Clear my local data</button></p>
+  <h3>On the leaderboard</h3>
+  <p>When you finish a game, your result can be posted to that game's shared leaderboard. A leaderboard entry contains the nickname you chose, your time, your move count and the date. It is linked to an anonymous account identifier so you can only replace your own entry. Use a nickname you are happy to show publicly; avoid your full name.</p>
+  <h3>Fonts</h3>
+  <p>Typefaces are loaded from Google Fonts, which receives your IP address when the page loads, as with any web request.</p>
+  <h3>Contact</h3>
+  <p>To remove a leaderboard entry, contact the site owner.</p></article>`+footer();
+  bindTop();
+  $('clearLocal').onclick=()=>{try{Object.keys(localStorage).filter(k=>k.startsWith('btc:')).forEach(k=>localStorage.removeItem(k))}catch(e){} toast('Local data cleared.'); };
+}
+
+/* ================= play shell ================= */
+function viewPlay(g){
+  const mod=MODULES[g.id];
+  $('app').innerHTML=topbar()+`
+  <div class="playhead"><div><p class="eyebrow"><a href="#">← All games</a> · Level ${g.level} · ${g.concept}</p><h1>${g.title}</h1></div>
+   <div class="hud"><span>time<b id="hudTime">0:00.0</b></span><span>moves<b id="hudMoves">0</b></span><span>tasks<b id="hudTasks">0/${mod.tasks.length}</b></span></div></div>
+  <div class="bench"><section class="card" style="padding:0" id="stage"></section>
+   <aside>
+    <div class="card" id="side1"></div>
+    <div class="card"><p class="eyebrow">Tasks</p><ol class="tasks" id="taskList"></ol></div>
+    <div class="card"><p class="eyebrow">Leaderboard · fastest full runs</p><div id="lbBox" class="small">Loading…</div></div>
+   </aside></div>`+footer();
+  bindTop();
+  const run={t0:null,elapsed:0,moves:0,done:new Set(),finished:false,timer:0};
+  const api={
+    start(){ if(run.t0===null&&!run.finished){run.t0=performance.now();} },
+    move(n=1){ if(run.finished) return; api.start(); run.moves+=n; $('hudMoves').textContent=run.moves; },
+    task(i){ if(run.finished||run.done.has(i)) return; run.done.add(i); renderTasks(); $('hudTasks').textContent=`${run.done.size}/${mod.tasks.length}`;
+      if(run.done.size>=mod.tasks.length) finish(); },
+    running(){ return run.t0!==null && !run.finished },
+    penalty(ms){ if(run.t0!==null&&!run.finished) run.t0-=ms; },
+    side:$('side1'), toast
+  };
+  function renderTasks(){
+    const cur=[...Array(mod.tasks.length).keys()].find(i=>!run.done.has(i));
+    $('taskList').innerHTML=mod.tasks.map((t,i)=>`<li class="${run.done.has(i)?'ok':(i===cur?'cur':'')}"><span class="box">${run.done.has(i)?'✓':i+1}</span><span>${t}</span></li>`).join('');
+  }
+  renderTasks();
+  run.timer=setInterval(()=>{ if(run.t0!==null&&!run.finished){ run.elapsed=performance.now()-run.t0; $('hudTime').textContent=fmt(run.elapsed);} },100);
+  function finish(){
+    run.finished=true; run.elapsed=performance.now()-run.t0; $('hudTime').textContent=fmt(run.elapsed);
+    const best=LS.get('best',{}); const pb=!best[g.id]||run.elapsed<best[g.id].ms;
+    if(pb){best[g.id]={ms:Math.round(run.elapsed),moves:run.moves};LS.set('best',best);}
+    const side=$('side1');
+    const nick=LS.get('nick','');
+    side.classList.add('result');
+    side.innerHTML=`<p class="eyebrow">Run complete</p><div class="big">${fmt(run.elapsed)}</div><p class="small">${run.moves} moves${pb?' · new personal best':''}</p>
+     <div class="row" style="margin-top:8px"><label class="nick small" for="nick2">Nickname <input id="nick2" maxlength="24" value="${esc(nick)}" style="font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:5px 8px;width:150px"></label>
+     <button class="btn" id="post">Post to leaderboard</button><button class="btn ghost" id="again">Play again</button></div><p class="small" id="postMsg"></p>`;
+    $('again').onclick=()=>route();
+    $('post').onclick=async()=>{
+      const n=$('nick2').value.trim(); if(!n){$('postMsg').textContent='Pick a nickname first.';return;}
+      LS.set('nick',n); $('post').disabled=true; $('postMsg').textContent='Posting…';
+      const r=await lbSubmit(g.id,n,run.elapsed,run.moves);
+      if(r.ok){$('postMsg').textContent=r.kept?'Your earlier time was faster, so it stays on the board.':'Posted.'; loadLB();}
+      else{$('post').disabled=false;$('postMsg').textContent=r.why==='offline'?'The shared leaderboard is not available in this view. Your best time is saved in this browser.':'Could not post: you may need contributor access to this page. Your best time is saved in this browser.';}
+    };
+    if(mod.onFinish) mod.onFinish();
+  }
+  async function loadLB(){
+    const box=$('lbBox'); const r=await lbTop(g.id); if(!$('lbBox')) return;
+    const best=LS.get('best',{})[g.id];
+    if(!r){box.innerHTML=`The shared leaderboard is not available in this view.${best?` Your best: <b>${fmt(best.ms)}</b>.`:''}`;return;}
+    if(!r.rows.length){box.innerHTML=`No times yet. Finish all tasks to set the first one.`;return;}
+    box.innerHTML=`<table class="lb"><tbody>${r.rows.map((x,i)=>`<tr class="${x.id===r.me?'me':''}"><td>${i+1}.</td><td>${esc(x.nick||'anonymous')}</td><td>${x.moves??''} mv</td><td>${fmt(x.ms)}</td></tr>`).join('')}</tbody></table>`;
+  }
+  loadLB();
+  const un=mod.mount($('stage'),api);
+  current={unmount(){clearInterval(run.timer); if(un) un();}};
+}
+
+/* ================= GAME 1: Traffic Cop (load balancing) ================= */
+const MODULES={};
+MODULES.balancer={
+ tasks:['Route 12 requests by hand without dropping any','Switch on round robin, then survive a server crash','Handle heavy requests: 15 in a row with no drops'],
+ mount(root,api){
+  const CAP=4;
+  let srv=[], queue=null, now=0, nextArr=0, strategy='manual', health=false, rr=0, streak=0, results=[], stage=0, stageT=0, started=false, crashAt=0, alive=true;
+  const intro=[
+   `<p class="eyebrow">The concept</p><h2>Load balancing</h2><p>One server can only do so much. A <b>load balancer</b> sits in front of several servers and decides which one handles each request. Each server here can hold <b>4 units</b> of work at once; a request that lands on a full or dead server is <b>dropped</b>, and that is a user seeing an error.</p><p>First, you are the load balancer. Click a server to send it the waiting request.</p>`,
+  ];
+  function reset(){ srv=[0,1,2].map(i=>({name:'web-'+(i+1),up:true,jobs:[]})); queue=null; streak=0; }
+  reset();
+  root.innerHTML=`<div class="lbstats" id="lbs"></div>
+   <div class="coach" id="coach" role="status" aria-live="polite"></div>
+   <div class="lbstage"><div class="queue"><div class="reqbox" id="rq"></div><span id="rqTxt">waiting…</span></div><div class="servers" id="srvs"></div></div>
+   <div class="lbctl" id="ctl"></div><div class="strip" id="strip" aria-label="Recent requests"></div>`;
+  api.side.innerHTML=intro[0]+`<div class="row" style="margin-top:12px"><button class="btn" id="go">Start</button></div>`;
+  $('go').onclick=()=>{started=true; api.start(); stage=0; stageT=0; nextArr=now+400; setSide();};
+  const load=s=>s.jobs.reduce((a,j)=>a+j.size,0);
+  function setSide(){
+    const L=[
+     `<p class="eyebrow">Task 1</p><h2>Be the load balancer</h2><p>Click a server to route each request before it times out (2.5 s). Get <b>12 in a row</b> without a drop. Orange requests are heavy.</p>`,
+     `<p class="eyebrow">Task 2</p><h2>Let the algorithm work</h2><p>Nobody routes by hand. The balancer now uses <b>Round robin</b>: it sends requests to each server in turn, so you just watch. Something will break. Fix it with the switch that appears, then get <b>15 in a row</b>.</p>`,
+     `<p class="eyebrow">Task 3</p><h2>Not all requests are equal</h2><p>Heavy requests (orange) take 3 units and last longer. Round robin does not look at load. Find the strategy that keeps <b>15 in a row</b> alive.</p>`,
+    ];
+    api.side.innerHTML=(L[stage]||'')+`<div class="progress" id="prog">Streak: ${streak}</div>`;
+    renderCtl();
+  }
+  function lessonFor(i){return [
+    'You just did what a load balancer does on every request. Doing it by hand does not scale, so real systems use simple rules.',
+    'Round robin kept sending traffic to a dead server until health checks removed it. Health checks are how a balancer learns a server is down: it pings each one and stops routing to failures.',
+    'Least-loaded routing looks at how busy each server is right now, so heavy requests stop piling onto the same machine. Real balancers offer both, plus weighted and latency-aware variants.'][i];}
+  function renderCtl(){
+    const c=$('ctl'); if(!c) return;
+    let h=`<span class="small">Strategy</span>`;
+    const opts=[['manual','Manual'],['rr','Round robin'],['least','Least loaded']];
+    for(const [k,l] of opts){ const dis=(stage===0&&k!=='manual')||(stage>=1&&k==='manual')||(stage===1&&k==='least'); h+=`<button class="chip" data-s="${k}" aria-pressed="${strategy===k}" ${dis?'disabled':''}>${l}</button>`; }
+    if(stage>=1&&(srv.some(s=>!s.up)||health)) h+=`<span class="small" style="margin-left:6px">Health checks</span><button class="chip" id="hc" aria-pressed="${health}">${health?'On':'Off'}</button>`;
+    c.innerHTML=h;
+    c.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{ if(b.disabled) return; strategy=b.dataset.s; streak=0; api.move(); renderCtl(); });
+    const hc=$('hc'); if(hc) hc.onclick=()=>{health=!health; api.move(); renderCtl();};
+  }
+  function pick(){
+    const ok=s=>!health||s.up;
+    if(strategy==='rr'){ for(let k=0;k<3;k++){ const i=(rr+k)%3; if(ok(srv[i])){ rr=(i+1)%3; return i; } } return rr; }
+    if(strategy==='least'){ let best=-1,bl=1e9; srv.forEach((s,i)=>{ if(!ok(s)) return; const l=load(s); if(l<bl){bl=l;best=i;} }); return best<0?0:best; }
+    return -1;
+  }
+  function assign(i){
+    if(!queue) return; const s=srv[i];
+    const success=s.up&&load(s)+queue.size<=CAP;
+    if(success) s.jobs.push({size:queue.size,end:now+queue.dur});
+    record(success, success?'':(s.up?`${s.name} was full`:`${s.name} is down`));
+    queue=null;
+  }
+  function record(ok,why){
+    results.push(ok); if(results.length>70) results.shift();
+    if(ok) streak++; else { streak=0; if(why) api.toast('Dropped: '+why); }
+    const goal=[12,15,15][stage];
+    if(started && streak>=goal && stage<3){
+      const done=stage; api.task(done);
+      api.side.innerHTML+=`<p class="lesson">${lessonFor(done)}</p>`;
+      stage++; streak=0; stageT=0;
+      if(stage===1){ strategy='rr'; health=false; srv.forEach(s=>s.up=true); crashAt=now+rand(5000,8000); }
+      if(stage===2){ strategy='rr'; srv.forEach(s=>s.up=true); }
+      if(stage<3) setTimeout(()=>{ if(alive){ setSide(); } }, 2600);
+    }
+  }
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  function newReq(){ const heavy = stage===2 ? Math.random()<0.4 : (stage===0? Math.random()<0.2 : false);
+    return {size:heavy?3:1,dur:heavy?3400:(stage===2?1100:1500),born:now,heavy}; }
+  let lastT=performance.now(), raf=0;
+  function frame(t){ const dt=Math.min(100,t-lastT); lastT=t; if(alive) step(dt); draw(); raf=requestAnimationFrame(frame); }
+  function step(dt){
+    now+=dt; if(!started||stage>=3) return;
+    srv.forEach(s=>s.jobs=s.jobs.filter(j=>j.end>now));
+    if(stage===1 && crashAt && now>=crashAt && srv[1].up){ srv[1].up=false; srv[1].jobs=[]; crashAt=0; api.toast('web-2 just crashed.'); renderCtl(); }
+    if(!queue && now>=nextArr){ queue=newReq(); nextArr=now+(stage===0?1100:stage===1?520:560); }
+    if(queue){
+      if(strategy!=='manual'){ assign(pick()); }
+      else if(now-queue.born>2500){ record(false,'timed out waiting for you'); queue=null; }
+    }
+    const p=$('prog'); if(p) p.textContent=`Streak: ${streak} / ${[12,15,15][stage]}`;
+  }
+  // server buttons are built once and updated in place, so clicks always land
+  const srvEls=[];
+  (function buildServers(){const box=$('srvs');box.innerHTML='';
+    srv.forEach((s,i)=>{const b=document.createElement('button');b.className='srv';b.type='button';
+      b.innerHTML=`<span class="nm">${s.name}</span><span class="bar"><i></i></span><span class="st"></span>`;
+      b.addEventListener('pointerdown',e=>{e.preventDefault();clickServer(i)});
+      b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();clickServer(i)}});
+      box.appendChild(b);srvEls.push({b,bar:b.querySelector('i'),st:b.querySelector('.st')});});})();
+  function clickServer(i){
+    if(!started){api.toast('Press Start first (right panel).');return;}
+    if(strategy!=='manual'){api.toast('The algorithm is routing now. Change the strategy below instead.');return;}
+    if(!queue){api.toast('No request waiting yet. Wait for the dot in the box on the left.');return;}
+    api.move(); assign(i); flash(i);
+  }
+  function flash(i){const b=srvEls[i].b;b.classList.add('hit');setTimeout(()=>b.classList.remove('hit'),180);}
+  function coachText(){
+    if(!started) return ['Press <b>Start</b> in the panel on the right.',''];
+    if(stage>=3) return ['All tasks done.',''];
+    if(stage===0) return queue?[`A request is waiting${queue.heavy?' (heavy: needs 3 free units)':''}. <b>Click a server</b> with enough free space.`,'go']:['Watch the box on the left. When a dot appears, click a server.',''];
+    if(stage===1){
+      if(strategy==='manual') return ['Click <b>Round robin</b> in the strategy row below.','go'];
+      if(srv.some(s=>!s.up)&&!health) return ['web-2 is down and round robin still sends it traffic. Click <b>Health checks</b> below to turn them on.','go'];
+      return ['Hands off. The algorithm routes every request. Watch the streak climb.',''];
+    }
+    if(strategy==='rr') return ['Round robin ignores load, so heavy requests land on full servers. Try the other strategy below.','go'];
+    return ['Hands off. Watch whether the streak reaches 15.',''];
+  }
+  let lastCoach='';
+  function draw(){
+    const rq=$('rq'); if(!rq) return;
+    const qk=queue?(queue.heavy?'h':'l'):'';
+    if(rq.dataset.k!==qk){rq.dataset.k=qk;rq.innerHTML=queue?`<span class="pkt ${queue.heavy?'heavy':''}" style="width:${queue.heavy?34:20}px;height:${queue.heavy?34:20}px"></span>`:'';}
+    rq.classList.toggle('waiting',!!queue&&strategy==='manual');
+    $('rqTxt').textContent=queue?(queue.heavy?'heavy · 3 units':'request · 1 unit'):(started?'next request…':'press Start');
+    srv.forEach((s,i)=>{const e=srvEls[i];const l=load(s);const pct=Math.min(100,l/CAP*100);
+      e.b.classList.toggle('down',!s.up);e.b.classList.toggle('pickable',started&&strategy==='manual'&&!!queue&&s.up);
+      e.b.setAttribute('aria-label',`${s.name}, ${s.up?l+' of 4 units busy':'down'}`);
+      e.bar.style.width=pct+'%';e.bar.className=pct>=100?'full':pct>=75?'hot':'';e.st.textContent=s.up?l+'/'+CAP:'DOWN';});
+    const [ct,cc]=coachText(); const ck=ct+cc; if(ck!==lastCoach){lastCoach=ck;const c=$('coach');c.innerHTML=ct;c.className='coach '+cc;}
+    const ok=results.filter(x=>x).length;
+    $('lbs').innerHTML=`<span>strategy <b>${{manual:'manual',rr:'round robin',least:'least loaded'}[strategy]}</b></span><span>health checks <b>${health?'on':'off'}</b></span><span>served <b>${results.length?Math.round(100*ok/results.length):100}%</b> of recent</span>`;
+    $('strip').innerHTML=results.slice(-60).map(x=>`<span class="${x?'':'x'}"></span>`).join('');
+  }
+  raf=requestAnimationFrame(frame);
+  return ()=>{alive=false;cancelAnimationFrame(raf);};
+ }
+};
+
+/* ================= GAME 2: Replica Diff (replication verification) ================= */
+MODULES.diff={
+ tasks:['Find the object missing from the replica','Find the corrupted copy','Find the copy with different access tags','Find the copy that lost its retention lock','Speed round: find all three differences'],
+ mount(root,api){
+  let round=0, src=[], dst=[], targets=new Set(), found=new Set(), started=false, alive=true;
+  const words=['invoices','scans','backups','models','logs','photos','contracts','payroll','audit','exports','reports','events','tiles','datasets','media','archive'];
+  const ext=['parquet','pdf','tar.gz','json','csv','jpg','bin','zip'];
+  const hex=()=>Math.random().toString(16).slice(2,10);
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  function mkObj(i){const kb=Math.floor(Math.random()*90000)+120;
+    return {key:`${pick(words)}/2026/${String(i+1).padStart(3,'0')}.${pick(ext)}`,size:kb,etag:hex(),tags:pick(['class=internal','class=internal','team=fin','class=public','team=ml']),ret:pick(['none','none','none','7y lock','90d lock'])};}
+  const INFO=[
+   {title:'Something is missing',body:'The replica should hold every object in the source. One did not make it across. Click the source object that has no copy.',
+    lesson:'Missing objects are the first thing any verification checks: list both sides and compare keys. It is cheap, but it is only the start.'},
+   {title:'Same size, different bytes',body:'One copy has the right name and size but different contents. Sizes match, so look at the checksum (ETag).',
+    lesson:'A size check would have passed this file. Checksums catch silent corruption from a bad disk, a truncated upload or a buggy copy job.'},
+   {title:'Same bytes, different permissions',body:'Every checksum matches now. But one object\'s tags differ. In S3, access policies often depend on tags, so this copy may be readable by the wrong people.',
+    lesson:'Content checks miss this entirely. Anyone who can change a tag can change who reads an object without touching its bytes. Real verification compares metadata and tags too, which is what tools like Bucket Delta do.'},
+   {title:'The lock that disappeared',body:'One replica lost its retention lock (write-once, read-many). Its bytes and tags are fine, but it can now be deleted.',
+    lesson:'Retention locks are what let you recover after ransomware: attackers cannot erase a locked copy. A replica without the lock looks healthy and protects nothing.'},
+   {title:'Speed round',body:'Twenty objects, three problems of different kinds. Find all three. Wrong clicks cost 5 seconds.',
+    lesson:'You just did by eye what a replication verifier does across millions of objects: compare keys, checksums, tags and retention, and report every difference.'},
+  ];
+  function build(){
+    const n=round===4?20:12;
+    src=Array.from({length:n},(_,i)=>mkObj(i)); dst=src.map(o=>({...o}));
+    targets=new Set(); found=new Set();
+    const kinds=round===4?shuffle(['miss','etag','tags','ret']).slice(0,3):[['miss','etag','tags','ret'][round]];
+    const idxs=shuffle([...Array(n).keys()]).slice(0,kinds.length);
+    kinds.forEach((k,j)=>{const i=idxs[j];targets.add(i);
+      if(k==='miss') dst[i]=null;
+      if(k==='etag') dst[i].etag=hex();
+      if(k==='tags'){ dst[i].tags= src[i].tags==='class=public'?'class=internal':'class=public'; }
+      if(k==='ret'){ if(src[i].ret==='none'){src[i].ret='7y lock'} dst[i].ret='none'; }
+    });
+    render();
+  }
+  const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+  const fmtSize=kb=>kb>1024?(kb/1024).toFixed(1)+' MB':kb+' KB';
+  function table(rows,side){
+    return `<div class="scroll"><table class="objtbl"><thead><tr><th>key</th><th>size</th><th>etag</th><th>tags</th><th>retention</th></tr></thead><tbody>${rows.map((o,i)=>{
+      if(!o) return `<tr class="miss" data-i="${i}"><td colspan="5">(no object)</td></tr>`;
+      const cls=side==='src'&&found.has(i)?'flag':'';
+      return `<tr class="${cls}" data-i="${i}" tabindex="0"><td>${esc(o.key)}</td><td>${fmtSize(o.size)}</td><td>${o.etag}</td><td>${o.tags}</td><td>${o.ret}</td></tr>`;}).join('')}</tbody></table></div>`;
+  }
+  function render(){
+    root.innerHTML=`<div class="statusbar"><span>round <b>${round+1}/5</b></span><span>problems left <b>${targets.size-found.size}</b></span><span>click a row in either bucket to flag that object</span></div>
+     <div class="diffwrap"><div class="bucket"><h3>Source · us-west</h3>${table(src,'src')}</div><div class="bucket"><h3>Replica · eu-central</h3>${table(dst,'dst')}</div></div>`;
+    root.querySelectorAll('tbody tr').forEach(tr=>{const f=()=>flag(+tr.dataset.i,tr); tr.onclick=f; tr.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f()}};});
+  }
+  function flag(i,tr){
+    if(!started) return; api.move();
+    if(found.has(i)) return;
+    if(targets.has(i)){ found.add(i); render(); if(found.size===targets.size) win(); }
+    else { api.penalty(5000); api.toast('Those two copies match. +5 s'); tr.classList.add('wrong'); setTimeout(()=>tr.classList.remove('wrong'),500); }
+  }
+  function win(){
+    api.task(round);
+    const L=INFO[round];
+    api.side.innerHTML=`<p class="eyebrow">Round ${round+1} complete</p><h2>${L.title}</h2><p class="lesson">${L.lesson}</p>${round<4?'<div class="row" style="margin-top:12px"><button class="btn" id="next">Next round</button></div>':''}`;
+    const nb=$('next'); if(nb) nb.onclick=()=>{round++; side(); build();};
+  }
+  function side(){const L=INFO[round]; api.side.innerHTML=`<p class="eyebrow">Round ${round+1} of 5</p><h2>${L.title}</h2><p>${L.body}</p>`;}
+  api.side.innerHTML=`<p class="eyebrow">The concept</p><h2>Replication</h2><p>Cloud storage keeps <b>copies</b> of your data in other places, so a lost disk or region does not lose your files. But a copy is only useful if it is really the same. Here are a source bucket and its replica. Your job: find every way they differ.</p><div class="row" style="margin-top:12px"><button class="btn" id="go">Start</button></div>`;
+  build();
+  $('go').onclick=()=>{started=true; api.start(); side();};
+  return ()=>{alive=false;};
+ }
+};
+
+/* ================= GAME 3: Split Brain (Raft) ================= */
+MODULES.raft={
+ tasks:['Depose: get a different leader elected','Two crowns: make two servers think they lead','Silence: no working leader for 10 s, scissors only','Storm: force 6 elections within 20 s'],
+ mount(root,api){
+  root.innerHTML=`<div class="statusbar" id="status"></div>
+   <svg class="net" id="net" viewBox="0 0 600 540" role="img" aria-label="Five Raft servers connected by network links"></svg>
+   <div class="reqs" id="reqs" aria-label="Recent client writes"></div>
+   <div class="stagefoot"><span class="key"><span class="dot" style="background:var(--vote)"></span>vote request</span><span class="key"><span class="dot" style="background:var(--ok)"></span>vote granted</span><span class="key"><span class="dot" style="background:var(--append)"></span>append / heartbeat</span><span class="key"><span class="dot" style="background:var(--reply)"></span>reply</span><span class="key"><span class="req ok"></span>write committed</span><span class="key"><span class="req fail"></span>write failed</span>
+   <span class="row" style="margin-left:auto"><button class="chip" id="pause" aria-pressed="false">Pause</button><button class="chip" data-speed="0.4" aria-pressed="false">0.4×</button><button class="chip" data-speed="1" aria-pressed="true">1×</button></span></div>
+   <div style="border-top:1px solid var(--line);padding:14px"><div class="tapehead"><p class="eyebrow" style="margin:0">Replicated logs</p><p>Solid = committed. Dashed = not committed yet, can still be thrown away. Colour = term.</p></div><div class="logs" id="logs"></div></div>
+   <div style="border-top:1px solid var(--line);padding:14px;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))"><div><p class="eyebrow">Safety monitor</p><div class="monitor" id="monitor"></div></div><div><p class="eyebrow">Event log</p><div class="feed" id="feed"></div></div></div>`;
+  const side=api.side;
+  side.innerHTML=`<p class="eyebrow">The concept</p><h2>Consensus with Raft</h2><p>Five servers must agree on one list of writes, even when the network fails. One <b>leader</b> (crown) sends heartbeats. If followers stop hearing them, their <b>timer ring</b> runs out and they hold an election; a server needs <b>3 of 5 votes</b> to win. A write is <b>committed</b> once 3 servers store it.</p><p>You are the network. Click a <b>link</b> to cut it, click a <b>server</b> to crash it.</p><div class="row" style="margin-top:12px"><button class="btn" id="go">Start</button></div>
+   <div id="missionCard"></div><div class="missions" id="missions" style="margin-top:10px"></div>`;
+  let alive=true, started=false;
+  const N=5, MAJ=3;
+  const CFG={latMin:380,latMax:700,hb:500,etMin:1700,etMax:3200,reqEvery:1000,reqTimeout:3600};
+  const TERM_COLORS=['#7B8794','#D9480F','#2563C9','#1F8A5B','#A341B8','#B98900','#0E8FA3','#C2255C','#5F7A1F','#7048E8'];
+  const tc=t=>TERM_COLORS[t%TERM_COLORS.length];
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const key=(a,b)=>a<b?a+'-'+b:b+'-'+a;
+  let now=0,nodes=[],msgs=[],cut=new Set(),committed={},leaderOfTerm={},uidSeq=0,violations=[],requests=[],ridSeq=0,nextReq=0,clientTarget=null,warming=false,seq=0,fx=[],feedLines=[];
+  const mkNode=i=>({id:i,name:'S'+(i+1),alive:true,role:'follower',term:0,votedFor:null,log:[],commit:0,deadline:rand(CFG.etMin,CFG.etMax),votes:new Set(),next:[],match:[],hbAt:0});
+  const linked=(a,b)=>!cut.has(key(a,b));
+  const lastTerm=n=>n.log.length?n.log[n.log.length-1].term:0;
+  const resetDeadline=n=>{n.deadline=now+rand(CFG.etMin,CFG.etMax)};
+  const send=(from,to,type,p)=>msgs.push({from,to,type,p,t0:now,t1:now+rand(CFG.latMin,CFG.latMax),id:++seq});
+  function log(s){ if(warming) return; feedLines.unshift(`${(now/1000).toFixed(1).padStart(5,' ')}s  ${s}`); if(feedLines.length>30) feedLines.length=30; }
+  function violate(w){violations.push(w);log('SAFETY VIOLATION: '+w);}
+  function startElection(n){n.term++;n.role='candidate';n.votedFor=n.id;n.votes=new Set([n.id]);resetDeadline(n);log(`${n.name} times out, starts election for term ${n.term}`);
+    for(let p=0;p<N;p++) if(p!==n.id) send(n.id,p,'RV',{term:n.term,lastIdx:n.log.length,lastTerm:lastTerm(n)});}
+  function becomeLeader(n){n.role='leader';const prev=leaderOfTerm[n.term];if(prev!==undefined&&prev!==n.id) violate(`Two leaders elected in term ${n.term}`);leaderOfTerm[n.term]=n.id;
+    for(let p=0;p<N;p++){n.next[p]=n.log.length+1;n.match[p]=0}n.log.push({term:n.term,cmd:'noop',rid:null,uid:++uidSeq});n.hbAt=now;log(`${n.name} wins ${n.votes.size} votes, leads term ${n.term}`);
+    if(!warming){ev.newLeader=true;ev.elections.push(now);}}
+  function broadcastAppend(n){for(let p=0;p<N;p++){if(p===n.id)continue;const prev=n.next[p]-1,prevTerm=prev>0?n.log[prev-1].term:0;
+    send(n.id,p,'AE',{term:n.term,prev,prevTerm,entries:n.log.slice(prev,prev+6).map(e=>({...e})),commit:n.commit});}}
+  function setCommit(n,c){for(let i=n.commit+1;i<=c;i++){const e=n.log[i-1],g=committed[i];
+      if(g){if(g.uid!==e.uid) violate(`Index ${i} committed with two different values`);}
+      else{committed[i]={term:e.term,uid:e.uid,cmd:e.cmd};if(e.rid){const r=requests.find(r=>r.rid===e.rid);if(r&&r.st==='pend')r.st='ok';}}}
+    if(c>n.commit)n.commit=c;}
+  function advanceCommit(n){for(let k=n.log.length;k>n.commit;k--){if(n.log[k-1].term!==n.term)break;let cnt=1;for(let p=0;p<N;p++)if(p!==n.id&&n.match[p]>=k)cnt++;if(cnt>=MAJ){setCommit(n,k);break;}}}
+  function handle(m){const n=nodes[m.to],p=m.p;
+    if(p.term>n.term){n.term=p.term;n.votedFor=null;if(n.role!=='follower'){if(n.role==='leader')log(`${n.name} sees term ${p.term}, steps down`);n.role='follower';}}
+    switch(m.type){
+     case 'RV':{const up=p.lastTerm>lastTerm(n)||(p.lastTerm===lastTerm(n)&&p.lastIdx>=n.log.length);const grant=p.term===n.term&&(n.votedFor===null||n.votedFor===m.from)&&up;
+       if(grant){n.votedFor=m.from;resetDeadline(n);}send(n.id,m.from,'RVR',{term:n.term,grant});break;}
+     case 'RVR': if(n.role==='candidate'&&p.term===n.term&&p.grant){n.votes.add(m.from);if(n.votes.size>=MAJ)becomeLeader(n);}break;
+     case 'AE':{if(p.term<n.term){send(n.id,m.from,'AER',{term:n.term,ok:false,hint:n.log.length});break;}
+       if(n.role!=='follower')n.role='follower';resetDeadline(n);
+       if(p.prev>n.log.length||(p.prev>0&&n.log[p.prev-1].term!==p.prevTerm)){send(n.id,m.from,'AER',{term:n.term,ok:false,hint:Math.min(n.log.length,p.prev-1)});break;}
+       p.entries.forEach((e,i)=>{const idx=p.prev+1+i;
+         if(n.log.length>=idx){if(n.log[idx-1].term!==e.term){const dropped=n.log.slice(idx-1);
+             for(let j=0;j<dropped.length;j++){const g=committed[idx+j];if(g&&g.uid===dropped[j].uid)violate(`${n.name} erased committed entry ${idx+j}`);}
+             log(`${n.name} discards ${dropped.length} uncommitted entr${dropped.length>1?'ies':'y'} (never committed, nothing lost)`);n.log.length=idx-1;n.log.push({...e});}}
+         else n.log.push({...e});});
+       const last=p.prev+p.entries.length;if(p.commit>n.commit)setCommit(n,Math.min(p.commit,last));send(n.id,m.from,'AER',{term:n.term,ok:true,match:last});break;}
+     case 'AER': if(n.role!=='leader'||p.term!==n.term)break;
+       if(p.ok){n.match[m.from]=Math.max(n.match[m.from],p.match);n.next[m.from]=n.match[m.from]+1;advanceCommit(n);}
+       else n.next[m.from]=Math.max(1,Math.min(n.next[m.from]-1,p.hint+1));break;}}
+  function deliver(m){if(!nodes[m.to].alive||!linked(m.from,m.to)){fx.push({from:m.from,to:m.to,t:now});return;}handle(m);}
+  function tickNode(n){if(!n.alive)return;if(n.role!=='leader'&&now>=n.deadline)startElection(n);if(n.role==='leader'&&now>=n.hbAt){broadcastAppend(n);n.hbAt=now+CFG.hb;}}
+  const leaders=()=>nodes.filter(n=>n.alive&&n.role==='leader');
+  const workingLeader=()=>leaders().find(l=>{let c=1;for(const n of nodes)if(n.id!==l.id&&n.alive&&linked(l.id,n.id))c++;return c>=MAJ;})||null;
+  function clientTick(){for(const r of requests)if(r.st==='pend'&&now-r.t0>CFG.reqTimeout){r.st='fail';if(clientTarget===r.to)clientTarget=null;}
+    if(now<nextReq)return;nextReq=now+CFG.reqEvery;
+    let t=clientTarget!==null&&nodes[clientTarget].alive&&nodes[clientTarget].role==='leader'?clientTarget:null;
+    if(t===null){const ls=leaders();if(ls.length)t=ls[Math.floor(Math.random()*ls.length)].id;}
+    const rid=++ridSeq;
+    if(t===null)requests.push({rid,st:'fail',t0:now,to:null});
+    else{clientTarget=t;const n=nodes[t];n.log.push({term:n.term,cmd:'x='+Math.floor(rand(1,99)),rid,uid:++uidSeq});requests.push({rid,st:'pend',t0:now,to:t});}
+    if(requests.length>80)requests.splice(0,requests.length-80);}
+  function step(dt){const end=now+dt;while(now<end){now=Math.min(end,now+20);
+      if(msgs.length){const due=[];msgs=msgs.filter(m=>m.t1<=now?(due.push(m),false):true);due.sort((a,b)=>a.t1-b.t1);for(const m of due)deliver(m);}
+      for(const n of nodes)tickNode(n);clientTick();if(!warming)missionTick(20);}}
+
+  /* missions */
+  const MS=[
+   {label:'Depose',goal:'Get the cluster to elect a different leader.',hint:'Crash the leader, or cut every link it has.',
+    lesson:'Followers that stop hearing heartbeats start an election in a higher term. A server needs votes from a majority (3 of 5) to win, so the cluster heals itself in a couple of seconds.',check:()=>ev.newLeader},
+   {label:'Two crowns',goal:'Make two servers believe they are leader at the same time.',hint:'Isolate the leader with scissors but do not crash it.',
+    lesson:'Two leaders, but in different terms. The stranded one cannot reach 3 servers, so nothing it accepts commits: its writes stay dashed and fail. Reconnect it and it steps down when it sees the higher term.',check:()=>leaders().length>=2},
+   {label:'Silence',goal:'No working leader for 10 seconds. Scissors only.',noCrash:true,hint:'A server wins with just two neighbours. How many of the 10 links must go so nobody has two?',
+    lesson:'At least 8 cuts. Any server linked to two others can gather a majority. Raft stays available while some majority can talk, which is why 5 servers tolerate 2 failures.',
+    progress:()=>`No working leader for ${(quiet/1000).toFixed(1)} / 10 s`,check:()=>quiet>=10000},
+   {label:'Storm',goal:'Force 6 elections within 20 seconds.',hint:'Isolate a follower until its term climbs, then reconnect it.',
+    lesson:'A cut-off server keeps raising its term. When it returns, the higher term deposes a healthy leader. Production Raft adds a "pre-vote" round to stop exactly this.',
+    progress:()=>`${ev.elections.filter(t=>now-t<20000).length} / 6 elections in the last 20 s`,check:()=>ev.elections.filter(t=>now-t<20000).length>=6},
+   {label:'Impossible',bonus:true,goal:'Bonus: lose a committed write. Make any server overwrite a solid cell.',hint:'Try anything. Dashed entries can vanish. Solid ones never should.',
+    giveUp:'A write commits only after a majority stores it. A new leader needs votes from a majority, and voters refuse anyone whose log is behind theirs. Any two majorities of 5 share at least one server, so every new leader already holds every committed write.',
+    progress:()=>`Violations caused: ${violations.length}`,check:()=>violations.length>0},
+  ];
+  let mi=0, mstate='', quiet=0, ev={newLeader:false,elections:[]}, doneM=new Set(), showHint=false, showWhy=false;
+  function missionTick(h){const m=MS[mi];if(!m||mstate==='won'||!started)return;
+    if(mi===2)quiet=workingLeader()?0:quiet+h;
+    if(m.check()){mstate='won';doneM.add(mi);if(!m.bonus)api.task(mi);api.toast(m.bonus?'You broke it. That should be impossible: please report the event log.':`Done: ${m.label}`);renderMissions();renderMission();}}
+  function reset(){now=0;nodes=Array.from({length:N},(_,i)=>mkNode(i));msgs=[];cut=new Set();committed={};leaderOfTerm={};uidSeq=0;violations=[];requests=[];ridSeq=0;nextReq=0;clientTarget=null;fx=[];feedLines=[];
+    warming=true;let g=0;step(3500);while(!leaders().length&&g++<40)step(500);step(1500);warming=false;requests=requests.filter(r=>r.st!=='fail');quiet=0;ev={newLeader:false,elections:[]};mstate='';}
+  function startMission(i){mi=i;showHint=false;showWhy=false;reset();log(`Mission: ${MS[i].label}`);renderMissions();renderMission();}
+  function afterAction(){api.move();if(mi===2&&workingLeader())quiet=0;}
+  function toggleLink(a,b){if(!started)return;const k=key(a,b);if(cut.has(k)){cut.delete(k);log(`Link S${a+1}–S${b+1} restored`)}else{cut.add(k);log(`Link S${a+1}–S${b+1} cut`)}afterAction();}
+  function toggleNode(i){if(!started)return;const n=nodes[i];if(MS[mi].noCrash){api.toast('Scissors only in this mission. Cut links instead.');return;}
+    if(n.alive){n.alive=false;n.role='follower';n.commit=0;n.votes=new Set();log(`${n.name} crashed`);}else{n.alive=true;resetDeadline(n);log(`${n.name} restarted (keeps its term and log on disk)`);}afterAction();}
+  function healAll(){cut.clear();nodes.forEach(n=>{if(!n.alive){n.alive=true;resetDeadline(n)}});log('Network healed, all servers up');afterAction();}
+  function renderMissions(){const el=$('missions');if(!el)return;el.innerHTML=MS.map((m,i)=>`<button class="mission${doneM.has(i)?' done':''}" aria-pressed="${i===mi}" data-m="${i}" ${started?'':'disabled'}>${m.label}<small>${doneM.has(i)?'done':(m.bonus?'bonus':'—')}</small></button>`).join('');
+    el.querySelectorAll('button').forEach(b=>b.onclick=()=>startMission(+b.dataset.m));}
+  function renderMission(){const el=$('missionCard');if(!el||!started)return;const m=MS[mi],won=mstate==='won';
+    let h=`<p class="eyebrow" style="margin-top:4px">${m.bonus?'Bonus mission':`Mission ${mi+1} of 4`}</p><h2>${m.label}</h2><p style="margin:0 0 8px">${m.goal}</p><div class="progress${won?' win':''}" id="mprog">${won?'Done.':(m.progress?m.progress():'Waiting for you…')}</div>`;
+    if(won&&m.lesson)h+=`<p class="lesson">${m.lesson}</p>`;
+    if(!won&&showHint)h+=`<p class="lesson">${m.hint}</p>`;
+    if(showWhy&&m.giveUp)h+=`<p class="lesson">${m.giveUp}</p>`;
+    h+=`<div class="row" style="margin-top:10px">`;
+    if(!won&&!showHint)h+=`<button class="btn ghost" id="hint">Hint</button>`;
+    if(m.giveUp&&!won&&!showWhy)h+=`<button class="btn ghost" id="why">I give up. Why?</button>`;
+    h+=`<button class="btn ghost" id="heal">Heal all</button>`;
+    const nxt=MS.findIndex((x,i)=>i>mi&&!doneM.has(i)); if(won&&nxt>=0)h+=`<button class="btn" id="nextm">Next mission</button>`;
+    h+=`</div>`;el.innerHTML=h;
+    const on=(id,f)=>{const b=$(id);if(b)b.onclick=f;};on('hint',()=>{showHint=true;renderMission()});on('why',()=>{showWhy=true;renderMission()});on('heal',healAll);on('nextm',()=>startMission(nxt));}
+
+  /* drawing */
+  const svgNS='http://www.w3.org/2000/svg';
+  const S=(tag,attrs,parent)=>{const e=document.createElementNS(svgNS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e;};
+  const svg=$('net');const CX=300,CY=282,R=196,NR=40;
+  const pos=Array.from({length:N},(_,i)=>{const a=-Math.PI/2+i*2*Math.PI/N;return{x:CX+R*Math.cos(a),y:CY+R*Math.sin(a)}});
+  const gLinks=S('g',{},svg),gFx=S('g',{},svg),gMsgs=S('g',{},svg),gNodes=S('g',{},svg);const linkEls={};
+  for(let a=0;a<N;a++)for(let b=a+1;b<N;b++){const g=S('g',{tabindex:0,role:'button','aria-label':`Link between S${a+1} and S${b+1}`,style:'cursor:pointer'},gLinks);
+    const vis=S('line',{x1:pos[a].x,y1:pos[a].y,x2:pos[b].x,y2:pos[b].y,'stroke-width':2.5,'stroke-linecap':'round'},g);
+    const mx=(pos[a].x+pos[b].x)/2,my=(pos[a].y+pos[b].y)/2;
+    const x=S('path',{d:`M${mx-7},${my-7}L${mx+7},${my+7}M${mx+7},${my-7}L${mx-7},${my+7}`,'stroke-width':3,'stroke-linecap':'round',fill:'none'},g);
+    S('line',{x1:pos[a].x,y1:pos[a].y,x2:pos[b].x,y2:pos[b].y,stroke:'transparent','stroke-width':22},g);
+    g.addEventListener('click',()=>toggleLink(a,b));g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleLink(a,b)}});linkEls[key(a,b)]={vis,x};}
+  const nodeEls=pos.map((p,i)=>{const g=S('g',{tabindex:0,role:'button',style:'cursor:pointer'},gNodes);
+    const timer=S('circle',{cx:p.x,cy:p.y,r:NR+7,fill:'none','stroke-width':3,transform:`rotate(-90 ${p.x} ${p.y})`},g);
+    const body=S('circle',{cx:p.x,cy:p.y,r:NR,'stroke-width':2},g);
+    const crown=S('path',{d:`M${p.x-17},${p.y-NR-14}l5,-15l7,9l5,-13l5,13l7,-9l5,15z`,'stroke-width':1.5},g);
+    const name=S('text',{x:p.x,y:p.y-3,'text-anchor':'middle','font-family':'Archivo, Arial Narrow, sans-serif','font-weight':800,'font-size':22},g);
+    const term=S('text',{x:p.x,y:p.y+16,'text-anchor':'middle','font-family':'IBM Plex Mono, monospace','font-size':11},g);
+    const xm=S('path',{d:`M${p.x-22},${p.y-22}L${p.x+22},${p.y+22}M${p.x+22},${p.y-22}L${p.x-22},${p.y+22}`,'stroke-width':4,'stroke-linecap':'round',fill:'none'},g);
+    g.addEventListener('click',()=>toggleNode(i));g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleNode(i)}});return{g,timer,body,crown,name,term,xm};});
+  const msgPool=[];const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();let C={};
+  const readColors=()=>{C={ink:css('--ink'),muted:css('--muted'),line:css('--line'),panel:css('--panel'),bg:css('--bg'),accent:css('--accent'),vote:css('--vote'),ok:css('--ok'),append:css('--append'),reply:css('--reply'),bad:css('--bad')};};readColors();
+  let mq=null;try{mq=matchMedia('(prefers-color-scheme: dark)');mq.addEventListener('change',readColors)}catch(e){}
+  const mo=new MutationObserver(readColors);mo.observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  const msgColor=m=>m.type==='RV'?C.vote:m.type==='RVR'?(m.p.grant?C.ok:C.reply):m.type==='AE'?C.append:C.reply;
+  const edgePt=(a,b,t)=>{const A=pos[a],B=pos[b];const dx=B.x-A.x,dy=B.y-A.y,L=Math.hypot(dx,dy);const s=(NR+2)/L;const u=s+(1-2*s)*t;return{x:A.x+dx*u,y:A.y+dy*u};};
+  function render(){
+    for(const k in linkEls){const c=cut.has(k);const e=linkEls[k];e.vis.setAttribute('stroke',c?C.bad:C.line);e.vis.setAttribute('stroke-dasharray',c?'4 7':'none');e.vis.setAttribute('opacity',c?.75:1);e.x.setAttribute('stroke',C.bad);e.x.setAttribute('opacity',c?1:0);}
+    nodes.forEach((n,i)=>{const e=nodeEls[i];const lead=n.alive&&n.role==='leader',cand=n.alive&&n.role==='candidate';
+      e.body.setAttribute('fill',n.alive?(lead?C.ink:C.panel):C.bg);e.body.setAttribute('stroke',n.alive?(cand?C.vote:C.ink):C.line);e.body.setAttribute('stroke-dasharray',n.alive?'none':'5 5');
+      e.name.textContent=n.name;e.name.setAttribute('fill',n.alive?(lead?C.bg:C.ink):C.muted);
+      e.term.textContent=n.alive?`term ${n.term}`:'down';e.term.setAttribute('fill',n.alive?(lead?C.bg:C.muted):C.muted);
+      e.crown.setAttribute('fill',C.accent);e.crown.setAttribute('stroke',C.accent);e.crown.setAttribute('opacity',lead?1:0);
+      e.xm.setAttribute('stroke',C.muted);e.xm.setAttribute('opacity',n.alive?0:.6);
+      const circ=2*Math.PI*(NR+7);let frac=0,col=C.line;
+      if(n.alive&&!lead){frac=Math.max(0,Math.min(1,(n.deadline-now)/CFG.etMax));col=cand?C.vote:C.muted;}if(lead){frac=1;col=C.accent;}
+      e.timer.setAttribute('stroke',col);e.timer.setAttribute('stroke-dasharray',`${circ*frac} ${circ}`);e.timer.setAttribute('opacity',n.alive?.8:0);
+      e.g.setAttribute('aria-label',`Server ${n.name}, ${n.alive?n.role+' in term '+n.term:'crashed'}. Activate to ${n.alive?'crash':'restart'}.`);});
+    while(msgPool.length<msgs.length)msgPool.push(S('circle',{r:5.5},gMsgs));
+    msgPool.forEach((c,i)=>{const m=msgs[i];if(!m){c.setAttribute('opacity',0);return;}const t=(now-m.t0)/(m.t1-m.t0);
+      if(cut.has(key(m.from,m.to))&&t>.5){c.setAttribute('opacity',0);return;}const p=edgePt(m.from,m.to,Math.max(0,Math.min(1,t)));
+      c.setAttribute('cx',p.x);c.setAttribute('cy',p.y);c.setAttribute('fill',msgColor(m));c.setAttribute('opacity',1);});
+    fx=fx.filter(f=>now-f.t<600);while(gFx.childNodes.length<fx.length)S('circle',{fill:'none','stroke-width':2},gFx);
+    [...gFx.childNodes].forEach((c,i)=>{const f=fx[i];if(!f){c.setAttribute('opacity',0);return;}const k=(now-f.t)/600;const p=cut.has(key(f.from,f.to))?edgePt(f.from,f.to,.5):edgePt(f.from,f.to,1);
+      c.setAttribute('cx',p.x);c.setAttribute('cy',p.y);c.setAttribute('r',4+12*k);c.setAttribute('stroke',C.bad);c.setAttribute('opacity',1-k);});}
+  function panels(){
+    const wl=workingLeader(),ls=leaders(),fin=requests.filter(r=>r.st!=='pend'),ok=fin.filter(r=>r.st==='ok').length;
+    $('status').innerHTML=`<span>leader <b>${wl?wl.name+' (term '+wl.term+')':(ls.length?'stranded':'none')}</b></span><span>commit index <b>${Math.max(0,...Object.keys(committed).map(Number))}</b></span><span>write success <b>${fin.length?Math.round(100*ok/fin.length):100}%</b></span>`;
+    $('reqs').innerHTML=requests.slice(-60).map(r=>`<span class="req ${r.st}"></span>`).join('');
+    const v=violations.length,two=violations.some(x=>x.startsWith('Two leaders')),lost=violations.some(x=>!x.startsWith('Two leaders'));
+    $('monitor').innerHTML=`<div class="mrow"><span>One leader per term</span><span class="${two?'bad-pill':'ok-pill'}">${two?'BROKEN':'holds'}</span></div><div class="mrow"><span>Committed writes never change</span><span class="${lost?'bad-pill':'ok-pill'}">${lost?'BROKEN':'holds'}</span></div><div class="mrow"><span>Safety violations</span><span class="${v?'bad-pill':'ok-pill'}">${v}</span></div>`;
+    $('feed').innerHTML=feedLines.slice(0,6).map(l=>`<div>${esc(l)}</div>`).join('');
+    const maxLen=Math.max(1,...nodes.map(n=>n.log.length)),from=Math.max(1,maxLen-13);
+    let h=`<div class="lrow"><span class="lname"></span><div class="cells">`;for(let i=from;i<=maxLen;i++)h+=`<div class="cell idx">${i}</div>`;h+=`</div></div>`;
+    for(const n of nodes){h+=`<div class="lrow"><span class="lname"><b>${n.name}</b>${n.alive?(n.role==='leader'?' ♦':''):' ✕'}</span><div class="cells">`;
+      for(let i=from;i<=maxLen;i++){const e=n.log[i-1];if(!e){h+=`<div class="cell empty"></div>`;continue;}const unc=!(committed[i]&&committed[i].uid===e.uid);
+        h+=`<div class="cell${unc?' unc':''}" style="--c:${tc(e.term)};background:${tc(e.term)}" title="index ${i}, term ${e.term}${unc?', not committed':', committed'}">${e.cmd==='noop'?'·':e.cmd}<i>t${e.term}</i></div>`;}
+      h+=`</div></div>`;}
+    $('logs').innerHTML=h;
+    const mp=$('mprog');if(mp&&mstate!=='won'&&MS[mi].progress)mp.textContent=MS[mi].progress();}
+  let speed=1,paused=false;
+  root.querySelectorAll('[data-speed]').forEach(b=>b.onclick=()=>{speed=+b.dataset.speed;root.querySelectorAll('[data-speed]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
+  $('pause').onclick=()=>{paused=!paused;$('pause').setAttribute('aria-pressed',paused);$('pause').textContent=paused?'Resume':'Pause';};
+  reset(); renderMissions();
+  $('go').onclick=()=>{started=true;api.start();$('go').parentElement.remove();startMission(0);};
+  let last=performance.now(),lp=0,raf=0;
+  function frame(t){if(!alive)return;const d=Math.min(80,t-last);last=t;if(!paused)step(d*speed);render();if(t-lp>120){lp=t;panels();}raf=requestAnimationFrame(frame);}
+  raf=requestAnimationFrame(frame);
+  return ()=>{alive=false;cancelAnimationFrame(raf);mo.disconnect();try{mq&&mq.removeEventListener('change',readColors)}catch(e){}};
+ }
+};
+
+/* ================= boot ================= */
+if(!LS.get('noticeOk',false)){ $('notice').hidden=false; }
+$('noticeOk').onclick=()=>{LS.set('noticeOk',true);$('notice').hidden=true;};
+route();
+})();
+</script>

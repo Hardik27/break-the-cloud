@@ -1,0 +1,523 @@
+<title>Split Brain</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,700..900&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: an operator's bench. Stage (the cluster) on the left, the mission card on the right, the replicated logs underneath like a tape. */
+:root{
+  --bg:#E9EDF1; --grid:#DCE2E9; --panel:#F7F9FB; --ink:#132033; --muted:#58677D; --line:#BFC9D5;
+  --accent:#D9480F; --vote:#C77700; --ok:#1F8A5B; --append:#2563C9; --reply:#7B8BA3; --bad:#C81E3A;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D141E; --grid:#16202D; --panel:#121B27; --ink:#E3E9F1; --muted:#8C9BB1; --line:#2B394B;
+  --accent:#FF7036; --vote:#F2A93B; --ok:#3CC487; --append:#5B95F5; --reply:#6E7F98; --bad:#FF5470; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D141E; --grid:#16202D; --panel:#121B27; --ink:#E3E9F1; --muted:#8C9BB1; --line:#2B394B;
+  --accent:#FF7036; --vote:#F2A93B; --ok:#3CC487; --append:#5B95F5; --reply:#6E7F98; --bad:#FF5470; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:28px 28px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+h1{font-family:var(--display);font-stretch:125%;font-weight:900;font-size:clamp(40px,7vw,76px);line-height:.9;letter-spacing:-.02em;margin:0;text-wrap:balance}
+h1 span{color:var(--accent)}
+.lede{max-width:52ch;margin:8px 0 0;color:var(--muted);font-size:16px}
+.lede b{color:var(--ink);font-weight:600}
+.speed{display:flex;gap:6px;align-items:center;font-family:var(--mono);font-size:12px;color:var(--muted)}
+button{font:inherit;color:inherit;cursor:pointer}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:5px 11px;font-family:var(--mono);font-size:12px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip:focus-visible,.mission:focus-visible,svg [tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.bench{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:860px){.bench{grid-template-columns:1fr}}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:6px;position:relative;min-width:0}
+.statusbar{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 14px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--muted)}
+.statusbar b{color:var(--ink);font-weight:600}
+svg#net{display:block;width:100%;height:auto;max-width:100%;touch-action:manipulation;user-select:none}
+.stagefoot{display:flex;flex-wrap:wrap;gap:6px 14px;padding:8px 14px 12px;font-size:12px;color:var(--muted);align-items:center}
+.key{display:inline-flex;align-items:center;gap:6px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.reqs{display:flex;gap:3px;flex-wrap:nowrap;overflow:hidden;padding:0 14px 12px}
+.req{width:10px;height:10px;border-radius:2px;flex:none;background:var(--line)}
+.req.ok{background:var(--ok)}.req.fail{background:var(--bad)}.req.pend{background:transparent;border:1.5px solid var(--append)}
+aside{display:flex;flex-direction:column;gap:12px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.missions{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px}
+.mission{border:1px solid var(--line);background:transparent;border-radius:4px;padding:8px 4px;font-family:var(--mono);font-size:12px;line-height:1.2;display:flex;flex-direction:column;align-items:center;gap:2px}
+.mission small{font-size:10px;color:var(--muted)}
+.mission[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.mission.done{background:color-mix(in srgb,var(--ok) 14%,transparent)}
+h2{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:24px;line-height:1.1;margin:0 0 6px;text-wrap:balance}
+.goal{margin:0 0 10px}
+.progress{font-family:var(--mono);font-size:13px;padding:8px 10px;border-radius:4px;background:var(--bg);border:1px dashed var(--line)}
+.progress.win{border-style:solid;border-color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--panel))}
+.lesson{margin:10px 0 0;font-size:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.btn{border:1px solid var(--ink);background:var(--ink);color:var(--bg);border-radius:4px;padding:7px 12px;font-size:13px;font-weight:600}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.monitor{display:grid;gap:6px;font-family:var(--mono);font-size:12px}
+.mrow{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.mrow span:first-child{color:var(--muted)}
+.ok-pill{padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok);font-weight:600}
+.bad-pill{padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad);font-weight:600}
+.feed{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:3px;min-height:7.5em}
+.feed div:first-child{color:var(--ink)}
+.tape{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;min-width:0}
+.tapehead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;align-items:baseline;margin-bottom:8px}
+.tapehead p{margin:0;font-size:13px;color:var(--muted)}
+.logs{overflow-x:auto;display:flex;flex-direction:column;gap:5px;padding-bottom:4px}
+.lrow{display:flex;align-items:center;gap:8px}
+.lname{font-family:var(--mono);font-size:12px;width:62px;flex:none;color:var(--muted)}
+.lname b{color:var(--ink)}
+.cells{display:flex;gap:3px}
+.cell{width:46px;height:30px;flex:none;border-radius:3px;font-family:var(--mono);font-size:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;color:#fff;position:relative}
+.cell i{font-style:normal;font-size:9px;opacity:.85}
+.cell.unc{background:transparent!important;border:1.5px dashed var(--c);color:var(--ink)}
+.cell.idx{background:transparent;color:var(--muted);height:16px;font-size:10px}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);font-size:13px;padding:9px 14px;border-radius:4px;max-width:min(560px,calc(100vw - 32px));opacity:0;transition:opacity .25s;pointer-events:none;z-index:5}
+.toast.show{opacity:1}
+footer{color:var(--muted);font-size:13px;max-width:70ch}
+footer a{color:inherit}
+@media (prefers-reduced-motion: reduce){.pulse{animation:none!important}}
+@keyframes pulse{50%{opacity:.35}}
+.pulse{animation:pulse 1s infinite}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Split <span>Brain</span></h1>
+      <p class="lede">Five servers keep one shared log using <b>Raft</b>. You are the network. Click a <b>link</b> to cut it, click a <b>server</b> to crash it, and try to make them disagree.</p>
+    </div>
+    <div class="speed" role="group" aria-label="Simulation speed">
+      <button class="chip" id="pause" aria-pressed="false">Pause</button>
+      <button class="chip" data-speed="0.4" aria-pressed="false">0.4×</button>
+      <button class="chip" data-speed="1" aria-pressed="true">1×</button>
+      <button class="chip" data-speed="2.5" aria-pressed="false">2.5×</button>
+    </div>
+  </header>
+
+  <div class="bench">
+    <section class="stage" aria-label="Cluster">
+      <div class="statusbar" id="status"></div>
+      <svg id="net" viewBox="0 0 600 540" role="img" aria-label="Five Raft servers connected by network links"></svg>
+      <div class="reqs" id="reqs" aria-label="Recent client writes"></div>
+      <div class="stagefoot">
+        <span class="key"><span class="dot" style="background:var(--vote)"></span>vote request</span>
+        <span class="key"><span class="dot" style="background:var(--ok)"></span>vote granted</span>
+        <span class="key"><span class="dot" style="background:var(--append)"></span>append / heartbeat</span>
+        <span class="key"><span class="dot" style="background:var(--reply)"></span>reply</span>
+        <span class="key"><span class="req ok"></span>write committed</span>
+        <span class="key"><span class="req fail"></span>write failed</span>
+      </div>
+    </section>
+
+    <aside>
+      <div class="card">
+        <p class="eyebrow">Missions</p>
+        <div class="missions" id="missions"></div>
+      </div>
+      <div class="card" id="missionCard" aria-live="polite"></div>
+      <div class="card">
+        <p class="eyebrow">Safety monitor</p>
+        <div class="monitor" id="monitor"></div>
+      </div>
+      <div class="card">
+        <p class="eyebrow">Event log</p>
+        <div class="feed" id="feed"></div>
+      </div>
+    </aside>
+  </div>
+
+  <section class="tape" aria-label="Replicated logs">
+    <div class="tapehead">
+      <p class="eyebrow" style="margin:0">Replicated logs</p>
+      <p>Solid cells are committed. Dashed cells are written but not yet committed and can still be thrown away. Colour = term.</p>
+    </div>
+    <div class="logs" id="logs"></div>
+  </section>
+
+  <footer>
+    Raft by Diego Ongaro and John Ousterhout (USENIX ATC 2014). This is a faithful small model: real terms, votes, log matching and majority commit, with message delays you can watch. The safety monitor checks every commit on every server. If it ever shows a violation, the bug is in this page, not in Raft.
+  </footer>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(()=>{
+"use strict";
+const N=5, MAJ=3;
+const CFG={latMin:380,latMax:700,hb:500,etMin:1700,etMax:3200,reqEvery:1000,reqTimeout:3600};
+const TERM_COLORS=['#7B8794','#D9480F','#2563C9','#1F8A5B','#A341B8','#B98900','#0E8FA3','#C2255C','#5F7A1F','#7048E8'];
+const tc=t=>TERM_COLORS[t%TERM_COLORS.length];
+const rand=(a,b)=>a+Math.random()*(b-a);
+const key=(a,b)=>a<b?a+'-'+b:b+'-'+a;
+
+let now=0, nodes=[], msgs=[], cut=new Set(), committed={}, leaderOfTerm={}, uidSeq=0;
+let violations=[], requests=[], ridSeq=0, nextReq=0, clientTarget=null, warming=false, actions=0, seq=0;
+let fx=[];
+
+function mkNode(i){return{id:i,name:'S'+(i+1),alive:true,role:'follower',term:0,votedFor:null,log:[],commit:0,
+  deadline:rand(CFG.etMin,CFG.etMax),votes:new Set(),next:[],match:[],hbAt:0}}
+const linked=(a,b)=>!cut.has(key(a,b));
+const lastTerm=n=>n.log.length?n.log[n.log.length-1].term:0;
+const resetDeadline=n=>{n.deadline=now+rand(CFG.etMin,CFG.etMax)};
+
+function send(from,to,type,p){msgs.push({from,to,type,p,t0:now,t1:now+rand(CFG.latMin,CFG.latMax),id:++seq})}
+
+function startElection(n){
+  n.term++; n.role='candidate'; n.votedFor=n.id; n.votes=new Set([n.id]); resetDeadline(n);
+  log(`${n.name} times out, starts election for term ${n.term}`);
+  for(let p=0;p<N;p++) if(p!==n.id) send(n.id,p,'RV',{term:n.term,lastIdx:n.log.length,lastTerm:lastTerm(n)});
+}
+function becomeLeader(n){
+  n.role='leader';
+  const prev=leaderOfTerm[n.term];
+  if(prev!==undefined && prev!==n.id) violate(`Two leaders elected in term ${n.term}`);
+  leaderOfTerm[n.term]=n.id;
+  for(let p=0;p<N;p++){n.next[p]=n.log.length+1;n.match[p]=0}
+  n.log.push({term:n.term,cmd:'noop',rid:null,uid:++uidSeq});
+  n.hbAt=now;
+  log(`${n.name} wins ${n.votes.size} votes, leads term ${n.term}`);
+  onLeader(n);
+}
+function broadcastAppend(n){
+  for(let p=0;p<N;p++){ if(p===n.id) continue;
+    const prev=n.next[p]-1, prevTerm=prev>0?n.log[prev-1].term:0;
+    const entries=n.log.slice(prev,prev+6).map(e=>({...e}));
+    send(n.id,p,'AE',{term:n.term,prev,prevTerm,entries,commit:n.commit});
+  }
+}
+function setCommit(n,c){
+  for(let i=n.commit+1;i<=c;i++){
+    const e=n.log[i-1], g=committed[i];
+    if(g){ if(g.uid!==e.uid) violate(`Index ${i} committed with two different values`); }
+    else { committed[i]={term:e.term,uid:e.uid,cmd:e.cmd};
+      if(e.rid){const r=requests.find(r=>r.rid===e.rid); if(r&&r.st==='pend') r.st='ok';} }
+  }
+  if(c>n.commit) n.commit=c;
+}
+function advanceCommit(n){
+  for(let k=n.log.length;k>n.commit;k--){
+    if(n.log[k-1].term!==n.term) break;
+    let cnt=1; for(let p=0;p<N;p++) if(p!==n.id && n.match[p]>=k) cnt++;
+    if(cnt>=MAJ){ setCommit(n,k); break; }
+  }
+}
+function handle(m){
+  const n=nodes[m.to], p=m.p;
+  if(p.term>n.term){ n.term=p.term; n.votedFor=null; if(n.role!=='follower'){ if(n.role==='leader') log(`${n.name} sees term ${p.term}, steps down`); n.role='follower'; } }
+  switch(m.type){
+    case 'RV':{
+      const upToDate = p.lastTerm>lastTerm(n) || (p.lastTerm===lastTerm(n) && p.lastIdx>=n.log.length);
+      const grant = p.term===n.term && (n.votedFor===null||n.votedFor===m.from) && upToDate;
+      if(grant){ n.votedFor=m.from; resetDeadline(n); }
+      send(n.id,m.from,'RVR',{term:n.term,grant}); break;}
+    case 'RVR':
+      if(n.role==='candidate' && p.term===n.term && p.grant){ n.votes.add(m.from); if(n.votes.size>=MAJ) becomeLeader(n); }
+      break;
+    case 'AE':{
+      if(p.term<n.term){ send(n.id,m.from,'AER',{term:n.term,ok:false,hint:n.log.length}); break; }
+      if(n.role!=='follower') n.role='follower';
+      resetDeadline(n);
+      if(p.prev>n.log.length || (p.prev>0 && n.log[p.prev-1].term!==p.prevTerm)){
+        send(n.id,m.from,'AER',{term:n.term,ok:false,hint:Math.min(n.log.length,p.prev-1)}); break; }
+      p.entries.forEach((e,i)=>{
+        const idx=p.prev+1+i;
+        if(n.log.length>=idx){
+          if(n.log[idx-1].term!==e.term){
+            const dropped=n.log.slice(idx-1);
+            for(let j=0;j<dropped.length;j++){ const g=committed[idx+j]; if(g && g.uid===dropped[j].uid) violate(`${n.name} erased committed entry ${idx+j}`); }
+            log(`${n.name} discards ${dropped.length} uncommitted entr${dropped.length>1?'ies':'y'} (never committed, nothing lost)`);
+            n.log.length=idx-1; n.log.push({...e});
+          }
+        } else n.log.push({...e});
+      });
+      const last=p.prev+p.entries.length;
+      if(p.commit>n.commit) setCommit(n,Math.min(p.commit,last));
+      send(n.id,m.from,'AER',{term:n.term,ok:true,match:last}); break;}
+    case 'AER':
+      if(n.role!=='leader'||p.term!==n.term) break;
+      if(p.ok){ n.match[m.from]=Math.max(n.match[m.from],p.match); n.next[m.from]=n.match[m.from]+1; advanceCommit(n); }
+      else n.next[m.from]=Math.max(1,Math.min(n.next[m.from]-1,p.hint+1));
+      break;
+  }
+}
+function deliver(m){
+  if(!nodes[m.to].alive || !linked(m.from,m.to)){ if(!headless) fx.push({from:m.from,to:m.to,t:now,type:m.type}); return; }
+  handle(m);
+}
+function tickNode(n){
+  if(!n.alive) return;
+  if(n.role!=='leader' && now>=n.deadline) startElection(n);
+  if(n.role==='leader' && now>=n.hbAt){ broadcastAppend(n); n.hbAt=now+CFG.hb; }
+}
+function leaders(){return nodes.filter(n=>n.alive&&n.role==='leader')}
+function workingLeader(){
+  return leaders().find(l=>{let c=1;for(const n of nodes) if(n.id!==l.id&&n.alive&&linked(l.id,n.id)) c++; return c>=MAJ;})||null;
+}
+function clientTick(){
+  for(const r of requests) if(r.st==='pend' && now-r.t0>CFG.reqTimeout){ r.st='fail'; if(clientTarget===r.to) clientTarget=null; }
+  if(now<nextReq) return;
+  nextReq=now+CFG.reqEvery;
+  let t = clientTarget!==null && nodes[clientTarget].alive && nodes[clientTarget].role==='leader' ? clientTarget : null;
+  if(t===null){ const ls=leaders(); if(ls.length) t=ls[Math.floor(Math.random()*ls.length)].id; }
+  const rid=++ridSeq;
+  if(t===null){ requests.push({rid,st:'fail',t0:now,to:null}); }
+  else { clientTarget=t; const n=nodes[t]; const v=Math.floor(rand(1,99));
+    n.log.push({term:n.term,cmd:'x='+v,rid,uid:++uidSeq}); requests.push({rid,st:'pend',t0:now,to:t}); }
+  if(requests.length>80) requests.splice(0,requests.length-80);
+}
+function step(dt){
+  const end=now+dt;
+  while(now<end){
+    now=Math.min(end,now+20);
+    if(msgs.length){ const due=[]; msgs=msgs.filter(m=>m.t1<=now?(due.push(m),false):true); due.sort((a,b)=>a.t1-b.t1); for(const m of due) deliver(m); }
+    for(const n of nodes) tickNode(n);
+    clientTick();
+    if(!warming) missionTick(20);
+  }
+}
+function violate(what){ violations.push(what); log('SAFETY VIOLATION: '+what); }
+
+/* ---------- player actions ---------- */
+function toggleLink(a,b){
+  const k=key(a,b);
+  if(cut.has(k)){cut.delete(k);log(`Link S${a+1}–S${b+1} restored`)} else {cut.add(k);log(`Link S${a+1}–S${b+1} cut`)}
+  actions++; afterAction();
+}
+function toggleNode(i){
+  const n=nodes[i];
+  if(mission && mission.noCrash){ toast('Scissors only in this mission. Cut links instead of crashing servers.'); return; }
+  if(n.alive){ n.alive=false; n.role='follower'; n.commit=0; n.votes=new Set(); log(`${n.name} crashed`); }
+  else { n.alive=true; resetDeadline(n); log(`${n.name} restarted (keeps its term and log on disk)`); }
+  actions++; afterAction();
+}
+function healAll(){ cut.clear(); nodes.forEach(n=>{if(!n.alive){n.alive=true;resetDeadline(n)}}); log('Network healed, all servers up'); actions++; afterAction(); }
+
+/* ---------- missions ---------- */
+const MISSIONS=[
+ {id:'depose',label:'Depose',goal:'Get the cluster to elect a different leader.',
+  hint:'Crash the leader, or cut every link it has. The others stop hearing heartbeats and hold an election.',
+  lesson:'Followers that stop hearing heartbeats start an election in a higher term. A server needs votes from a majority (3 of 5) to win, so the cluster recovers by itself in a couple of seconds.',
+  check:()=>ev.newLeader},
+ {id:'crowns',label:'Two crowns',goal:'Make two servers believe they are leader at the same time.',
+  hint:'Isolate the leader with scissors but do not crash it. It keeps thinking it leads.',
+  lesson:'Two leaders, but in different terms. The old one is stranded with a minority, so nothing it accepts can reach 3 servers: watch its writes stay dashed and fail. When you reconnect it, it sees the higher term and steps down.',
+  check:()=>leaders().length>=2},
+ {id:'silence',label:'Silence',goal:'Keep the cluster without a working leader for 10 seconds. Scissors only.',noCrash:true,
+  hint:'A server can win with just two neighbours that vote for it. How many of the 10 links must go so that nobody has two?',
+  lesson:'You need at least 8 cuts. With 5 servers, any server linked to two others can gather a majority. Raft stays available as long as some majority can talk, which is why 5 servers tolerate 2 failures.',
+  progress:()=>`No working leader for ${(quiet/1000).toFixed(1)} / 10 s`, check:()=>quiet>=10000, score:true},
+ {id:'storm',label:'Storm',goal:'Force 6 elections within 20 seconds.',
+  hint:'Isolate a follower until it bumps its term, then reconnect it. Its higher term forces the leader to step down.',
+  lesson:'A server cut off from everyone keeps timing out and raising its term. When it returns, that higher term deposes a healthy leader. Production Raft adds a "pre-vote" round to stop exactly this.',
+  progress:()=>`${ev.elections.filter(t=>now-t<20000).length} / 6 elections in the last 20 s`,
+  check:()=>ev.elections.filter(t=>now-t<20000).length>=6},
+ {id:'impossible',label:'Impossible',goal:'Lose a committed write: make any server overwrite or disagree about a solid cell.',
+  hint:'Try anything. Partition, crash, heal, repeat. Uncommitted (dashed) entries can vanish; solid ones never should.',
+  lesson:'',
+  giveUp:'A write commits only after a majority stores it. A new leader needs votes from a majority, and voters refuse anyone whose log is behind theirs. Any two majorities of 5 share at least one server, so every new leader already holds every committed write. That overlap is the whole trick.',
+  progress:()=>`Violations caused: ${violations.length}`, check:()=>violations.length>0},
+];
+let mission=null, missionState='', quiet=0, ev={newLeader:false,elections:[]}, done=new Set(), showHint=false, showGiveUp=false;
+try{ JSON.parse(localStorage.getItem('splitbrain-done')||'[]').forEach(x=>done.add(x)); }catch(e){}
+
+function onLeader(n){ if(warming) return; ev.newLeader=true; ev.elections.push(now); }
+function missionTick(h){
+  if(!mission||missionState==='won') return;
+  if(mission.id==='silence'){ quiet = workingLeader()?0:quiet+h; }
+  if(mission.check()){ missionState='won'; done.add(mission.id); try{localStorage.setItem('splitbrain-done',JSON.stringify([...done]))}catch(e){}
+    toast(mission.id==='impossible'?'You broke it. That should not be possible: please report the event log.':`Mission complete: ${mission.label}`);
+    renderMissions(); renderMission(); }
+}
+function afterAction(){ if(mission && mission.id==='silence' && workingLeader()) quiet=0; renderMission(); }
+
+function reset(){
+  now=0; nodes=Array.from({length:N},(_,i)=>mkNode(i)); msgs=[]; cut=new Set(); committed={}; leaderOfTerm={}; uidSeq=0;
+  violations=[]; requests=[]; ridSeq=0; nextReq=0; clientTarget=null; actions=0; fx=[]; feedLines=[];
+  warming=true; let guard=0; step(3500); while(!leaders().length && guard++<40) step(500); step(1500); warming=false;
+  requests=requests.filter(r=>r.st!=='fail');
+  quiet=0; ev={newLeader:false,elections:[]}; missionState='';
+}
+function startMission(id){
+  mission=MISSIONS.find(m=>m.id===id)||null; showHint=false; showGiveUp=false;
+  reset(); log(mission?`Mission: ${mission.label}`:'Sandbox'); renderMissions(); renderMission();
+}
+
+/* ---------- rendering ---------- */
+let headless=false;
+const $=id=>document.getElementById(id);
+const svgNS='http://www.w3.org/2000/svg';
+const S=(tag,attrs,parent)=>{const e=document.createElementNS(svgNS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e;};
+const svg=$('net');
+const CX=300, CY=282, R=196, NR=40;
+const pos=Array.from({length:N},(_,i)=>{const a=-Math.PI/2+i*2*Math.PI/N;return{x:CX+R*Math.cos(a),y:CY+R*Math.sin(a)}});
+const gLinks=S('g',{},svg), gFx=S('g',{},svg), gMsgs=S('g',{},svg), gNodes=S('g',{},svg);
+const linkEls={};
+for(let a=0;a<N;a++)for(let b=a+1;b<N;b++){
+  const g=S('g',{tabindex:0,role:'button','aria-label':`Link between S${a+1} and S${b+1}`,style:'cursor:pointer'},gLinks);
+  const vis=S('line',{x1:pos[a].x,y1:pos[a].y,x2:pos[b].x,y2:pos[b].y,'stroke-width':2.5,'stroke-linecap':'round'},g);
+  const mx=(pos[a].x+pos[b].x)/2, my=(pos[a].y+pos[b].y)/2;
+  const x=S('path',{d:`M${mx-7},${my-7}L${mx+7},${my+7}M${mx+7},${my-7}L${mx-7},${my+7}`,'stroke-width':3,'stroke-linecap':'round',fill:'none'},g);
+  S('line',{x1:pos[a].x,y1:pos[a].y,x2:pos[b].x,y2:pos[b].y,stroke:'transparent','stroke-width':22},g);
+  g.addEventListener('click',()=>toggleLink(a,b));
+  g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleLink(a,b)}});
+  linkEls[key(a,b)]={vis,x};
+}
+const nodeEls=pos.map((p,i)=>{
+  const g=S('g',{tabindex:0,role:'button','aria-label':`Server S${i+1}`,style:'cursor:pointer'},gNodes);
+  const timer=S('circle',{cx:p.x,cy:p.y,r:NR+7,fill:'none','stroke-width':3,transform:`rotate(-90 ${p.x} ${p.y})`},g);
+  const body=S('circle',{cx:p.x,cy:p.y,r:NR,'stroke-width':2},g);
+  const crown=S('path',{d:`M${p.x-17},${p.y-NR-14}l5,-15l7,9l5,-13l5,13l7,-9l5,15z`,'stroke-width':1.5},g);
+  const name=S('text',{x:p.x,y:p.y-3,'text-anchor':'middle','font-family':'Archivo, Arial Narrow, sans-serif','font-weight':800,'font-size':22},g);
+  const term=S('text',{x:p.x,y:p.y+16,'text-anchor':'middle','font-family':'IBM Plex Mono, monospace','font-size':11},g);
+  const xm=S('path',{d:`M${p.x-22},${p.y-22}L${p.x+22},${p.y+22}M${p.x+22},${p.y-22}L${p.x-22},${p.y+22}`,'stroke-width':4,'stroke-linecap':'round',fill:'none'},g);
+  g.addEventListener('click',()=>toggleNode(i));
+  g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleNode(i)}});
+  return{g,timer,body,crown,name,term,xm};
+});
+const msgPool=[];
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+let C={};
+function readColors(){C={ink:css('--ink'),muted:css('--muted'),line:css('--line'),panel:css('--panel'),bg:css('--bg'),accent:css('--accent'),
+  vote:css('--vote'),ok:css('--ok'),append:css('--append'),reply:css('--reply'),bad:css('--bad')};}
+readColors();
+try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readColors)}catch(e){}
+new MutationObserver(readColors).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+function msgColor(m){ if(m.type==='RV')return C.vote; if(m.type==='RVR')return m.p.grant?C.ok:C.reply; if(m.type==='AE')return C.append; return C.reply; }
+function edgePt(a,b,t){const A=pos[a],B=pos[b];const dx=B.x-A.x,dy=B.y-A.y,L=Math.hypot(dx,dy);const s=(NR+2)/L;const u=s+(1-2*s)*t;return{x:A.x+dx*u,y:A.y+dy*u};}
+
+function render(){
+  for(const k in linkEls){const c=cut.has(k);const e=linkEls[k];
+    e.vis.setAttribute('stroke',c?C.bad:C.line); e.vis.setAttribute('stroke-dasharray',c?'4 7':'none'); e.vis.setAttribute('opacity',c?.75:1);
+    e.x.setAttribute('stroke',C.bad); e.x.setAttribute('opacity',c?1:0);}
+  nodes.forEach((n,i)=>{const e=nodeEls[i];
+    const lead=n.alive&&n.role==='leader', cand=n.alive&&n.role==='candidate';
+    e.body.setAttribute('fill',n.alive?(lead?C.ink:C.panel):C.bg);
+    e.body.setAttribute('stroke',n.alive?(cand?C.vote:C.ink):C.line);
+    e.body.setAttribute('stroke-dasharray',n.alive?'none':'5 5');
+    e.name.textContent=n.name; e.name.setAttribute('fill',n.alive?(lead?C.bg:C.ink):C.muted);
+    e.term.textContent=n.alive?`term ${n.term}`:'down'; e.term.setAttribute('fill',n.alive?(lead?C.bg:C.muted):C.muted);
+    e.crown.setAttribute('fill',C.accent); e.crown.setAttribute('stroke',C.accent); e.crown.setAttribute('opacity',lead?1:0);
+    e.xm.setAttribute('stroke',C.muted); e.xm.setAttribute('opacity',n.alive?0:.6);
+    const circ=2*Math.PI*(NR+7);
+    let frac=0, col=C.line;
+    if(n.alive&&!lead){frac=Math.max(0,Math.min(1,(n.deadline-now)/CFG.etMax)); col=cand?C.vote:C.muted;}
+    if(lead){frac=1;col=C.accent;}
+    e.timer.setAttribute('stroke',col); e.timer.setAttribute('stroke-dasharray',`${circ*frac} ${circ}`); e.timer.setAttribute('opacity',n.alive?.8:0);
+    e.g.setAttribute('aria-label',`Server ${n.name}, ${n.alive?n.role+' in term '+n.term:'crashed'}. Activate to ${n.alive?'crash':'restart'}.`);
+  });
+  while(msgPool.length<msgs.length) msgPool.push(S('circle',{r:5.5},gMsgs));
+  msgPool.forEach((c,i)=>{const m=msgs[i]; if(!m){c.setAttribute('opacity',0);return;}
+    let t=(now-m.t0)/(m.t1-m.t0); const isCut=cut.has(key(m.from,m.to));
+    if(isCut&&t>.5){c.setAttribute('opacity',0);return;}
+    const p=edgePt(m.from,m.to,Math.max(0,Math.min(1,t)));
+    c.setAttribute('cx',p.x);c.setAttribute('cy',p.y);c.setAttribute('fill',msgColor(m));c.setAttribute('opacity',1);});
+  fx=fx.filter(f=>now-f.t<600);
+  while(gFx.childNodes.length<fx.length) S('circle',{fill:'none','stroke-width':2},gFx);
+  [...gFx.childNodes].forEach((c,i)=>{const f=fx[i]; if(!f){c.setAttribute('opacity',0);return;}
+    const k=(now-f.t)/600; const p=cut.has(key(f.from,f.to))?edgePt(f.from,f.to,.5):edgePt(f.from,f.to,1);
+    c.setAttribute('cx',p.x);c.setAttribute('cy',p.y);c.setAttribute('r',4+12*k);c.setAttribute('stroke',C.bad);c.setAttribute('opacity',1-k);});
+}
+
+let lastPanel=0;
+function renderPanels(){
+  const wl=workingLeader(), ls=leaders();
+  const fin=requests.filter(r=>r.st!=='pend'), ok=fin.filter(r=>r.st==='ok').length;
+  $('status').innerHTML=`<span>leader <b>${wl?wl.name+' (term '+wl.term+')':(ls.length?'stranded':'none')}</b></span>`+
+    `<span>commit index <b>${Math.max(0,...Object.keys(committed).map(Number))}</b></span>`+
+    `<span>write success <b>${fin.length?Math.round(100*ok/fin.length):100}%</b></span>`+
+    `<span>your moves <b>${actions}</b></span>`;
+  $('reqs').innerHTML=requests.slice(-60).map(r=>`<span class="req ${r.st}"></span>`).join('');
+  const viol=violations.length;
+  $('monitor').innerHTML=
+    `<div class="mrow"><span>One leader per term</span><span class="${violations.some(v=>v.startsWith('Two leaders'))?'bad-pill':'ok-pill'}">${violations.some(v=>v.startsWith('Two leaders'))?'BROKEN':'holds'}</span></div>`+
+    `<div class="mrow"><span>Committed writes never change</span><span class="${viol&&!violations.every(v=>v.startsWith('Two leaders'))?'bad-pill':'ok-pill'}">${viol&&!violations.every(v=>v.startsWith('Two leaders'))?'BROKEN':'holds'}</span></div>`+
+    `<div class="mrow"><span>Safety violations</span><span class="${viol?'bad-pill':'ok-pill'}">${viol}</span></div>`;
+  $('feed').innerHTML=feedLines.slice(0,6).map(l=>`<div>${l}</div>`).join('');
+  renderLogs();
+  if(mission&&mission.progress){const p=document.querySelector('#progress'); if(p&&missionState!=='won') p.textContent=mission.progress();}
+}
+function renderLogs(){
+  const maxLen=Math.max(1,...nodes.map(n=>n.log.length)); const W=14; const from=Math.max(1,maxLen-W+1);
+  let h=`<div class="lrow"><span class="lname"></span><div class="cells">`;
+  for(let i=from;i<=maxLen;i++) h+=`<div class="cell idx">${i}</div>`; h+=`</div></div>`;
+  for(const n of nodes){
+    h+=`<div class="lrow"><span class="lname"><b>${n.name}</b>${n.alive?(n.role==='leader'?' ♦':''):' ✕'}</span><div class="cells">`;
+    for(let i=from;i<=maxLen;i++){const e=n.log[i-1];
+      if(!e){h+=`<div class="cell" style="background:transparent;border:1px solid var(--grid)"></div>`;continue;}
+      const isC=!!committed[i]&&committed[i].uid===e.uid&&(i<=n.commit||n.alive===false||true);
+      const unc=!(committed[i]&&committed[i].uid===e.uid);
+      h+=`<div class="cell${unc?' unc':''}" style="--c:${tc(e.term)};background:${tc(e.term)}" title="index ${i}, term ${e.term}${unc?', not committed':', committed'}">${e.cmd==='noop'?'·':e.cmd}<i>t${e.term}</i></div>`;}
+    h+=`</div></div>`;
+  }
+  $('logs').innerHTML=h;
+}
+let feedLines=[];
+function log(s){ if(warming||headless) return; const t=(now/1000).toFixed(1).padStart(5,' '); feedLines.unshift(`${t}s  ${s}`); if(feedLines.length>30) feedLines.length=30; }
+function renderMissions(){
+  $('missions').innerHTML=MISSIONS.map(m=>`<button class="mission${done.has(m.id)?' done':''}" aria-pressed="${mission&&mission.id===m.id}" data-m="${m.id}">${m.label}<small>${done.has(m.id)?'done':'—'}</small></button>`).join('');
+  $('missions').querySelectorAll('button').forEach(b=>b.onclick=()=>startMission(b.dataset.m));
+}
+function renderMission(){
+  const el=$('missionCard');
+  if(!mission){el.innerHTML=`<p class="eyebrow">Sandbox</p><h2>Free play</h2><p class="goal">No goal. Break things and watch the logs.</p><div class="row"><button class="btn ghost" id="heal">Heal everything</button></div>`;$('heal').onclick=healAll;return;}
+  const won=missionState==='won';
+  let body=`<p class="eyebrow">Mission ${MISSIONS.indexOf(mission)+1} of ${MISSIONS.length}</p><h2>${mission.label}</h2><p class="goal">${mission.goal}</p>`;
+  body+=`<div class="progress${won?' win':''}" id="progress">${won?(mission.score?`Done in ${actions} moves${actions<=8?' (the minimum)':'. The minimum is 8.'}`:'Done.'):(mission.progress?mission.progress():'Waiting for you…')}</div>`;
+  if(won&&mission.lesson) body+=`<p class="lesson">${mission.lesson}</p>`;
+  if(won&&mission.id==='impossible') body+=`<p class="lesson"><b>You found a real bug in this simulation.</b> Raft itself is proven safe, so please share the event log.</p>`;
+  if(!won&&showHint) body+=`<p class="lesson">${mission.hint}</p>`;
+  if(showGiveUp&&mission.giveUp) body+=`<p class="lesson">${mission.giveUp}</p>`;
+  body+=`<div class="row">`;
+  if(!won&&!showHint) body+=`<button class="btn ghost" id="hint">Hint</button>`;
+  if(mission.giveUp&&!won&&!showGiveUp) body+=`<button class="btn ghost" id="giveup">I give up. Why?</button>`;
+  body+=`<button class="btn ghost" id="heal">Heal everything</button><button class="btn ghost" id="restart">Restart mission</button>`;
+  const ix=MISSIONS.indexOf(mission); if(won&&ix<MISSIONS.length-1) body+=`<button class="btn" id="nextm">Next mission</button>`;
+  body+=`</div>`;
+  el.innerHTML=body;
+  const on=(id,f)=>{const b=$(id); if(b) b.onclick=f;};
+  on('hint',()=>{showHint=true;renderMission()}); on('giveup',()=>{showGiveUp=true;renderMission()});
+  on('heal',healAll); on('restart',()=>startMission(mission.id)); on('nextm',()=>startMission(MISSIONS[ix+1].id));
+}
+let toastT=0;
+function toast(s){const t=$('toast');t.textContent=s;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),3200);}
+
+/* ---------- controls & loop ---------- */
+let speed=1, paused=false;
+document.querySelectorAll('[data-speed]').forEach(b=>b.onclick=()=>{speed=+b.dataset.speed;document.querySelectorAll('[data-speed]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
+$('pause').onclick=()=>{paused=!paused;$('pause').setAttribute('aria-pressed',paused);$('pause').textContent=paused?'Resume':'Pause';};
+let last=performance.now();
+function frame(t){const d=Math.min(80,t-last);last=t;if(!paused)step(d*speed);render();if(t-lastPanel>120){lastPanel=t;renderPanels();}requestAnimationFrame(frame);}
+
+/* test hook: fuzz the core with random chaos, no rendering */
+window.__splitbrainFuzz=(simMs=600000)=>{
+  const keep={mission}; headless=true; mission=null; reset();
+  let nextChaos=0;
+  while(now<simMs){
+    if(now>=nextChaos){ nextChaos=now+rand(150,900); const r=Math.random();
+      if(r<0.55){const a=Math.floor(Math.random()*N);let b=Math.floor(Math.random()*N);if(a!==b){const k=key(a,b);cut.has(k)?cut.delete(k):cut.add(k);}}
+      else if(r<0.8){const n=nodes[Math.floor(Math.random()*N)];if(n.alive){n.alive=false;n.role='follower';n.commit=0;}else{n.alive=true;resetDeadline(n);}}
+      else if(r<0.9){cut.clear();nodes.forEach(n=>{if(!n.alive){n.alive=true;resetDeadline(n)}});} }
+    step(100);
+  }
+  cut.clear(); nodes.forEach(n=>{if(!n.alive){n.alive=true;resetDeadline(n)}}); step(20000);
+  const out={violations:violations.slice(),committed:Object.keys(committed).length,ok:requests.filter(r=>r.st==='ok').length,
+    agree:nodes.every(n=>n.log.slice(0,n.commit).every((e,i)=>committed[i+1]&&committed[i+1].uid===e.uid)),
+    maxCommit:Math.min(...nodes.map(n=>n.commit))};
+  headless=false; mission=keep.mission; return out;
+};
+
+startMission('depose');
+requestAnimationFrame(frame);
+})();
+</script>

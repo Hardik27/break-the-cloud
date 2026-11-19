@@ -1,0 +1,17 @@
+/* Design tokens, copied from reference/split-brain.html (light + dark). Do not invent new colours here. */
+:root{
+  --bg:#E9EDF1; --grid:#DCE2E9; --panel:#F7F9FB; --ink:#132033; --muted:#58677D; --line:#BFC9D5;
+  --accent:#D9480F; --vote:#C77700; --ok:#1F8A5B; --append:#2563C9; --reply:#7B8BA3; --bad:#C81E3A;
+  --scrim:rgba(19,32,51,.58);
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D141E; --grid:#16202D; --panel:#121B27; --ink:#E3E9F1; --muted:#8C9BB1; --line:#2B394B;
+  --accent:#FF7036; --vote:#F2A93B; --ok:#3CC487; --append:#5B95F5; --reply:#6E7F98; --bad:#FF5470;
+  --scrim:rgba(3,6,10,.72); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D141E; --grid:#16202D; --panel:#121B27; --ink:#E3E9F1; --muted:#8C9BB1; --line:#2B394B;
+  --accent:#FF7036; --vote:#F2A93B; --ok:#3CC487; --append:#5B95F5; --reply:#6E7F98; --bad:#FF5470;
+  --scrim:rgba(3,6,10,.72); color-scheme:dark}
