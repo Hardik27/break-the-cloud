@@ -422,3 +422,40 @@ svg.hb-run{display:block;width:100%;height:auto;border:1px solid var(--line);bor
 .rl-track{height:170px}
 .rl-chip{width:54px;height:27px}
 @media (max-width:520px){.rl-chip{width:44px;font-size:10px}.rl-api{width:70px}}
+
+/* ---------- Cache Hit ---------- */
+.ch-panel{padding:14px;display:grid;gap:12px}
+.ch-reqrow{justify-content:space-between;min-height:40px}
+.ch-req{font-size:14px;flex:1 1 220px}
+.tag.bad{border-color:var(--bad);color:var(--bad)}
+.tag.okt{border-color:var(--ok);color:var(--ok)}
+.ch-cachebox{border:1px solid var(--line);border-radius:6px;padding:10px;display:grid;gap:8px}
+.ch-slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+@media (max-width:420px){.ch-slots{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ch-slot{border:1.5px solid var(--ok);background:var(--panel);border-radius:6px;padding:10px 8px;display:flex;flex-direction:column;gap:2px;text-align:left;touch-action:manipulation;min-height:58px}
+.ch-slot .k{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:16px}
+.ch-slot .n{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.ch-slot.empty{border-style:dashed;border-color:var(--line)}
+.ch-slot.empty .k{color:var(--muted);font-weight:600}
+.ch-slot.pick{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.ch-slot.lit{animation:lit .5s}
+.ch-db{display:flex;justify-content:space-between;align-items:center;background:var(--ink);color:var(--bg);border-radius:6px;padding:6px 10px;font-size:13px}
+.ch-db .small{color:var(--bg);opacity:.7}
+.ch-keys{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 12px}
+.ch-key{display:grid;grid-template-columns:56px minmax(0,1fr) 26px;gap:6px;align-items:center;font-family:var(--mono);font-size:11px}
+.ch-key .bar{height:7px;background:var(--grid);border-radius:4px;overflow:hidden}
+.ch-key .bar i{display:block;height:100%;background:var(--vote)}
+.ch-key.cached .nm{color:var(--ok);font-weight:600}
+.ch-strip{padding:0}
+.ch-pat{border:1px solid var(--line);border-radius:6px;padding:12px}
+.ch-pat.done{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 7%,var(--panel))}
+.ch-pat p{margin:4px 0 8px}
+.ch-out{font-size:13px;min-height:1.4em}
+.okc{color:var(--ok)}.badc{color:var(--bad)}
+.ch-strow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.ch-stbox{border:1.5px solid var(--ok);border-radius:6px;padding:12px;display:grid;gap:8px;align-content:start}
+.ch-stbox .eyebrow{margin:0}
+.ch-stbox .big{font-family:var(--display);font-stretch:112%;font-weight:900;font-size:32px;line-height:1}
+.ch-stbox.db{border-color:var(--ink)}
+.ch-stbox.stale{border-color:var(--bad);animation:alarm .8s infinite}
+.ch-panel>*{min-width:0}

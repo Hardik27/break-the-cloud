@@ -35,7 +35,7 @@ export const GAMES: GameEntry[] = [
   { id: 'traffic-cop', level: 2, title: 'Traffic Cop', concept: 'Load balancing', blurb: 'Route requests across servers by hand, then let an algorithm do it and watch it fail.', load: () => import('./traffic-cop') },
   { id: 'heartbeat', level: 2, title: 'Heartbeat', concept: 'Health checks and failover', blurb: 'Spot dead servers fast, without evicting healthy ones that are only slow.', load: () => import('./heartbeat') },
   { id: 'rate-limiter', level: 2, title: 'Rate Limiter', concept: 'Token buckets and 429s', blurb: 'A bot floods your API. Block it by hand, then protect paying users with token buckets.', load: () => import('./rate-limiter') },
-  { id: 'cache-hit', level: 3, title: 'Cache Hit', concept: 'Caching and eviction', blurb: 'A tiny cache, a stream of requests. Keep the hit rate up and the data fresh.' },
+  { id: 'cache-hit', level: 3, title: 'Cache Hit', concept: 'Caching and eviction', blurb: 'A tiny cache, a stream of requests. Keep the hit rate up and the data fresh.', load: () => import('./cache-hit') },
   { id: 'replica-diff', level: 3, title: 'Replica Diff', concept: 'Replication verification', blurb: 'Two copies of a bucket. Find what is different, including what checksums miss.', load: () => import('./replica-diff') },
   { id: 'thundering-herd', level: 3, title: 'Thundering Herd', concept: 'Cache stampedes', blurb: 'One hot key expires and a thousand requests hit the database at once.' },
   { id: 'the-ring', level: 4, title: 'The Ring', concept: 'Consistent hashing', blurb: 'Add a server and move as little data as possible.' },
