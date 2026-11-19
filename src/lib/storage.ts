@@ -46,17 +46,29 @@ export interface Best {
   ms: number;
   moves: number;
   at: string;
+  /** Older saves (before scoring) have no points. */
+  points?: number;
+  stars?: number;
 }
 
 export const allBest = (): Record<string, Best> => storage.get<Record<string, Best>>('best', {});
 export const getBest = (gameId: string): Best | undefined => allBest()[gameId];
 
-/** Saves the run if it beats the stored best. Returns true for a new personal best. */
-export function saveBest(gameId: string, ms: number, moves: number): boolean {
+/** Saves the run if it beats the stored best (more points; equal points, less time). */
+export function saveBest(gameId: string, run: { ms: number; moves: number; points: number; stars: number }): { pb: boolean; prev?: Best } {
   const best = allBest();
   const prev = best[gameId];
-  if (prev && prev.ms <= ms) return false;
-  best[gameId] = { ms: Math.round(ms), moves, at: new Date().toISOString() };
+  const better = !prev || run.points > (prev.points ?? 0) || (run.points === (prev.points ?? 0) && run.ms < prev.ms);
+  if (!better) return { pb: false, prev };
+  best[gameId] = { ms: Math.round(run.ms), moves: run.moves, points: run.points, stars: run.stars, at: new Date().toISOString() };
   storage.set('best', best);
-  return true;
+  return { pb: true, prev };
+}
+
+/** Sum of your best score in every game: drives the career rank. */
+export function careerPoints(): number {
+  return Object.values(allBest()).reduce((a, b) => a + (b.points ?? 0), 0);
+}
+export function careerStars(): number {
+  return Object.values(allBest()).reduce((a, b) => a + (b.stars ?? 0), 0);
 }

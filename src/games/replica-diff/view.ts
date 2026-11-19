@@ -12,7 +12,7 @@ const INFO = [
   { h: 'Same size, different bytes', p: 'One copy has the right name and size but different contents. Sizes match, so look at the checksum (etag).' },
   { h: 'Same bytes, different permissions', p: 'Every checksum matches now. But one object’s tags differ, and in S3 tags can decide who may read an object.' },
   { h: 'The lock that disappeared', p: 'One replica lost its retention lock. Its bytes and tags are fine, but it can now be deleted.' },
-  { h: 'Speed round', p: 'Fourteen objects, three problems of different kinds. Find all three. Wrong clicks still cost 5 seconds.' },
+  { h: 'Speed round', p: 'Fourteen objects, three problems of different kinds. Find all three. Wrong clicks still cost points and 3 seconds.' },
 ];
 
 const COACH = [
@@ -30,6 +30,8 @@ export const game: Game = {
     const rng = mulberry32(api.seed);
     let round = sim.makeRound(0, rng);
     let phase: Phase = 'pre';
+    let roundStart = performance.now();
+    let hintOn = false;
 
     stage.innerHTML = '';
     const status = el(
@@ -76,6 +78,35 @@ export const game: Game = {
       });
     }
 
+    const COL_NAMES = ['', 'key', 'size', 'etag', 'tags', 'retention'];
+    const cellsInCol = (col: number) => [...stage.querySelectorAll<HTMLElement>(`.objtbl tr > :nth-child(${col + 1})`)];
+    function nextHintKind(): sim.Kind | null {
+      for (const [i, k] of round.targets) if (!round.found.has(i)) return k;
+      return null;
+    }
+    function clearHint() {
+      hintOn = false;
+      stage.querySelectorAll('.hintcol').forEach((e) => e.classList.remove('hintcol'));
+    }
+    function showHint() {
+      const k = nextHintKind();
+      if (!k || hintOn) return;
+      hintOn = true;
+      cellsInCol(sim.KIND_COL[k]).forEach((c) => c.classList.add('hintcol'));
+      update();
+    }
+    const hintTimer = window.setInterval(() => {
+      if (phase !== 'play' || hintOn) return;
+      const wait = round.task === 4 ? 20000 : 12000;
+      if (performance.now() - roundStart > wait) showHint();
+    }, 500);
+    function markCells(i: number) {
+      const k = sim.diffKind(round.src[i], round.dst[i]);
+      if (!k || k === 'miss') return;
+      const col = sim.KIND_COL[k];
+      for (const tr of [rowEls[i].src, rowEls[i].dst]) tr.children[col]?.classList.add('cellbad');
+    }
+
     function renderSide() {
       const t = round.task;
       const info = INFO[t];
@@ -95,7 +126,8 @@ export const game: Game = {
       if (phase === 'solved') api.coach.say('Read the lesson, then click <b>Next round</b>.', 'act');
       else if (phase === 'play') {
         const leftTxt = round.task === 4 ? ` ${sim.left(round)} left.` : '';
-        api.coach.say(COACH[round.task] + leftTxt, 'act');
+        const k = hintOn ? nextHintKind() : null;
+        api.coach.say(k ? `Psst: look closely at the <b>${COL_NAMES[sim.KIND_COL[k]]}</b> column (highlighted).${leftTxt}` : COACH[round.task] + leftTxt, 'act');
       }
     }
 
@@ -113,7 +145,8 @@ export const game: Game = {
       api.move();
       if (res === 'wrong') {
         api.penalty(sim.PENALTY_MS);
-        api.toast(`Row ${i + 1}: those two copies match. +5 s`);
+        api.mistake('match', rows.src);
+        api.toast(`Row ${i + 1}: those two copies match. +3 s`);
         for (const tr of [rows.src, rows.dst]) {
           tr.classList.add('wrong');
           setTimeout(() => tr.classList.remove('wrong'), 600);
@@ -122,6 +155,12 @@ export const game: Game = {
       }
       rows.src.classList.add('flag');
       rows.dst.classList.add('flag');
+      markCells(i);
+      api.hit(phase === 'tutorial' ? 'Found it!' : 'found', rows.src);
+      if (hintOn) {
+        clearHint();
+        roundStart = performance.now();
+      }
       if (!sim.solved(round)) {
         api.toast(`Row ${i + 1} flagged. ${sim.left(round)} to go.`);
         update();
@@ -140,6 +179,8 @@ export const game: Game = {
     function nextRound() {
       round = sim.makeRound(round.task + 1, rng);
       phase = 'play';
+      hintOn = false;
+      roundStart = performance.now();
       buildRows();
       renderSide();
       update();
@@ -167,6 +208,6 @@ export const game: Game = {
 
     buildRows();
     update();
-    return () => {};
+    return () => clearInterval(hintTimer);
   },
 };

@@ -20,7 +20,13 @@ function runUntilGoal(s: tc.State, ms: number, onTick?: (s: tc.State, ev: tc.Sim
   return false;
 }
 
-describe('tutorial (task 1)', () => {
+/** Pull crashed servers and return recovered ones right away. */
+const keepRotation = (s: tc.State) =>
+  s.servers.forEach((srv, i) => {
+    if (srv.up !== srv.inRotation) tc.toggleRotation(s, i);
+  });
+
+describe('task 1: tutorial', () => {
   it('waits for injected requests and never times them out', () => {
     const s = fresh(0);
     for (let i = 0; i < 200; i++) tc.step(s, 100);
@@ -28,21 +34,18 @@ describe('tutorial (task 1)', () => {
     tc.inject(s, false);
     for (let i = 0; i < 200; i++) tc.step(s, 100);
     expect(s.queue).not.toBeNull();
-    const ev = tc.route(s, 0);
-    expect(ev[0]).toMatchObject({ type: 'served', server: 0 });
+    expect(tc.route(s, 0)[0]).toMatchObject({ type: 'served', server: 0, manual: true });
     tc.inject(s, true);
     expect(tc.route(s, 1)[0]).toMatchObject({ type: 'served', heavy: true });
     expect(tc.load(s.servers[1])).toBe(3);
   });
 });
 
-describe('task 2: route by hand', () => {
-  it('a student who picks a server with room reaches 10 in a row', () => {
+describe('task 2: rush hour by hand', () => {
+  it('a student who picks a server with room reaches 8 in a row', () => {
     const s = fresh(1);
-    const ok = runUntilGoal(s, 60_000, (st) => {
-      if (st.queue && st.now - st.queue.born > 500) tc.route(st, Math.max(0, tc.bestFit(st)));
-    });
-    expect(ok).toBe(true);
+    expect(runUntilGoal(s, 60_000, (st) => st.queue && st.now - st.queue.born > 500 && tc.route(st, Math.max(0, tc.bestFit(st))))).toBe(true);
+    expect(s.drops).toBe(0);
   });
   it('a request left waiting times out and is dropped', () => {
     const s = fresh(1);
@@ -51,83 +54,132 @@ describe('task 2: route by hand', () => {
     expect(drops[0]).toMatchObject({ type: 'drop', why: 'it timed out waiting for you' });
     expect(s.streak).toBe(0);
   });
-  it('a heavy request sent to a busy server is dropped', () => {
-    const s = fresh(1);
-    s.queue = { size: 1, dur: 5000, born: 0, heavy: false };
-    tc.route(s, 0);
-    s.queue = { size: 1, dur: 5000, born: 0, heavy: false };
-    tc.route(s, 0);
-    s.queue = { size: 3, dur: 5000, born: 0, heavy: true };
-    expect(tc.route(s, 0)[0]).toMatchObject({ type: 'drop', why: 'web-1 was full' });
+  it('piling everything on one server overflows it (the lesson: look at the load)', () => {
+    let fails = 0;
+    for (let seed = 1; seed <= 30; seed++) {
+      const s = fresh(1, seed);
+      runUntilGoal(s, 60_000, (st) => st.queue && st.now - st.queue.born > 500 && tc.route(st, 0));
+      if (s.drops >= 4 || !s.stageDone) fails++;
+    }
+    expect(fails).toBeGreaterThan(20);
   });
 });
 
-describe('task 3: round robin and a crash', () => {
-  it('requests wait until round robin is chosen', () => {
+describe('task 3: be the health check', () => {
+  it('requests wait until round robin is switched on, then two servers crash', () => {
     const s = fresh(2);
     for (let i = 0; i < 100; i++) tc.step(s, 100);
     expect(s.results.length).toBe(0);
     tc.setStrategy(s, 'rr');
-    for (let i = 0; i < 20; i++) tc.step(s, 100);
-    expect(s.results.length).toBeGreaterThan(0);
+    expect(s.crashes.map((c) => c.server)).toEqual([1, 2]);
   });
-  it('round robin cycles through servers in turn', () => {
+  it('round robin cycles through servers in turn and skips servers out of rotation', () => {
     const s = fresh(2);
     tc.setStrategy(s, 'rr');
     expect([tc.pick(s), tc.pick(s), tc.pick(s), tc.pick(s)]).toEqual([0, 1, 2, 0]);
+    tc.toggleRotation(s, 1);
+    expect([tc.pick(s), tc.pick(s), tc.pick(s)]).toEqual([2, 0, 2]);
   });
-  it('without health checks, round robin keeps sending traffic to the dead server and never reaches 15', () => {
+  it('a dead server left in rotation keeps eating every third request', () => {
     const s = fresh(2, 3);
     tc.setStrategy(s, 'rr');
-    const downDrops: string[] = [];
-    const ok = runUntilGoal(s, 60_000, (_st, ev) => ev.forEach((e) => e.type === 'drop' && downDrops.push(e.why)));
-    expect(ok).toBe(false);
-    expect(s.servers[1].up).toBe(false);
-    expect(downDrops.filter((w) => w === 'web-2 is down').length).toBeGreaterThan(20);
+    const whys: string[] = [];
+    runUntilGoal(s, 60_000, (_st, ev) => ev.forEach((e) => e.type === 'drop' && whys.push(e.why)));
+    expect(whys.filter((w) => w.endsWith('is down')).length).toBeGreaterThanOrEqual(8);
   });
-  it('with health checks after the crash, the streak reaches 15', () => {
+  it('pulling dead servers and returning them keeps drops near zero and completes the task', () => {
     const s = fresh(2, 3);
     tc.setStrategy(s, 'rr');
-    const ok = runUntilGoal(s, 60_000, (st, ev) => {
-      if (ev.some((e) => e.type === 'crash')) tc.setHealth(st, true);
-    });
-    expect(ok).toBe(true);
-    expect(s.servers[1].up).toBe(false);
+    expect(runUntilGoal(s, 60_000, keepRotation)).toBe(true);
+    expect(s.drops).toBeLessThanOrEqual(1);
   });
-  it('least-loaded without health checks sends everything to the dead server (it looks empty)', () => {
+  it('pull and return report what happened', () => {
     const s = fresh(2);
     s.servers[1].up = false;
-    s.strategy = 'least';
-    s.servers[0].jobs.push({ size: 1, end: 1e9 });
-    s.servers[2].jobs.push({ size: 1, end: 1e9 });
-    expect(tc.pick(s)).toBe(1);
-    tc.setHealth(s, true);
-    expect(tc.pick(s)).not.toBe(1);
+    expect(tc.toggleRotation(s, 1)).toBe('pulled-dead');
+    expect(tc.toggleRotation(s, 1)).toBe('returned-dead');
+    expect(tc.toggleRotation(s, 0)).toBe('pulled-healthy');
+    expect(tc.toggleRotation(s, 0)).toBe('returned');
+  });
+  it('a crashed server comes back after a while', () => {
+    const s = fresh(2);
+    tc.setStrategy(s, 'rr');
+    const ev: tc.SimEvent[] = [];
+    for (let i = 0; i < 400; i++) ev.push(...tc.step(s, 50));
+    expect(ev.some((e) => e.type === 'crash' && e.server === 1)).toBe(true);
+    expect(ev.some((e) => e.type === 'recover' && e.server === 1)).toBe(true);
+    expect(s.servers[1].up).toBe(true);
   });
 });
 
-describe('task 4: heavy traffic mix', () => {
-  it('round robin usually drops heavy requests (it ignores load)', () => {
+describe('task 4: heavy hitters', () => {
+  it('round robin holds heavy requests so the student can override, and says where it would send them', () => {
+    const s = fresh(3);
+    let held = false;
+    for (let i = 0; i < 200 && !held; i++) {
+      tc.step(s, 50);
+      if (s.queue?.heavy && tc.holdLeft(s) > 0) held = true;
+    }
+    expect(held).toBe(true);
+    expect(tc.peek(s)).toBeGreaterThanOrEqual(0);
+  });
+  it('left alone, round robin drops heavy requests (they arrive in its rhythm)', () => {
     let fails = 0;
-    for (let seed = 1; seed <= 40; seed++) {
+    for (let seed = 1; seed <= 30; seed++) {
       const s = fresh(3, seed);
-      if (!runUntilGoal(s, 60_000)) fails++;
+      runUntilGoal(s, 60_000);
+      if (!s.stageDone || s.drops >= 4) fails++;
     }
-    expect(fails).toBeGreaterThan(20);
+    expect(fails).toBeGreaterThan(15);
   });
-  it('round robin sends the heavy-prone third request to the same server every time', () => {
-    const s = fresh(3, 9);
-    const heavyOn = new Set<number>();
-    for (let i = 0; i < 400; i++) tc.step(s, 50).forEach((e) => e.type === 'served' && e.heavy && heavyOn.add(e.server));
-    expect(heavyOn.has(2)).toBe(true);
-  });
-  it('least loaded reaches 15 in a row', () => {
+  it('overriding each heavy request to the emptiest server wins', () => {
     let wins = 0;
-    for (let seed = 1; seed <= 40; seed++) {
+    for (let seed = 1; seed <= 30; seed++) {
       const s = fresh(3, seed);
-      tc.setStrategy(s, 'least');
-      if (runUntilGoal(s, 60_000)) wins++;
+      const ok = runUntilGoal(s, 60_000, (st) => {
+        if (st.queue?.heavy && st.now - st.queue.born > 500) tc.route(st, Math.max(0, tc.bestFit(st)));
+      });
+      if (ok && s.drops <= 2) wins++;
     }
-    expect(wins).toBeGreaterThanOrEqual(38);
+    expect(wins).toBeGreaterThanOrEqual(28);
+  });
+});
+
+describe('task 5: boss wave', () => {
+  it('least loaded sends everything to a crashed server in rotation (it looks empty)', () => {
+    const s = fresh(4);
+    tc.setStrategy(s, 'least');
+    s.servers[0].up = false;
+    s.servers[1].jobs.push({ size: 1, end: 1e9 });
+    s.servers[2].jobs.push({ size: 1, end: 1e9 });
+    expect(tc.pick(s)).toBe(0);
+    tc.toggleRotation(s, 0);
+    expect(tc.pick(s)).not.toBe(0);
+  });
+  it('round robin usually fails the boss wave', () => {
+    let fails = 0;
+    for (let seed = 1; seed <= 30; seed++) {
+      const s = fresh(4, seed);
+      runUntilGoal(s, 60_000, keepRotation);
+      if (!s.stageDone || s.drops >= 4) fails++;
+    }
+    expect(fails).toBeGreaterThan(15);
+  });
+  it('least loaded plus pulling the dead server wins', () => {
+    let wins = 0;
+    for (let seed = 1; seed <= 30; seed++) {
+      const s = fresh(4, seed);
+      tc.setStrategy(s, 'least');
+      if (runUntilGoal(s, 60_000, keepRotation) && s.drops <= 3) wins++;
+    }
+    expect(wins).toBeGreaterThanOrEqual(27);
+  });
+  it('the goal only counts after the crash has happened', () => {
+    const s = fresh(4);
+    tc.setStrategy(s, 'least');
+    s.streak = 99;
+    expect(tc.crashesOver(s)).toBe(false);
+    tc.step(s, 100);
+    expect(s.stageDone).toBe(false);
   });
 });

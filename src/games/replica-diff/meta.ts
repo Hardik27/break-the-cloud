@@ -1,3 +1,4 @@
+import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="12"';
@@ -31,12 +32,12 @@ export const meta: GameMeta = {
     { color: 'var(--ink)', shape: 'line', label: '<b>tags</b>: labels that access rules can depend on' },
     { color: 'var(--ink)', shape: 'line', label: '<b>retention</b>: a lock that blocks deletion' },
     { color: 'var(--ok)', shape: 'square', label: 'A row you flagged correctly' },
-    { color: 'var(--bad)', shape: 'square', label: 'Wrong flag: the copies match (+5 s)' },
+    { color: 'var(--bad)', shape: 'square', label: 'Wrong flag: the copies match (+3 s)' },
   ],
   howTo: [
     'A short tutorial shows you how to flag a row. The clock starts after it.',
     'Compare each source row with the replica row of the same number, and click a row that differs.',
-    'A wrong click adds 5 seconds. Each round hides a different kind of difference.',
+    'Correct flags build a combo. A wrong flag costs points and adds 3 seconds. Stuck? The right column lights up after a while.',
   ],
   tasks: [
     'Tutorial: flag the object missing from the replica',
@@ -54,9 +55,10 @@ export const meta: GameMeta = {
   ],
   walkthrough: [
     { id: 'flag-missing', target: '[data-row="src-2"]', text: 'Row 3 has no copy in the replica. Click row 3 in the source table to flag it.' },
-    { id: 'next', target: '#rd-next', text: 'Flagged. From now on a wrong flag costs 5 s. Click Next round to start the clock.' },
+    { id: 'next', target: '#rd-next', text: 'Flagged. From now on a wrong flag costs 3 s. Click Next round to start the clock.' },
   ],
-  minTimeMs: [0, 3000, 3000, 3000, 6000],
+  minTimeMs: RULES['replica-diff'].minTimeMs,
+  parMs: RULES['replica-diff'].parMs,
   learnMore: {
     paragraphs: [
       'Replication copies each new object from a source bucket to a replica, usually <b>asynchronously</b>: the write succeeds first and the copy follows seconds or minutes later. Replication can skip objects without telling you (objects written before the rule existed, or copies that failed), so teams verify it instead of trusting it.',

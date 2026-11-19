@@ -32,12 +32,13 @@ test('solver completes every task with real mouse clicks, no console errors', as
     const diffs = await differingRows(page);
     expect(diffs.length).toBe(round === T - 1 ? 3 : 1);
     if (round === 1) {
-      // A wrong flag costs 5 seconds and says so.
+      // A wrong flag costs 3 seconds and points, and says so.
       const wrong = [...Array(12).keys()].find((i) => !diffs.includes(i))!;
       await realClick(page, page.locator(`[data-row="src-${wrong}"]`), { offsetX: 40 });
-      await expect(page.locator('#toast')).toContainText('+5 s');
+      await expect(page.locator('#toast')).toContainText('+3 s');
+      await expect(page.locator('.pop.bad')).toBeVisible();
       const secs = async () => Number(((await page.locator('#hud-time').textContent()) ?? '0:0').split(':')[1]);
-      await expect.poll(secs).toBeGreaterThanOrEqual(5);
+      await expect.poll(secs).toBeGreaterThanOrEqual(3);
     }
     for (const i of diffs) await realClick(page, page.locator(`[data-row="src-${i}"]`), { offsetX: 40 });
     await expectTasks(page, round + 1, T);
@@ -52,6 +53,15 @@ test('coach bar text changes for each tutorial step', async ({ page }) => {
   await openGame(page, 'replica-diff', 3);
   await realClick(page, page.locator('#coach-start'));
   await playTutorial(page, meta.walkthrough);
+  await expect(page.locator('#coach-text')).toContainText('etag');
+});
+
+test('a stuck student gets the right column highlighted', async ({ page }) => {
+  await openGame(page, 'replica-diff', 8);
+  await realClick(page, page.locator('#start-btn'));
+  await realClick(page, page.locator('.coach-skip'));
+  await expectTasks(page, 1, T);
+  await expect(page.locator('.hintcol').first()).toBeVisible({ timeout: 16_000 });
   await expect(page.locator('#coach-text')).toContainText('etag');
 });
 

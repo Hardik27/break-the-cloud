@@ -1,3 +1,4 @@
+import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
 
 const box = 'style="fill:var(--panel);stroke:var(--line);stroke-width:1.5"';
@@ -28,38 +29,41 @@ export const meta: GameMeta = {
   title: 'Traffic Cop',
   concept: 'Load balancing',
   intro:
-    'A <b>load balancer</b> sits in front of several servers and decides which one handles each request. Each server here can work on <b>4 units</b> at once: a normal request needs 1 unit, a heavy one needs 3. A request sent to a full or crashed server is <b>dropped</b>, which means a user sees an error. You will route by hand first, then let algorithms do it and watch where they fail.',
+    'A <b>load balancer</b> sits in front of several servers and decides which one handles each request. Each server here can work on <b>4 units</b> at once: a normal request needs 1 unit, a heavy one needs 3. A request sent to a full or crashed server is <b>dropped</b>: a user sees an error. First you route by hand, then you put an algorithm on autopilot and keep it out of trouble.',
   legend: [
     { color: 'var(--append)', shape: 'dot', label: 'Request (needs 1 unit)' },
     { color: 'var(--vote)', shape: 'dot', label: 'Heavy request (needs 3 units)' },
     { color: 'var(--ok)', shape: 'line', label: 'Server load bar (4 units = full)' },
-    { color: 'var(--bad)', shape: 'line', label: 'Server full' },
-    { color: 'var(--ok)', shape: 'square', label: 'History: request served' },
+    { color: 'var(--bad)', shape: 'dash', label: 'Crashed server still getting traffic (pull it!)' },
+    { color: 'var(--muted)', shape: 'dash', label: 'Out of rotation: the balancer skips it' },
     { color: 'var(--bad)', shape: 'square', label: 'History: request dropped' },
   ],
   howTo: [
     'A short tutorial shows you every click first. The clock starts after it.',
-    'Click a server to send it the waiting request, or pick a strategy and let the balancer route for you.',
-    'Each task needs a streak of served requests. One drop resets the streak to zero.',
+    'Click a server to send it the waiting request. On autopilot, click a server to pull it out of rotation or put it back.',
+    'Good moves build a combo. Every dropped request is a mistake and breaks it.',
   ],
   tasks: [
     'Tutorial: route three requests by hand',
-    'Route 10 requests in a row by hand, with no drops',
-    'Switch to round robin and survive a server crash (15 in a row)',
-    'Handle a heavy traffic mix (15 in a row)',
+    'Rush hour: route 8 in a row by hand',
+    'Be the health check: survive two crashes on autopilot',
+    'Heavy hitters: override round robin (5 heavy in a row)',
+    'Boss wave: pick the right algorithm and survive a crash',
   ],
   lessons: [
     'You just did a load balancer’s job: pick a server for each request, ideally one with room. Real balancers such as NGINX and the AWS Application Load Balancer (ALB) make this choice millions of times a second, so they follow simple rules instead of a person.',
-    'Routing by hand works only while you can keep up, and you had to read every load bar to do it well. Algorithms automate that choice. Every production balancer (HAProxy, NGINX, Envoy) ships a few of them.',
-    'Round robin kept sending every third request to the dead server until you turned on health checks. A <b>health check</b> is a small request the balancer sends to each server every few seconds; after a few failures it stops routing there. AWS ALB does this with target-group health checks.',
-    'Round robin hands out requests in turn and ignores how busy each server is, so heavy work that arrives in a rhythm piles up on one machine. <b>Least-loaded</b> routing (NGINX calls it <code>least_conn</code>) checks current load before every pick.',
+    'Routing by hand works only while you can keep up, and you had to read every load bar to do it well. That is exactly what algorithms automate. Every production balancer (HAProxy, NGINX, Envoy) ships a few of them.',
+    'You were the <b>health check</b>. Round robin is blind: it kept sending every third request to the dead server until you pulled it. Real balancers probe each server every few seconds (for example <code>GET /health</code>) and pull it after a few failures; AWS ALB calls these target-group health checks.',
+    'Round robin hands out requests in turn and ignores how busy each server is, so heavy work that arrives in a rhythm lands on the same full machine. You fixed it by checking the load bars first. That rule has a name: <b>least-loaded</b> (NGINX calls it <code>least_conn</code>).',
+    'Least loaded beat round robin, until a server died. A dead server has no work, so it looks like the <i>least loaded</i> server of all, and requests poured into it. That is why real balancers always pair least-loaded with health checks.',
   ],
   walkthrough: [
     { id: 'route-1', target: '[data-srv="0"]', text: 'A request is waiting in the request box. Click web-1 to send it there.' },
     { id: 'route-2', target: '[data-srv="1"]', text: 'web-1 is now 1 of 4 units busy (see its bar). Send the next request to web-2.' },
     { id: 'route-heavy', target: '[data-srv="2"]', text: 'This request is heavy (orange): it needs 3 free units. Click web-3.' },
   ],
-  minTimeMs: [0, 9000, 8000, 9000],
+  minTimeMs: RULES['traffic-cop'].minTimeMs,
+  parMs: RULES['traffic-cop'].parMs,
   learnMore: {
     paragraphs: [
       'A load balancer spreads requests over a pool of servers, so no single machine is overwhelmed and one dead machine does not take the service down. Layer 4 balancers route TCP connections by address and port. Layer 7 balancers understand HTTP, so they can also route by path or header.',

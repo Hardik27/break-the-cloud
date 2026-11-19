@@ -76,11 +76,19 @@ A student must never be on screen without knowing what to click next. The v1 bui
 
 Never rebuild interactive DOM nodes inside the animation loop. Create buttons and SVG nodes once; in each frame only update attributes, text and styles. Use `pointerdown` for time-critical game clicks. A Playwright test must click with a real mouse (`mouse.down`, wait 120 ms, `mouse.up`) to prove clicks land while the game is animating.
 
+## Scoring (keep every game engaging)
+
+- Points per task: 200 for clearing it, up to 300 for speed (full at or under par, zero at 2× par), 100 if flawless, combo points (+10, +20 … +80 per good move in a row, capped at 400 per task), minus 25 per mistake. The tutorial is a flat +100. Grades S/A/B/C per task; stars (1–3) from grades. Career rank (Intern → Principal Chaos Engineer) is the sum of your best score per game.
+- The formula lives in `supabase/functions/_shared/scoring.ts`; per-game `minTimeMs` and `parMs` live in `supabase/functions/_shared/rules.ts`. The browser and the Edge Function import the same files. Set par from the tuning medians.
+- Games report `api.hit(label, el)` for every good move and `api.mistake(label, el)` for every error (dropped request, wrong flag). The shell shows the floating +N/−25, combo, task-clear banner, result card, share text and sounds.
+- Every task must be hands-on: the student acts, not only watches. If an algorithm takes over, give the student a job (pull dead servers, override bad picks).
+
 ## Leaderboard and anti-cheat
 
 - Anonymous Supabase sign-in on first visit (no email). The player picks a nickname (3–20 chars, filtered for profanity, no URLs).
-- `runs` table: id, user_id, game_id, started_at (server time), finished_at, ms, moves, client_version. `scores` view: best run per user per game.
-- `startRun(gameId)` inserts a row with server `started_at` and returns its id. `finishRun(runId, moves, taskTimes[])` calls the Edge Function, which computes `ms` from server timestamps, rejects runs faster than `sum(minTimeMs)` or with impossible task timing, and marks the run finished.
+- `runs` table: id, user_id, game_id, started_at (server time), finished_at, ms, moves, mistakes, points, stars, task_ms, client_version, status. `scores` view: best run per user per game (most points, then least time). Leaderboards rank by points.
+- `startRun(gameId)` inserts a row when the clock starts (after the tutorial); a trigger sets `started_at`. `finishRun(runId, payload)` calls the Edge Function, which checks the client clock against server time, rejects tasks faster than `minTimeMs`, recomputes points with the shared formula, and marks the run finished.
+- Backends in `src/lib/leaderboard.ts`: supabase (when `VITE_SUPABASE_*` are set), offline (default), mock (Playwright sets `window.__BTC_LB__ = 'mock'`). The migration and RLS are tested in `tests/unit/db.test.ts` with PGlite.
 - RLS: anyone can read finished runs and nicknames; a user can insert only their own runs; nobody can update `ms` from the client.
 - Per-game leaderboard: top 20 all-time, top 20 this week, and "your rank". Also store play counts (runs started, runs finished per game) for a public stats line on the home page.
 - If Supabase is unreachable, the game still works and the best time is saved locally.
@@ -103,5 +111,5 @@ Never rebuild interactive DOM nodes inside the animation loop. Create buttons an
 ## Working style
 
 - Build in milestones (see docs/curriculum.md). Commit after each milestone with all tests passing.
-- Run `npm test` and `npm run e2e` before saying anything works. Never claim a game works without the Playwright solver passing.
+- Run `npm test` and `npm run e2e` before saying anything works. Playwright runs 2 workers: more than that starves the animated pages of CPU and makes the solvers flaky. Never claim a game works without the Playwright solver passing.
 - Keep copy plain and short. Write for a second-year engineering student. Define each term the first time it appears.

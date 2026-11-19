@@ -41,8 +41,10 @@ export interface GameMeta {
   /** One lesson per task, shown when the task is done. */
   lessons: string[];
   walkthrough: CoachStep[];
-  /** Fastest plausible time per task (anti-cheat in M2). */
+  /** Fastest plausible time per task (anti-cheat). From supabase/functions/_shared/rules.ts. */
   minTimeMs: number[];
+  /** "Good" time per task: at or under par earns the full speed bonus. From the shared rules. */
+  parMs: number[];
   learnMore: LearnMore;
 }
 
@@ -69,6 +71,10 @@ export interface GameApi {
   task(i: number): void;
   /** Add time to the clock (wrong answers). */
   penalty(ms: number): void;
+  /** A good move: builds the combo and earns points. `at` is where to float the "+N". */
+  hit(label?: string, at?: Element | null): void;
+  /** A mistake (a dropped request, a wrong flag): breaks the combo and costs points. */
+  mistake(label?: string, at?: Element | null): void;
   coach: Coach;
   toast(msg: string): void;
   /** Game-owned card in the side panel (task details, progress, buttons). */

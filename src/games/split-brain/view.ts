@@ -155,11 +155,39 @@ export const game: Game = {
       });
     });
 
+    // Event tracking for points: elections caused, crowns seen, silence held.
+    let seenElections = 0, seenStale = false, quietMark = 0;
     function enterTask(t: number) {
       task = t;
       r.reset();
       phase = 'play';
+      seenElections = 0;
+      seenStale = false;
+      quietMark = 0;
       renderSide();
+    }
+    function scoreEvents() {
+      if (phase !== 'play') return;
+      if ((task === 1 || task === 4) && r.elections.length > seenElections) {
+        seenElections = r.elections.length;
+        const L = r.leaders()[0];
+        api.hit('new leader!', L ? nodeEls[L.id].g : null);
+      }
+      if (task === 2 && !seenStale && r.staleLeader !== null) {
+        seenStale = true;
+        api.hit('two crowns!', nodeEls[r.staleLeader].g);
+      }
+      if (task === 3) {
+        if (r.quiet >= quietMark + 2000) {
+          quietMark += 2000;
+          api.hit(`${quietMark / 1000} s quiet`, svg);
+        } else if (r.quiet === 0 && quietMark > 0) {
+          quietMark = 0;
+          const wl = r.workingLeader();
+          api.mistake('leader is back', wl ? nodeEls[wl.id].g : svg);
+          api.toast(`${wl ? wl.name : 'A server'} found a majority and leads again. Cut more links!`);
+        }
+      }
     }
 
     function blocked(): boolean {
@@ -184,6 +212,7 @@ export const game: Game = {
       const nowCut = r.toggleLink(a, b);
       api.move();
       if (phase === 'tutorial') {
+        api.hit('Nice!', linkEls[k].g);
         if (api.coach.step === 'cut' && nowCut) api.coach.did('cut');
         else if (api.coach.step === 'restore' && !nowCut) api.coach.did('restore');
       } else api.toast(`Link S${a + 1}–S${b + 1} ${nowCut ? 'cut' : 'restored'}.`);
@@ -196,9 +225,15 @@ export const game: Game = {
         if ((st !== 'crash' && st !== 'restart') || i !== 3) return api.toast(st === 'cut' || st === 'restore' ? 'Tutorial: click the highlighted link between S3 and S4.' : 'Tutorial: click server S4 (highlighted).');
       }
       if (phase === 'play' && task === 3) return api.toast('Links only in this task. Cut links instead of crashing servers.');
+      const wasLeader = r.nodes[i].alive && r.nodes[i].role === 'leader';
       const up = r.toggleNode(i);
+      if (phase === 'play' && task === 2 && wasLeader && r.staleLeader === null) {
+        api.mistake('crashed it', nodeEls[i].g);
+        api.toast('A crashed server cannot think it leads. Restart it, then cut its links instead.');
+      }
       api.move();
       if (phase === 'tutorial') {
+        api.hit('Nice!', nodeEls[i].g);
         if (api.coach.step === 'crash' && !up) api.coach.did('crash');
         else if (api.coach.step === 'restart' && up) api.coach.did('restart');
       } else api.toast(`S${i + 1} ${up ? 'restarted' : 'crashed'}.`);
@@ -404,6 +439,7 @@ export const game: Game = {
       const d = Math.min(80, t - last);
       last = t;
       r.step(d * speed);
+      scoreEvents();
       if (phase === 'play' && sim.TASK_CHECKS[task](r)) {
         api.task(task);
         api.toast(`Done: ${TASKS[task].label}`);

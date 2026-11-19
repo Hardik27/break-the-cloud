@@ -1,10 +1,18 @@
-/** Play page: HUD (timer, moves, tasks), coach bar, stage, side panel, lessons, result card, Learn more. */
-import type { GameEntry } from '../games/registry';
+/**
+ * Play page: HUD (time, points, combo, tasks), coach bar, stage, side panel, lessons, task-clear banners,
+ * result card with stars/points/share, leaderboard, Learn more.
+ */
+import { COMBO_CAP_PER_TASK, MISTAKE_POINTS, TUTORIAL_POINTS, comboPointsFor, rankFor, scoreRun, scoreTask, type Grade, type TaskScore } from '../../supabase/functions/_shared/scoring.ts';
+import { builtGames, type GameEntry } from '../games/registry';
 import type { Coach, GameApi, GameMeta, LegendItem } from '../games/types';
+import { confetti } from '../lib/confetti';
 import { esc, fmtTime } from '../lib/dom';
+import { getBackend, withTimeout, type Backend, type Range } from '../lib/leaderboard';
 import { randomSeed } from '../lib/rng';
-import { getBest, saveBest } from '../lib/storage';
-import { footer, toast, topbar } from './chrome';
+import { sfx } from '../lib/sfx';
+import { careerPoints, getBest, saveBest } from '../lib/storage';
+import { finishHeadline, GRADE_EMOJI, gradeWord } from './cheer';
+import { bindTopbar, fmtPts, footer, refreshRankChip, toast, topbar } from './chrome';
 import { createCoach } from './coach';
 
 const titleHtml = (t: string) => {
@@ -13,18 +21,9 @@ const titleHtml = (t: string) => {
 };
 
 const legendHtml = (items: LegendItem[]) =>
-  `<ul class="legend">${items
-    .map((l) => `<li><span class="sw ${l.shape}" style="background:${l.color};--c:${l.color}"></span><span>${l.label}</span></li>`)
-    .join('')}</ul>`;
+  `<ul class="legend">${items.map((l) => `<li><span class="sw ${l.shape}" style="background:${l.color};--c:${l.color}"></span><span>${l.label}</span></li>`).join('')}</ul>`;
 
-function bestHtml(id: string): string {
-  const b = getBest(id);
-  return (
-    `<p class="eyebrow">Your best in this browser</p>` +
-    (b ? `<p style="margin:0"><b>${fmtTime(b.ms)}</b> <span class="small">· ${b.moves} moves</span></p>` : `<p class="small" style="margin:0">No time yet. Finish every task to set one.</p>`) +
-    `<p class="small" style="margin:6px 0 0">The shared leaderboard arrives in the next update.</p>`
-  );
-}
+const starsHtml = (n: number) => `<span class="stars big" aria-label="${n} of 3 stars">${[1, 2, 3].map((i) => `<span class="${i <= n ? 'on' : 'off'}" style="animation-delay:${i * 0.18}s">★</span>`).join('')}</span>`;
 
 export interface PlayHandle {
   unmount(): void;
@@ -34,46 +33,108 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
   const mod = await entry.load!();
   const meta: GameMeta = mod.meta;
   const nTasks = meta.tasks.length;
+  const games = builtGames();
+  const nextGame = games[(games.findIndex((g) => g.id === meta.id) + 1) % games.length];
 
   app.innerHTML =
     topbar() +
     `<div class="playhead"><div><p class="eyebrow"><a href="#/">← All games</a> · Level ${meta.level} · ${esc(meta.concept)}</p><h1>${titleHtml(meta.title)}</h1></div>
-      <div class="hud" aria-label="Run status"><span id="hud-time-wrap" class="paused">time<b id="hud-time">0:00.0</b></span><span>moves<b id="hud-moves">0</b></span><span>tasks<b id="hud-tasks">0/${nTasks}</b></span></div></div>
+      <div class="hud" aria-label="Run status"><span id="hud-time-wrap" class="paused">time<b id="hud-time">0:00.0</b></span>
+      <span class="hud-pts">points<b id="hud-points">0</b><em id="hud-combo" class="combo" hidden></em></span>
+      <span>tasks<b id="hud-tasks">0/${nTasks}</b></span></div></div>
     <div class="bench">
-      <div class="stagecol"><div id="coach-slot"></div><section class="card stage" id="stage" aria-label="${esc(meta.title)} game"></section></div>
+      <div class="stagecol" id="stagecol"><div id="coach-slot"></div><section class="card stage" id="stage" aria-label="${esc(meta.title)} game"></section>
+        <div class="fx-layer" id="fx" aria-hidden="true"></div><div class="banner" id="banner" role="status" aria-live="polite"></div></div>
       <aside>
-        <div class="card result" id="result" hidden aria-live="polite"></div>
+        <div class="card result" id="result" hidden></div>
         <div class="card brief" id="brief"><details id="brief-details" open><summary class="eyebrow" style="cursor:pointer;margin:0 0 8px">Brief</summary>
           <h2>${esc(meta.concept)}</h2><p>${meta.intro}</p>
           <p class="eyebrow">On screen</p>${legendHtml(meta.legend)}
-          <p class="eyebrow">How to play</p><ul>${meta.howTo.map((x) => `<li>${x}</li>`).join('')}</ul></details>
+          <p class="eyebrow">How to play</p><ul>${meta.howTo.map((x) => `<li>${x}</li>`).join('')}</ul>
+          <p class="eyebrow">How you score</p><p class="small" style="margin:0 0 12px">Each task: 200 for clearing it, up to 300 for speed, 100 if flawless, plus combo points for good moves in a row. Each mistake costs ${MISTAKE_POINTS}. Clean, fast runs earn ★★★.</p></details>
           <div class="row" id="start-row"><button class="btn go" id="start-btn" type="button">Start</button><span class="small">A short tutorial comes first. The clock starts after it.</span></div>
         </div>
         <div class="card" id="side"></div>
         <div class="card" id="lesson-card" hidden aria-live="polite"><p class="eyebrow" id="lesson-title">Lesson</p><div class="lesson" id="lesson"></div></div>
         <div class="card"><p class="eyebrow">Tasks</p><ol class="tasks" id="tasks"></ol></div>
-        <div class="card" id="best">${bestHtml(meta.id)}</div>
+        <div class="card" id="board"><div class="boardhead"><p class="eyebrow" style="margin:0">Leaderboard</p>
+          <div class="tabs" role="tablist"><button class="chip" type="button" role="tab" data-range="all" aria-selected="true">All time</button><button class="chip" type="button" role="tab" data-range="week" aria-selected="false">This week</button></div></div>
+          <div id="board-body" class="small">Loading…</div><p class="small" id="board-me" style="margin:8px 0 0"></p><div id="board-nick"></div></div>
       </aside>
     </div>
     <section class="card" id="learn" hidden></section>` +
     footer();
+  bindTopbar(app);
 
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => app.querySelector<T>('#' + id)!;
   const stage = $('stage');
   const coach = createCoach($('coach-slot'), toast);
+  let alive = true;
 
   // ---------- run state ----------
-  const run = { begun: false, t0: null as number | null, elapsed: 0, moves: 0, done: new Set<number>(), taskTimes: [] as number[], finished: false };
+  const run = { begun: false, t0: null as number | null, elapsed: 0, moves: 0, done: new Set<number>(), finished: false };
+  const sc = {
+    taskMs: Array<number>(nTasks).fill(0),
+    mistakes: Array<number>(nTasks).fill(0),
+    comboPts: Array<number>(nTasks).fill(0),
+    scores: Array<TaskScore | null>(nTasks).fill(null),
+    tutorialPts: 0,
+    combo: 0,
+    bestCombo: 0,
+    penaltyMs: 0,
+  };
   const seed = seedParam ?? randomSeed();
   const beginCbs: (() => void)[] = [];
   const running = () => run.t0 !== null && !run.finished;
+  const curTask = () => {
+    for (let i = 0; i < nTasks; i++) if (!run.done.has(i)) return i;
+    return nTasks - 1;
+  };
+  const clock = () => (run.t0 === null ? 0 : performance.now() - run.t0);
+
+  // ---------- backend ----------
+  let runId: Promise<string | null> = Promise.resolve(null);
+  const backendReady: Promise<Backend> = getBackend();
+
+  // ---------- HUD ----------
+  let shownPts = 0;
+  let ptsRaf = 0;
+  function livePoints(): number {
+    let t = sc.tutorialPts;
+    sc.scores.forEach((s) => s && (t += s.total));
+    const i = curTask();
+    if (running() && !sc.scores[i] && i > 0) t += Math.max(0, sc.comboPts[i] - MISTAKE_POINTS * sc.mistakes[i]);
+    return t;
+  }
+  function renderPoints() {
+    const target = livePoints();
+    cancelAnimationFrame(ptsRaf);
+    const from = shownPts;
+    const t0 = performance.now();
+    const tick = (t: number) => {
+      const k = Math.min(1, (t - t0) / 450);
+      shownPts = Math.round(from + (target - from) * (1 - Math.pow(1 - k, 3)));
+      $('hud-points').textContent = fmtPts(shownPts);
+      if (k < 1 && alive) ptsRaf = requestAnimationFrame(tick);
+    };
+    ptsRaf = requestAnimationFrame(tick);
+    const c = $('hud-combo');
+    c.hidden = sc.combo < 2;
+    c.textContent = `×${sc.combo} combo`;
+    c.classList.remove('bump');
+    void c.offsetWidth;
+    c.classList.add('bump');
+  }
 
   function renderTasks() {
-    const cur = [...Array(nTasks).keys()].find((i) => !run.done.has(i));
+    const cur = curTask();
     $('tasks').innerHTML = meta.tasks
       .map((t, i) => {
-        const cls = run.done.has(i) ? 'ok' : i === cur && run.begun ? 'cur' : '';
-        return `<li class="${cls}" data-task="${i}"><span class="box">${run.done.has(i) ? '✓' : i + 1}</span><span>${esc(t)}</span></li>`;
+        const done = run.done.has(i);
+        const cls = done ? 'ok' : i === cur && run.begun ? 'cur' : '';
+        const s = sc.scores[i];
+        const tail = done && s ? `<span class="grade g${s.grade}" title="Grade ${s.grade}, +${s.total} points">${s.grade}</span>` : done && i === 0 ? `<span class="grade gS">✓</span>` : '';
+        return `<li class="${cls}" data-task="${i}"><span class="box">${done ? '✓' : i + 1}</span><span class="tt">${esc(t)}</span>${tail}</li>`;
       })
       .join('');
     $('hud-tasks').textContent = `${run.done.size}/${nTasks}`;
@@ -82,7 +143,7 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
 
   const timer = window.setInterval(() => {
     if (running()) {
-      run.elapsed = performance.now() - run.t0!;
+      run.elapsed = clock();
       $('hud-time').textContent = fmtTime(run.elapsed);
     }
   }, 100);
@@ -91,7 +152,40 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
     if (run.t0 === null && !run.finished) {
       run.t0 = performance.now();
       $('hud-time-wrap').classList.remove('paused');
+      runId = backendReady.then((b) => withTimeout(b.startRun(meta.id), 6000, null));
     }
+  }
+
+  // ---------- juice ----------
+  function popup(text: string, kind: 'good' | 'bad', at?: Element | null) {
+    const layer = $('fx');
+    const base = $('stagecol').getBoundingClientRect();
+    const r = (at && at.isConnected ? at : stage).getBoundingClientRect();
+    const p = document.createElement('div');
+    p.className = `pop ${kind}`;
+    p.textContent = text;
+    const x = r.left - base.left + r.width / 2;
+    const y = r.top - base.top + Math.min(r.height / 2, 60);
+    p.style.left = `${Math.max(40, Math.min(base.width - 40, x))}px`;
+    p.style.top = `${Math.max(10, y)}px`;
+    layer.appendChild(p);
+    setTimeout(() => p.remove(), 1000);
+    while (layer.childElementCount > 12) layer.firstElementChild?.remove();
+  }
+
+  let bannerT = 0;
+  function banner(title: string, pts: string, detail: string, kind: 'task' | 'tutorial' = 'task') {
+    const b = $('banner');
+    b.innerHTML = `<div class="banner-in ${kind}"><p class="eyebrow">${kind === 'tutorial' ? 'Tutorial done' : 'Task clear'}</p><div class="banner-title">${esc(title)}</div><div class="banner-pts">${pts}</div><p class="small">${detail}</p></div>`;
+    b.classList.add('show');
+    clearTimeout(bannerT);
+    bannerT = window.setTimeout(() => b.classList.remove('show'), 2200);
+  }
+
+  function shake() {
+    stage.classList.remove('shake');
+    void stage.offsetWidth;
+    stage.classList.add('shake');
   }
 
   function showLesson(i: number) {
@@ -101,30 +195,177 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
     $('lesson').innerHTML = `<p><b>${esc(meta.tasks[i])}</b></p><p>${meta.lessons[i]}</p>`;
   }
 
+  // ---------- finish ----------
   function finish() {
     run.finished = true;
-    run.elapsed = run.t0 === null ? 0 : performance.now() - run.t0;
+    run.elapsed = clock();
     $('hud-time').textContent = fmtTime(run.elapsed);
-    const pb = saveBest(meta.id, run.elapsed, run.moves);
+    const inputs = sc.taskMs.map((t, i) => ({ ms: i === 0 ? 0 : t - sc.taskMs[i - 1], mistakes: sc.mistakes[i], comboPoints: sc.comboPts[i] }));
+    const rs = scoreRun(inputs, meta.parMs);
+    const careerBefore = careerPoints();
+    const { pb, prev } = saveBest(meta.id, { ms: run.elapsed, moves: run.moves, points: rs.total, stars: rs.stars });
+    const careerAfter = careerPoints();
+    const rankBefore = rankFor(careerBefore).title;
+    const rank = rankFor(careerAfter);
+    const head = finishHeadline(rs.stars, seed);
+    const totalMistakes = sc.mistakes.reduce((a, b) => a + b, 0);
+    const sum = (k: keyof TaskScore) => rs.tasks.reduce((a, t) => a + (t[k] as number), 0);
+    // Best moment: the task done fastest relative to its par.
+    let bestI = 1;
+    for (let i = 1; i < nTasks; i++) if (inputs[i].ms / meta.parMs[i] < inputs[bestI].ms / meta.parMs[bestI]) bestI = i;
+
     const res = $('result');
     res.hidden = false;
-    res.innerHTML = `<p class="eyebrow">Run complete</p><div class="big" id="result-time">${fmtTime(run.elapsed)}</div>
-      <p class="small">${run.moves} moves${pb ? ' · new personal best' : ''}</p>
-      <div class="row" style="margin-top:8px"><button class="btn" id="again" type="button">Play again</button><a class="btn ghost" href="#/" style="text-decoration:none">All games</a><button class="btn ghost" id="to-learn" type="button">Learn more ↓</button></div>`;
+    res.innerHTML = `<p class="eyebrow">Run complete</p>${starsHtml(rs.stars)}
+      <div class="big" id="result-points">0</div><p class="small" style="margin:0">points · ${fmtTime(run.elapsed)} · ${totalMistakes} mistake${totalMistakes === 1 ? '' : 's'} · best combo ×${sc.bestCombo}</p>
+      <h2 class="cheer" id="result-cheer">${esc(head.title)}</h2><p style="margin:0 0 10px">${esc(head.sub)}</p>
+      ${pb ? `<p class="pb">${prev ? `New personal best! +${fmtPts(rs.total - (prev.points ?? 0))} over your last best.` : 'First clear. That is now your score to beat.'}</p>` : `<p class="small">Your best is still ${fmtPts(prev?.points ?? 0)}. So close.</p>`}
+      <div class="grades" id="result-grades">${rs.grades.map((g: Grade, i: number) => `<span class="gchip g${g}" title="${esc(meta.tasks[i + 1])}">${GRADE_EMOJI[g]} ${g}</span>`).join('')}</div>
+      <table class="breakdown"><tbody>
+        <tr><td>Tutorial</td><td>+${TUTORIAL_POINTS}</td></tr>
+        <tr><td>Tasks cleared</td><td>+${fmtPts(sum('base'))}</td></tr>
+        <tr><td>Speed bonus</td><td>+${fmtPts(sum('speed'))}</td></tr>
+        <tr><td>Flawless bonus</td><td>+${fmtPts(sum('flawless'))}</td></tr>
+        <tr><td>Combos</td><td>+${fmtPts(sum('combo'))}</td></tr>
+        <tr><td>Mistakes</td><td>−${fmtPts(sum('penalty'))}</td></tr>
+      </tbody></table>
+      <p class="small">Best moment: <b>${esc(meta.tasks[bestI])}</b> in ${(inputs[bestI].ms / 1000).toFixed(1)} s (par ${(meta.parMs[bestI] / 1000).toFixed(0)} s).</p>
+      <p class="small">${rank.title !== rankBefore ? `<b class="pb">Promoted to ${rank.title}!</b> ` : `Rank: <b>${rank.title}</b>. `}${rank.next ? `${fmtPts(rank.next.min - careerAfter)} pts to ${rank.next.title}.` : ''}</p>
+      <div class="row" style="margin-top:10px"><button class="btn go" id="share-btn" type="button">Share score</button><button class="btn" id="again" type="button">Play again</button>
+        <a class="btn ghost" id="next-game" href="#/play/${nextGame.id}" style="text-decoration:none">Next: ${esc(nextGame.title)} →</a></div>
+      <div id="post-status" class="small" style="margin-top:10px" role="status"></div><div id="result-nick"></div>`;
+    // count-up
+    const t0 = performance.now();
+    const target = rs.total;
+    const up = (t: number) => {
+      const k = Math.min(1, (t - t0) / 1200);
+      const el = app.querySelector('#result-points');
+      if (!el) return;
+      el.textContent = fmtPts(target * (1 - Math.pow(1 - k, 3)));
+      if (k < 1 && alive) requestAnimationFrame(up);
+    };
+    requestAnimationFrame(up);
     $('again').addEventListener('click', onReplay);
-    $('to-learn').addEventListener('click', () => $('learn').scrollIntoView({ behavior: 'smooth', block: 'start' }));
-    $('best').innerHTML = bestHtml(meta.id);
+    $('share-btn').addEventListener('click', () => share(rs.total, rs.stars, rs.grades));
+    sfx.finish(rs.stars);
+    if (rs.stars === 3 || pb) confetti();
+    refreshRankChip();
+
     const lm = meta.learnMore;
     const learn = $('learn');
     learn.hidden = false;
-    learn.innerHTML = `<div class="learn"><div><p class="eyebrow">Learn more</p><h2>${esc(meta.concept)} in depth</h2>${lm.paragraphs
-      .map((p) => `<p>${p}</p>`)
-      .join('')}<p class="eyebrow" style="margin-top:14px">Primary sources</p><ul>${lm.links
+    learn.innerHTML = `<div class="learn"><div><p class="eyebrow">Learn more</p><h2>${esc(meta.concept)} in depth</h2>${lm.paragraphs.map((p) => `<p>${p}</p>`).join('')}<p class="eyebrow" style="margin-top:14px">Primary sources</p><ul>${lm.links
       .map((l) => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a></li>`)
       .join('')}</ul></div><figure>${lm.diagram}<figcaption>${lm.caption}</figcaption></figure></div>`;
-    coach.shellSay('All tasks done. Read the last lesson, then scroll to <b>Learn more</b>.', 'watch');
+    coach.shellSay(`${rs.stars === 3 ? 'Three stars!' : 'All tasks done.'} Share your score, then scroll down to <b>Learn more</b>.`, 'watch');
     res.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    void postRun(sc.taskMs.map((t, i) => (i === 0 ? 0 : Math.round(t))));
   }
+
+  async function postRun(taskMs: number[]) {
+    const status = () => app.querySelector<HTMLElement>('#post-status');
+    const b = await backendReady;
+    const id = await runId;
+    if (!alive) return;
+    if (b.kind === 'offline' || !id) {
+      const s = status();
+      if (s) s.textContent = 'The shared leaderboard is offline, so this score is saved in this browser only.';
+      return;
+    }
+    status()!.textContent = 'Posting your score…';
+    const r = await withTimeout(
+      b.finishRun(id, { taskMs, mistakes: sc.mistakes, comboPoints: sc.comboPts.map((x) => Math.min(COMBO_CAP_PER_TASK, Math.round(x))), penaltyMs: Math.round(sc.penaltyMs), moves: run.moves }),
+      8000,
+      { ok: false, reason: 'the leaderboard did not answer in time' },
+    );
+    if (!alive) return;
+    const rank = r.ok ? await withTimeout(b.myRank(meta.id, 'all'), 5000, null) : null;
+    const s = status();
+    if (s) s.innerHTML = r.ok ? `Posted: <b>${fmtPts(r.points ?? 0)}</b> points.${rank ? ` You are <b>#${rank.rank}</b> of ${rank.of} all time.` : ''}` : `Not posted: ${esc(r.reason ?? 'unknown error')}. Your best is saved in this browser.`;
+    await renderNickForm(app.querySelector('#result-nick'));
+    void loadBoard();
+  }
+
+  function share(points: number, stars: number, grades: Grade[]) {
+    const url = `${location.href.split('#')[0]}#/play/${meta.id}`;
+    const text = `Break the Cloud · ${meta.title}\n${'⭐'.repeat(stars)} ${fmtPts(points)} pts · ${fmtTime(run.elapsed)}\n${grades.map((g) => GRADE_EMOJI[g]).join('')}\nCan you keep the cloud up? ${url}`;
+    const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
+    if (nav.share && matchMedia('(pointer: coarse)').matches) {
+      nav.share({ text }).catch(() => {});
+      return;
+    }
+    navigator.clipboard
+      ?.writeText(text)
+      .then(() => toast('Copied! Paste it in your group chat.'))
+      .catch(() => toast(text));
+    if (!navigator.clipboard) toast(text);
+  }
+
+  // ---------- leaderboard ----------
+  let range: Range = 'all';
+  async function loadBoard() {
+    const b = await backendReady;
+    const body = app.querySelector<HTMLElement>('#board-body');
+    const meLine = app.querySelector<HTMLElement>('#board-me');
+    if (!body || !meLine || !alive) return;
+    const local = getBest(meta.id);
+    const localLine = local ? `Your best in this browser: <b>${fmtPts(local.points ?? 0)}</b> pts${local.stars ? ` · ${'★'.repeat(local.stars)}` : ''} · ${fmtTime(local.ms)}` : 'No score yet. Finish every task to set one.';
+    if (b.kind === 'offline') {
+      body.innerHTML = `<p style="margin:0">The shared leaderboard is offline right now.</p>`;
+      meLine.innerHTML = localLine;
+      return;
+    }
+    const rows = await withTimeout(b.top(meta.id, range), 6000, null);
+    if (!alive) return;
+    if (!rows) {
+      body.innerHTML = `<p style="margin:0">Could not load the leaderboard.</p>`;
+    } else if (!rows.length) {
+      body.innerHTML = `<p style="margin:0">${range === 'week' ? 'No scores this week yet.' : 'No scores yet.'} Be the first!</p>`;
+    } else {
+      body.innerHTML = `<table class="lb"><tbody>${rows
+        .map((r) => `<tr class="${r.me ? 'me' : ''}"><td>${r.rank}.</td><td>${esc(r.nickname)}${r.me ? ' (you)' : ''}</td><td>${'★'.repeat(r.stars)}</td><td>${fmtPts(r.points)}</td><td>${fmtTime(r.ms)}</td></tr>`)
+        .join('')}</tbody></table>`;
+    }
+    const mine = await withTimeout(b.myRank(meta.id, range), 5000, null);
+    if (!alive) return;
+    meLine.innerHTML = mine ? `Your rank: <b>#${mine.rank}</b> of ${mine.of} · ${fmtPts(mine.points)} pts` : localLine;
+    await renderNickForm(app.querySelector('#board-nick'));
+  }
+  app.querySelectorAll<HTMLButtonElement>('[data-range]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      range = btn.dataset.range as Range;
+      app.querySelectorAll('[data-range]').forEach((x) => x.setAttribute('aria-selected', String(x === btn)));
+      void loadBoard();
+    }),
+  );
+
+  async function renderNickForm(slot: Element | null) {
+    const b = await backendReady;
+    if (!slot || !alive || b.kind === 'offline') return;
+    const nick = await withTimeout(b.nickname(), 4000, null);
+    if (!alive) return;
+    if (nick) {
+      slot.innerHTML = `<p class="small" style="margin:6px 0 0">Playing as <b>${esc(nick)}</b>.</p>`;
+      return;
+    }
+    slot.innerHTML = `<form class="nickform" novalidate><label class="small" for="${slot.id}-in">Pick a nickname to show on the board</label>
+      <div class="row"><input id="${slot.id}-in" maxlength="20" autocomplete="off" placeholder="3–20 characters"><button class="btn" type="submit">Save</button></div><p class="small nickmsg" role="status"></p></form>`;
+    const form = slot.querySelector('form')!;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = form.querySelector('input')!;
+      const msg = form.querySelector('.nickmsg')!;
+      msg.textContent = 'Saving…';
+      const r = await b.setNickname(input.value);
+      if (!alive) return;
+      if (r.ok) {
+        toast('Nickname saved. You are on the board!');
+        document.querySelectorAll('#board-nick, #result-nick').forEach((s) => (s.innerHTML = `<p class="small" style="margin:6px 0 0">Playing as <b>${esc(input.value.trim())}</b>.</p>`));
+        void loadBoard();
+      } else msg.textContent = r.reason ?? 'Could not save.';
+    });
+  }
+  void loadBoard();
 
   // The coach the game sees: silent before Start and after the end, so the shell's message stays.
   const gameCoach: Coach = {
@@ -146,19 +387,62 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
     move(n = 1) {
       if (!running()) return;
       run.moves += n;
-      $('hud-moves').textContent = String(run.moves);
     },
     task(i) {
       if (run.finished || run.done.has(i) || i < 0 || i >= nTasks) return;
       run.done.add(i);
-      run.taskTimes[i] = run.t0 === null ? 0 : Math.round(performance.now() - run.t0);
+      if (i === 0) {
+        sc.tutorialPts = TUTORIAL_POINTS;
+        startClock();
+        banner('Ready for real', `+${TUTORIAL_POINTS}`, 'The clock is running. Go!', 'tutorial');
+      } else {
+        sc.taskMs[i] = Math.round(clock());
+        const ms = sc.taskMs[i] - sc.taskMs[i - 1];
+        const s = scoreTask({ ms, mistakes: sc.mistakes[i], comboPoints: sc.comboPts[i] }, meta.parMs[i]);
+        sc.scores[i] = s;
+        const parts = [`${(ms / 1000).toFixed(1)} s`, s.speed ? `speed +${s.speed}` : '', s.flawless ? `flawless +${s.flawless}` : '', s.combo ? `combo +${s.combo}` : '', s.penalty ? `mistakes −${s.penalty}` : ''].filter(Boolean);
+        banner(`${gradeWord(s.grade, seed + i)} Grade ${s.grade}`, `+${fmtPts(s.total)}`, parts.join(' · '));
+      }
+      sfx.task();
       renderTasks();
+      renderPoints();
       showLesson(i);
-      if (i === 0) startClock();
       if (run.done.size >= nTasks) finish();
     },
     penalty(ms) {
-      if (running()) run.t0! -= ms;
+      if (running()) {
+        run.t0! -= ms;
+        sc.penaltyMs += ms;
+      }
+    },
+    hit(label, at) {
+      if (run.finished) return;
+      if (!running()) {
+        popup(label ?? 'Nice!', 'good', at);
+        sfx.hit(1);
+        return;
+      }
+      sc.combo++;
+      sc.bestCombo = Math.max(sc.bestCombo, sc.combo);
+      const i = curTask();
+      const pts = comboPointsFor(sc.combo);
+      sc.comboPts[i] = Math.min(COMBO_CAP_PER_TASK, sc.comboPts[i] + pts);
+      popup(`+${pts}${label ? ' ' + label : ''}`, 'good', at);
+      sfx.hit(sc.combo);
+      renderPoints();
+    },
+    mistake(label, at) {
+      if (run.finished) return;
+      if (!running()) {
+        popup(label ?? 'Oops', 'bad', at);
+        return;
+      }
+      sc.mistakes[curTask()]++;
+      sc.combo = 0;
+      popup(`−${MISTAKE_POINTS}${label ? ' ' + label : ''}`, 'bad', at);
+      sfx.miss();
+      shake();
+      renderPoints();
     },
     coach: gameCoach,
     toast,
@@ -185,6 +469,7 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
 
   function begin() {
     if (run.begun) return;
+    sfx.unlock();
     run.begun = true;
     $('start-row').remove();
     coachStart.remove();
@@ -200,7 +485,10 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
 
   return {
     unmount() {
+      alive = false;
       clearInterval(timer);
+      clearTimeout(bannerT);
+      cancelAnimationFrame(ptsRaf);
       coach.destroy();
       unmountGame();
     },

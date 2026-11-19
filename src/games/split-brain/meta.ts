@@ -1,3 +1,4 @@
+import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="12"';
@@ -33,7 +34,7 @@ export const meta: GameMeta = {
   howTo: [
     'A short tutorial shows you how to cut a link and crash a server. The clock starts after it.',
     'Click a link to cut it (again to restore). Click a server to crash it (again to restart).',
-    'Each task asks you to break the cluster in one specific way. Press Hint if you are stuck.',
+    'Each task asks you to break the cluster in one specific way. Every election you cause scores. Press Hint if you are stuck.',
   ],
   tasks: [
     'Tutorial: cut a link and crash a server',
@@ -55,7 +56,8 @@ export const meta: GameMeta = {
     { id: 'crash', target: '[data-node="3"]', text: 'Click server S4 to crash it.' },
     { id: 'restart', target: '[data-node="3"]', text: 'Click S4 again to restart it. It keeps its log on disk.' },
   ],
-  minTimeMs: [0, 4000, 4000, 10000, 8000],
+  minTimeMs: RULES['split-brain'].minTimeMs,
+  parMs: RULES['split-brain'].parMs,
   learnMore: {
     paragraphs: [
       'Raft splits agreement into three parts. <b>Leader election</b>: one server leads per term, chosen by a majority vote. <b>Log replication</b>: the leader appends each write to its log and copies it to followers; once a majority store it, it is committed. <b>Safety</b>: a server only votes for a candidate whose log is at least as up to date as its own.',

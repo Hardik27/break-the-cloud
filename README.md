@@ -35,7 +35,13 @@
    VITE_SUPABASE_URL=https://xxxx.supabase.co
    VITE_SUPABASE_ANON_KEY=eyJ...
    ```
-4. Install the Supabase CLI (`npm i -g supabase`), run `supabase login`, then `supabase link`. Claude Code will write the migrations and the Edge Function; it will ask you to run `supabase db push` and `supabase functions deploy finish-run`.
+4. Install the Supabase CLI (`brew install supabase/tap/supabase`), run `supabase login`, then `supabase link` and pick your project.
+5. Create the tables and policies, then deploy the scoring function:
+   ```
+   supabase db push
+   supabase functions deploy finish-run
+   ```
+6. Restart `npm run dev`. The leaderboard switches on by itself; without the `.env.local` values the game runs offline and keeps best scores in the browser.
 
 ## Deploying (after M2)
 

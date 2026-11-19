@@ -29,14 +29,17 @@ export function watchErrors(page: Page): string[] {
   return errs;
 }
 
-export async function openGame(page: Page, id: string, seed: number): Promise<void> {
-  await page.addInitScript(() => {
+/** Opens a game. lb: which leaderboard backend the page uses ('offline' by default, 'mock' for an in-memory board). */
+export async function openGame(page: Page, id: string, seed: number, opts: { lb?: 'mock' | 'offline' } = {}): Promise<void> {
+  await page.addInitScript((lb) => {
     try {
       localStorage.setItem('btc:noticeOk', 'true');
+      localStorage.setItem('btc:muted', 'true');
     } catch {
       /* ignore */
     }
-  });
+    (window as unknown as { __BTC_LB__?: string }).__BTC_LB__ = lb;
+  }, opts.lb ?? 'offline');
   await page.goto(`./#/play/${id}?seed=${seed}`);
   await expect(page.locator('#start-btn')).toBeVisible();
 }
@@ -110,6 +113,11 @@ export async function keyboardTutorial(page: Page, steps: CoachStep[]): Promise<
 export async function expectFinished(page: Page, total: number, timeout = 40_000): Promise<void> {
   await expectTasks(page, total, total, timeout);
   await expect(page.locator('#result')).toBeVisible();
+  // Points, stars, grades and encouragement are shown.
+  await expect(page.locator('#result .stars .on').first()).toBeVisible();
+  await expect.poll(async () => Number(((await page.locator('#result-points').textContent()) ?? '0').replace(/,/g, ''))).toBeGreaterThan(500);
+  await expect(page.locator('#result-grades .gchip')).toHaveCount(total - 1);
+  await expect(page.locator('#result-cheer')).not.toBeEmpty();
   await expect(page.locator('#learn')).toBeVisible();
   await expect(page.locator('#learn a[href^="https://"]')).toHaveCount(3);
 }

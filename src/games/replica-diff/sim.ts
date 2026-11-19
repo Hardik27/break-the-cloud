@@ -39,7 +39,9 @@ export const ROUNDS: { rows: number; kinds: Kind[] | 'mixed3' }[] = [
 ];
 /** In the tutorial the missing object is always on this row, so the walkthrough can point at it. */
 export const TUTORIAL_ROW = 2;
-export const PENALTY_MS = 5000;
+export const PENALTY_MS = 3000;
+/** Column index in the tables for each kind of difference (0 is the row number). */
+export const KIND_COL: Record<Kind, number> = { miss: 1, etag: 3, tags: 4, ret: 5 };
 
 const WORDS = ['invoices', 'scans', 'backups', 'models', 'logs', 'photos', 'contracts', 'payroll', 'audit', 'exports', 'reports', 'events', 'tiles', 'datasets', 'media', 'archive'];
 const EXT = ['parquet', 'pdf', 'tar.gz', 'json', 'csv', 'jpg', 'bin', 'zip'];

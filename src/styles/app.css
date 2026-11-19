@@ -209,3 +209,76 @@ svg.net .msgs,svg.net .fx{pointer-events:none}
 .cell.idx{background:transparent;color:var(--muted);height:16px;font-size:10px}
 .cell.empty{background:transparent;border:1px solid var(--grid)}
 .panes{border-top:1px solid var(--line);padding:14px;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+
+/* ---------- scoring, juice and results ---------- */
+.btn.big{font-size:16px;padding:11px 18px;text-decoration:none;display:inline-block}
+.rankchip{font-family:var(--mono);font-size:11px;padding:4px 9px;border-radius:999px;border:1px solid var(--accent);color:var(--accent);white-space:nowrap}
+.career-title{font-family:var(--display);font-stretch:125%;font-weight:900;font-size:28px;line-height:1;color:var(--accent);margin-bottom:6px}
+.career-pts{margin:0 0 8px;font-family:var(--mono);font-size:13px}
+.meter{height:10px;border-radius:999px;background:var(--grid);overflow:hidden;border:1px solid var(--line)}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:999px}
+.stars{color:var(--vote);letter-spacing:1px}
+.stars .off{color:var(--line)}
+.stars.big{display:flex;gap:6px;font-size:40px;line-height:1;margin:2px 0 6px}
+.stars.big span{display:inline-block;animation:starpop .45s cubic-bezier(.2,1.6,.4,1) both}
+.stars.big .on{color:var(--vote)}
+.stars.big .off{color:var(--line)}
+@keyframes starpop{from{transform:scale(0) rotate(-40deg);opacity:0}to{transform:none;opacity:1}}
+.hud-pts b{color:var(--accent)!important}
+.hud .combo{display:block;font-style:normal;font-size:11px;color:var(--vote);font-weight:600;height:0;overflow:visible;white-space:nowrap}
+.hud .combo.bump{animation:bump .3s ease-out}
+@keyframes bump{40%{transform:scale(1.35)}}
+.stagecol{position:relative}
+.fx-layer{position:absolute;inset:0;pointer-events:none;z-index:20;overflow:visible}
+.pop{position:absolute;transform:translate(-50%,0);font-family:var(--mono);font-weight:600;font-size:15px;white-space:nowrap;animation:popup 1s ease-out forwards;text-shadow:0 1px 0 var(--panel)}
+.pop.good{color:var(--ok)}
+.pop.bad{color:var(--bad)}
+@keyframes popup{0%{opacity:0;transform:translate(-50%,6px) scale(.8)}15%{opacity:1;transform:translate(-50%,0) scale(1.1)}100%{opacity:0;transform:translate(-50%,-46px) scale(1)}}
+.banner{position:absolute;left:0;right:0;top:64px;display:flex;justify-content:center;pointer-events:none;z-index:21;opacity:0;transform:translateY(-8px) scale(.96);transition:opacity .2s,transform .2s}
+.banner.show{opacity:1;transform:none}
+.banner-in{background:var(--panel);border:2px solid var(--ok);border-radius:8px;padding:12px 20px;text-align:center;min-width:min(320px,calc(100% - 32px));max-width:calc(100% - 32px)}
+.banner-in.tutorial{border-color:var(--accent)}
+.banner-in .eyebrow{margin:0 0 2px;color:var(--ok)}
+.banner-in.tutorial .eyebrow{color:var(--accent)}
+.banner-title{font-family:var(--display);font-stretch:112%;font-weight:900;font-size:24px;line-height:1.1}
+.banner-pts{font-family:var(--mono);font-weight:600;font-size:22px;color:var(--accent)}
+.banner-in .small{margin:4px 0 0}
+.stage.shake{animation:shake .32s}
+@keyframes shake{20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+.tasks li .tt{flex:1}
+.grade,.gchip{font-family:var(--mono);font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;border:1px solid var(--line);flex:none}
+.gS{border-color:var(--ok);color:var(--ok)}.gA{border-color:var(--vote);color:var(--vote)}.gB{border-color:var(--accent);color:var(--accent)}.gC{border-color:var(--bad);color:var(--bad)}
+.grades{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.cheer{margin:10px 0 4px}
+.pb{color:var(--accent);font-weight:600;margin:0 0 6px}
+.breakdown{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px;margin:6px 0}
+.breakdown td{padding:3px 0;border-bottom:1px solid var(--grid)}
+.breakdown td:last-child{text-align:right}
+.boardhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.tabs{display:flex;gap:4px}
+.tabs [aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.lb{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+.lb td{padding:4px 2px;border-bottom:1px solid var(--grid)}
+.lb td:nth-child(2){max-width:9em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb td:nth-child(3){color:var(--vote)}
+.lb td:nth-child(4),.lb td:nth-child(5){text-align:right;font-variant-numeric:tabular-nums}
+.lb tr.me td{color:var(--accent);font-weight:600}
+.nickform{margin-top:8px}
+.nickform input{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:6px 8px;flex:1 1 140px;min-width:0}
+.nickform .nickmsg{margin:4px 0 0;color:var(--bad)}
+.confetti{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:70}
+
+/* Traffic Cop extras */
+.srv.out{opacity:.55;border-style:dashed}
+.srv.alarm{border-color:var(--bad);box-shadow:inset 0 0 0 1px var(--bad);animation:alarm .8s infinite}
+@keyframes alarm{50%{background:color-mix(in srgb,var(--bad) 12%,var(--panel))}}
+.srv .tag-next{font-family:var(--mono);font-size:10px;color:var(--vote);margin-left:6px;font-weight:600}
+.srv.drop{animation:shake .3s}
+.holdbar{width:64px;height:5px;border-radius:3px;background:var(--grid);overflow:hidden}
+.holdbar i{display:block;height:100%;background:var(--vote)}
+.flyer{position:absolute;left:0;top:0;width:12px;height:12px;border-radius:50%;pointer-events:none;z-index:5;background:var(--append)}
+.flyer.heavy{background:var(--vote);width:18px;height:18px}
+@media (prefers-reduced-motion: reduce){.pop,.stage.shake,.srv.alarm,.srv.drop,.stars.big span,.hud .combo.bump{animation:none!important}}
+.objtbl td.cellbad{color:var(--bad);font-weight:600;text-decoration:underline wavy var(--bad) 1px;text-underline-offset:3px}
+.objtbl .hintcol{background:color-mix(in srgb,var(--vote) 22%,transparent)!important;transition:background .4s}
+@media (max-width:480px){.topbar nav a[href="#/"]{display:none}.topbar nav{gap:10px}}

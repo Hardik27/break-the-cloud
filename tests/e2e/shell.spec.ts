@@ -10,6 +10,9 @@ test('home lists all 8 levels and 24 games, unbuilt ones marked coming soon', as
   await expect(page.locator('a.game')).toHaveCount(3);
   await expect(page.locator('.game.soon')).toHaveCount(21);
   for (const g of GAMES) await expect(page.locator(`[data-game="${g.id}"] h3`)).toHaveText(g.title);
+  // Career card and first-game call to action.
+  await expect(page.locator('#career .career-title')).toHaveText('Intern');
+  await expect(page.locator('#cta')).toHaveAttribute('href', '#/play/traffic-cop');
   await expectNoHorizontalScroll(page);
   expect(errors).toEqual([]);
 });

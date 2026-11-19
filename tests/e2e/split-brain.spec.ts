@@ -58,12 +58,29 @@ test('solver completes every task with real mouse clicks, no console errors', as
 
   // Two crowns: isolate the leader, wait for a second crown, then reconnect it.
   await waitTask(page, 3);
-  await expect.poll(() => roleIndex(page, 'leader')).toBeGreaterThanOrEqual(0);
-  const L = await roleIndex(page, 'leader');
-  const others = [0, 1, 2, 3, 4].filter((i) => i !== L);
-  for (const j of others) await toggleLink(page, L, j, true);
-  await expect(page.locator('[data-role="leader"]')).toHaveCount(2, { timeout: 15_000 });
-  await toggleLink(page, L, others[0], false);
+  // The leader can change while we work, so re-read it until the old one is stranded with a second crown.
+  let L = -1;
+  const end = Date.now() + 40_000;
+  while ((await page.locator('[data-role="leader"]').count()) < 2) {
+    if (Date.now() > end) throw new Error('never saw two crowns');
+    const cur = await roleIndex(page, 'leader');
+    if (cur < 0) {
+      await page.waitForTimeout(150);
+      continue;
+    }
+    L = cur;
+    for (const j of [0, 1, 2, 3, 4].filter((i) => i !== L)) {
+      if ((await link(page, L, j).getAttribute('data-cut')) === '0') await toggleLink(page, L, j, true);
+    }
+    await page.waitForTimeout(300);
+  }
+  // Reconnect the stranded leader (the one in the older term) so it steps down.
+  const stale = await page.evaluate(() => {
+    const ls = [...document.querySelectorAll('[data-role="leader"]')].map((g) => ({ i: Number(g.getAttribute('data-node')), term: Number((g.querySelector('text:nth-of-type(2)')?.textContent ?? '').replace(/\D/g, '')) }));
+    return ls.sort((a, b) => a.term - b.term)[0].i;
+  });
+  const back = [0, 1, 2, 3, 4].find((j) => j !== stale)!;
+  if ((await link(page, stale, back).getAttribute('data-cut')) === '1') await toggleLink(page, stale, back, false);
   await expectTasks(page, 3, T, 15_000);
 
   // Silence: 8 cuts, links only (crashing is refused with a toast).
