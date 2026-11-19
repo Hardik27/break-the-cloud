@@ -659,3 +659,19 @@ svg.as-chart{display:block;width:100%;height:auto;border:1px solid var(--line);b
 .pt-sys{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);border-radius:6px;padding:8px 10px}
 .pt-sys>div:first-child{display:grid}
 .pt-sys.done{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 7%,var(--panel))}
+
+/* ---------- Quorum ---------- */
+.qr-panel{padding:14px;display:grid;gap:12px}
+.qr-panel>*{min-width:0}
+.qr-reps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.qr-rep{display:grid;gap:4px;justify-items:start;text-align:left;border:1.5px solid var(--line);background:var(--panel);border-radius:6px;padding:10px;color:var(--ink);touch-action:manipulation;min-width:0}
+.qr-rep b{font-family:var(--display);font-stretch:125%;font-weight:900;font-size:22px}
+.qr-val{font-family:var(--mono);font-size:13px}
+.qr-rep.newest{border-color:var(--append);background:color-mix(in srgb,var(--append) 8%,var(--panel))}
+.qr-rep.newest .qr-st{color:var(--append)}
+.qr-rep[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:2px}
+.qr-rep.down{border-color:var(--bad);opacity:.6;background:color-mix(in srgb,var(--bad) 8%,var(--panel))}
+.qr-rep.down .qr-st{color:var(--bad);font-weight:600}
+.btn.qr-read{background:var(--append);border-color:var(--append)}
+.qr-lbl{width:110px}
+.qr-sum{margin:0;font-family:var(--mono)}

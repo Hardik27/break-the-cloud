@@ -45,7 +45,7 @@ export const GAMES: GameEntry[] = [
   { id: 'circuit-breaker', level: 5, title: 'Circuit Breaker', concept: 'Closed, open, half-open', blurb: 'Stop one failing service from taking the whole page down.', load: () => import('./circuit-breaker') },
   { id: 'blast-radius', level: 5, title: 'Blast Radius', concept: 'Zones, regions and cells', blurb: 'Lose a zone, then a region, and keep serving.', load: () => import('./blast-radius') },
   { id: 'partition', level: 6, title: 'Partition', concept: 'CAP', blurb: 'Split the network and choose: reject writes, or accept them and diverge.', load: () => import('./partition') },
-  { id: 'quorum', level: 6, title: 'Quorum', concept: 'N, R, W', blurb: 'Pick read and write quorums so every read sees the latest write.' },
+  { id: 'quorum', level: 6, title: 'Quorum', concept: 'N, R, W', blurb: 'Pick read and write quorums so every read sees the latest write.', load: () => import('./quorum') },
   { id: 'clock-skew', level: 6, title: 'Clock Skew', concept: 'Lamport and vector clocks', blurb: 'Order events when every clock is wrong.' },
   { id: 'split-brain', level: 7, title: 'Split Brain', concept: 'Raft consensus', blurb: 'You are the network. Cut links and crash servers to make five servers disagree.', load: () => import('./split-brain') },
   { id: 'two-phase-commit', level: 7, title: 'Two-Phase Commit', concept: 'Atomic commit', blurb: 'Crash the coordinator mid-vote and see who gets stuck holding locks.' },
