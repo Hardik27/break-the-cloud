@@ -42,6 +42,8 @@ export async function openGame(page: Page, id: string, seed: number, opts: { lb?
   }, opts.lb ?? 'offline');
   await page.goto(`./#/play/${id}?seed=${seed}`);
   await expect(page.locator('#start-btn')).toBeVisible();
+  // Web fonts swapping in reflow the page; wait so clicks land where we measured.
+  await page.evaluate(() => document.fonts.ready);
 }
 
 export const coachText = (page: Page) => page.locator('#coach-text');

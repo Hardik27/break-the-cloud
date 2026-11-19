@@ -117,7 +117,7 @@ test('solver completes every task with real mouse clicks; scores, posts and shar
   await page.goto('./#/');
   await expect(page.locator('[data-game="traffic-cop"] .tag')).toHaveText('completed');
   await expect(page.locator('[data-game="traffic-cop"] .stars')).toBeVisible();
-  await expect(page.locator('#rankchip')).not.toContainText(' 0 pts');
+  await expect(page.locator('#rankchip')).toHaveText(/· [1-9][\d,]* pts$/);
   expect(errors).toEqual([]);
 });
 
