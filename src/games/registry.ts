@@ -30,7 +30,7 @@ export const LEVELS: Level[] = [
 /** All 24 games in curriculum order (docs/curriculum.md). */
 export const GAMES: GameEntry[] = [
   { id: 'dns-detective', level: 1, title: 'DNS Detective', concept: 'DNS resolution and caching', blurb: 'Walk a name lookup from the root down, then watch a stale answer outlive its record.', load: () => import('./dns-detective') },
-  { id: 'handshake', level: 1, title: 'Handshake', concept: 'TCP', blurb: 'Open a connection packet by packet, drop one, and put the rest back in order.' },
+  { id: 'handshake', level: 1, title: 'Handshake', concept: 'TCP', blurb: 'Open a connection packet by packet, drop one, and put the rest back in order.', load: () => import('./handshake') },
   { id: 'latency-budget', level: 1, title: 'Latency Budget', concept: 'RTT, CDNs and edge caching', blurb: 'Place CDN edges until every user loads the page in under 100 ms.' },
   { id: 'traffic-cop', level: 2, title: 'Traffic Cop', concept: 'Load balancing', blurb: 'Route requests across servers by hand, then let an algorithm do it and watch it fail.', load: () => import('./traffic-cop') },
   { id: 'heartbeat', level: 2, title: 'Heartbeat', concept: 'Health checks and failover', blurb: 'Spot dead servers fast, without evicting healthy ones that are only slow.' },
