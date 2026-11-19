@@ -24,6 +24,7 @@ export const RULES: Record<string, GameRules> = {
   quorum: { tasks: 4, minTimeMs: [0, 6000, 2000, 2000], parMs: [0, 38000, 12000, 12000] },
   'clock-skew': { tasks: 4, minTimeMs: [0, 3000, 4000, 3000], parMs: [0, 22000, 31000, 27000] },
   'two-phase-commit': { tasks: 4, minTimeMs: [0, 6000, 3000, 7000], parMs: [0, 26000, 27000, 28000] },
+  saga: { tasks: 4, minTimeMs: [0, 2500, 3500, 2000], parMs: [0, 24000, 34000, 15000] },
   'rate-limiter': { tasks: 4, minTimeMs: [0, 7000, 2000, 2000], parMs: [0, 12000, 14000, 15000] },
   'the-ring': { tasks: 4, minTimeMs: [0, 5000, 5000, 2000], parMs: [0, 22000, 26000, 12000] },
   'thundering-herd': { tasks: 4, minTimeMs: [0, 15000, 2000, 2000], parMs: [0, 27000, 12000, 14000] },
