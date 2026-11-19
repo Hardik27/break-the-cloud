@@ -798,3 +798,23 @@ svg.as-chart{display:block;width:100%;height:auto;border:1px solid var(--line);b
 .bz-res{margin:0;font-size:14px;min-height:1.4em}
 .bz-res.okc{color:var(--ok)}.bz-res.badc{color:var(--bad)}
 .chip.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+
+/* ---------- CRDT Merge ---------- */
+.cr-panel{padding:14px;display:grid;gap:12px}
+.cr-panel>*{min-width:0}
+.cr-devs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.cr-dev{border:1.5px solid var(--append);border-radius:6px;padding:10px;display:grid;gap:4px;justify-items:start;min-width:0}
+.cr-dev b{font-family:var(--display);font-stretch:112%;font-weight:800}
+.cr-dev.synced{border-color:var(--ok)}
+.cr-val{font-family:var(--display);font-stretch:125%;font-weight:900;font-size:30px;line-height:1}
+.cr-vec,.cr-merged{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-family:var(--mono)}
+.cr-lbl{min-width:64px}
+.cr-vec i{font-style:normal;border:1.5px solid var(--append);border-radius:4px;min-width:40px;padding:6px 0;text-align:center;font-size:15px}
+.cr-merged{align-items:stretch;border-top:1px dashed var(--line);padding-top:10px}
+.cr-slot{border:1.5px solid var(--accent);border-radius:6px;padding:6px 8px;display:grid;gap:4px;justify-items:start;min-width:84px}
+.cr-slot.done{border-color:var(--ok)}
+.cr-picked{font-family:var(--mono);font-size:18px;font-weight:600}
+.cr-slot.done .cr-picked{color:var(--ok)}
+.cr-chips{gap:4px}
+.cr-tag{color:var(--muted);font-size:11px}
+.cr-feed{padding:0 14px 14px;min-height:5em}

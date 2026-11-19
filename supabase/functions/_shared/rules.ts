@@ -27,6 +27,7 @@ export const RULES: Record<string, GameRules> = {
   saga: { tasks: 4, minTimeMs: [0, 2500, 3500, 2000], parMs: [0, 24000, 34000, 15000] },
   gossip: { tasks: 4, minTimeMs: [0, 4000, 3000, 14000], parMs: [0, 25000, 19000, 17000] },
   'byzantine-generals': { tasks: 4, minTimeMs: [0, 3000, 4000, 3000], parMs: [0, 18000, 23000, 20000] },
+  'crdt-merge': { tasks: 4, minTimeMs: [0, 3000, 4000, 4000], parMs: [0, 18000, 28000, 33000] },
   'rate-limiter': { tasks: 4, minTimeMs: [0, 7000, 2000, 2000], parMs: [0, 12000, 14000, 15000] },
   'the-ring': { tasks: 4, minTimeMs: [0, 5000, 5000, 2000], parMs: [0, 22000, 26000, 12000] },
   'thundering-herd': { tasks: 4, minTimeMs: [0, 15000, 2000, 2000], parMs: [0, 27000, 12000, 14000] },
