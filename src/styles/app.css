@@ -585,3 +585,17 @@ svg.as-chart{display:block;width:100%;height:auto;border:1px solid var(--line);b
 #rs-send.pulse{animation:boxpulse 1s infinite}
 .rs-lbl{width:60px}
 #rs-run{justify-self:start}
+
+/* ---------- Circuit Breaker ---------- */
+.cb-panel{padding:14px;display:grid;gap:12px}
+.cb-panel>*{min-width:0}
+.cb-page{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;border:1.5px solid var(--ok);border-radius:6px;padding:10px 12px}
+.cb-page b{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:18px}
+.cb-page.down{border-color:var(--bad);animation:alarm .8s infinite}
+.cb-page.down #cb-pagest{color:var(--bad);font-weight:600}
+.cb-threads{display:grid;grid-template-columns:90px minmax(0,1fr) 52px;gap:10px;align-items:center;font-family:var(--mono)}
+.cb-threads .as-bar i{background:var(--vote)}
+.cb-threads.hot .as-bar i{background:var(--bad)}
+.cb-switch{border:0;border-radius:999px;padding:12px 18px;font-family:var(--mono);font-weight:600;font-size:13px;color:#fff;touch-action:manipulation}
+.cb-switch.closed{background:var(--ok)}
+.cb-switch.open{background:var(--bad)}
