@@ -4,6 +4,8 @@ import { parseHash } from '../../src/shell/router';
 import { allBest, careerPoints, saveBest, storage } from '../../src/lib/storage';
 import { checkNickname } from '../../src/lib/nickname';
 import { mockBackend } from '../../src/lib/leaderboard';
+import { RULES } from '../../supabase/functions/_shared/rules.ts';
+import { meta as dnsMeta } from '../../src/games/dns-detective/meta';
 import { meta as tc } from '../../src/games/traffic-cop/meta';
 import { meta as rd } from '../../src/games/replica-diff/meta';
 import { meta as sb } from '../../src/games/split-brain/meta';
@@ -78,17 +80,17 @@ describe('mock leaderboard backend', () => {
 });
 
 describe('curriculum registry', () => {
-  it('has 8 levels, 24 games, 3 built', () => {
+  it('has 8 levels and 24 games; every built game has scoring rules', () => {
     expect(LEVELS.length).toBe(8);
     expect(GAMES.length).toBe(24);
     expect(new Set(GAMES.map((g) => g.id)).size).toBe(24);
-    expect(builtGames().map((g) => g.id)).toEqual(['traffic-cop', 'replica-diff', 'split-brain']);
+    for (const g of builtGames()) expect(RULES[g.id], g.id).toBeDefined();
     for (const L of LEVELS) expect(GAMES.filter((g) => g.level === L.n).length).toBe(3);
   });
 });
 
 describe('game metadata follows the walkthrough rules', () => {
-  for (const m of [tc, rd, sb]) {
+  for (const m of [dnsMeta, tc, rd, sb]) {
     it(m.id, () => {
       expect(m.tasks.length).toBeGreaterThanOrEqual(3);
       expect(m.tasks.length).toBeLessThanOrEqual(5);

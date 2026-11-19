@@ -1,14 +1,13 @@
 /** Light and dark screenshots of every page, saved to tests/e2e/__screenshots__/ for review. */
 import { expect, test } from '@playwright/test';
+import { builtGames } from '../../src/games/registry';
 import { realClick } from './helpers';
 
 const dir = 'tests/e2e/__screenshots__';
 const pages = [
   { name: 'home', url: './#/' },
   { name: 'privacy', url: './#/privacy' },
-  { name: 'traffic-cop', url: './#/play/traffic-cop?seed=1' },
-  { name: 'replica-diff', url: './#/play/replica-diff?seed=1' },
-  { name: 'split-brain', url: './#/play/split-brain?seed=1' },
+  ...builtGames().map((g) => ({ name: `game-${g.id}`, url: `./#/play/${g.id}?seed=1` })),
 ];
 
 for (const scheme of ['light', 'dark'] as const) {
@@ -21,7 +20,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.evaluate(() => document.fonts.ready);
       const shot = `${dir}/${info.project.name}-${scheme}-${p.name}.png`;
       await page.screenshot({ path: shot, fullPage: p.name !== 'home' });
-      if (p.name.includes('-')) {
+      if (p.name.startsWith('game-')) {
         // Mid-tutorial, with the spotlight on.
         await realClick(page, page.locator('#coach-start'));
         await expect(page.locator('.spot-ring')).toBeVisible();
