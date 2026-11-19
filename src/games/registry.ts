@@ -51,7 +51,7 @@ export const GAMES: GameEntry[] = [
   { id: 'two-phase-commit', level: 7, title: 'Two-Phase Commit', concept: 'Atomic commit', blurb: 'Crash the coordinator mid-vote and see who gets stuck holding locks.', load: () => import('./two-phase-commit') },
   { id: 'saga', level: 7, title: 'Saga', concept: 'Compensating actions', blurb: 'Book a trip across four services and undo it cleanly when one fails.', load: () => import('./saga') },
   { id: 'gossip', level: 8, title: 'Gossip', concept: 'Epidemic broadcast', blurb: 'Spread a rumour to 50 nodes and find out why it takes O(log N) rounds.', load: () => import('./gossip') },
-  { id: 'byzantine-generals', level: 8, title: 'Byzantine Generals', concept: 'Traitors and 3f+1', blurb: 'Reach agreement when some of the generals lie.' },
+  { id: 'byzantine-generals', level: 8, title: 'Byzantine Generals', concept: 'Traitors and 3f+1', blurb: 'Reach agreement when some of the generals lie.', load: () => import('./byzantine-generals') },
   { id: 'crdt-merge', level: 8, title: 'CRDT Merge', concept: 'Convergent data types', blurb: 'Two offline editors, one shopping list, and no lost updates.' },
 ];
 
