@@ -514,3 +514,30 @@ svg.th-chart{display:block;width:100%;height:auto;border:1px solid var(--line);b
 .rg-shares .mrow:last-child{display:flex}
 .rg-bar{height:10px;border-radius:5px;background:var(--grid);overflow:hidden}
 .rg-bar i{display:block;height:100%}
+
+/* ---------- Autoscaler ---------- */
+.as-panel{padding:14px;display:grid;gap:12px}
+.as-panel>*{min-width:0}
+.as-gauge{display:grid;grid-template-columns:auto auto minmax(0,1fr);grid-template-areas:"lbl val bar" "load load load";gap:4px 12px;align-items:center;border:1.5px solid var(--ok);border-radius:6px;padding:10px 12px}
+.as-gauge .eyebrow{grid-area:lbl;margin:0}
+.as-gauge b{grid-area:val;font-family:var(--display);font-stretch:112%;font-weight:900;font-size:30px;font-variant-numeric:tabular-nums;min-width:3.2ch}
+.as-gauge .as-bar{grid-area:bar}
+.as-gauge #as-load{grid-area:load}
+.as-bar{position:relative;display:block;height:14px;border-radius:7px;background:var(--grid);overflow:hidden}
+.as-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--ok);border-radius:7px}
+.as-bar .lo{position:absolute;left:35%;top:0;bottom:0;border-left:2px dashed var(--muted)}
+.as-gauge.warm{border-color:var(--vote)}.as-gauge.warm .as-bar i{background:var(--vote)}
+.as-gauge.hot{border-color:var(--bad);animation:alarm .8s infinite}.as-gauge.hot .as-bar i{background:var(--bad)}
+.as-gauge.idle{border-color:var(--muted)}.as-gauge.idle .as-bar i{background:var(--muted)}
+.as-fleet{display:flex;flex-wrap:wrap;gap:6px;min-height:30px}
+.as-inst{width:26px;height:26px;border-radius:4px;border:1.5px dashed transparent}
+.as-inst.on{background:var(--ok)}
+.as-inst.boot{border-color:var(--vote);background:color-mix(in srgb,var(--vote) 18%,transparent);animation:pulse 1s infinite}
+.as-btn{min-width:130px;font-size:16px;padding:10px 16px}
+.as-ramp{display:grid;gap:4px}
+.as-ramp .as-bar{height:6px}
+.as-ramp .as-bar i{background:var(--append)}
+.as-lbl{width:90px}
+#as-run{justify-self:start}
+.as-res{display:grid;gap:6px;font-family:var(--mono);font-size:12px}
+svg.as-chart{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:6px}
