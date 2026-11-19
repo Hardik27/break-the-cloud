@@ -22,6 +22,7 @@ export const RULES: Record<string, GameRules> = {
   'latency-budget': { tasks: 4, minTimeMs: [0, 2000, 5000, 6000], parMs: [0, 17000, 19000, 19000] },
   partition: { tasks: 4, minTimeMs: [0, 6000, 4000, 4000], parMs: [0, 21000, 21000, 15000] },
   quorum: { tasks: 4, minTimeMs: [0, 6000, 2000, 2000], parMs: [0, 38000, 12000, 12000] },
+  'clock-skew': { tasks: 4, minTimeMs: [0, 3000, 4000, 3000], parMs: [0, 22000, 31000, 27000] },
   'rate-limiter': { tasks: 4, minTimeMs: [0, 7000, 2000, 2000], parMs: [0, 12000, 14000, 15000] },
   'the-ring': { tasks: 4, minTimeMs: [0, 5000, 5000, 2000], parMs: [0, 22000, 26000, 12000] },
   'thundering-herd': { tasks: 4, minTimeMs: [0, 15000, 2000, 2000], parMs: [0, 27000, 12000, 14000] },
