@@ -43,9 +43,24 @@
    ```
 6. Restart `npm run dev`. The leaderboard switches on by itself; without the `.env.local` values the game runs offline and keeps best scores in the browser.
 
-## Deploying (after M2)
+## Deploying to GitHub Pages
 
-Ask Claude Code: "Set up deployment to Cloudflare Pages (or GitHub Pages) with a GitHub Action that runs tests before deploying." Add the two `VITE_SUPABASE_*` values as build secrets.
+`.github/workflows/deploy.yml` runs the unit tests, builds the site and publishes it on every push to `main`.
+
+1. On github.com, create an **empty** repository named `break-the-cloud` (no README, no .gitignore, no licence).
+2. Push this folder (replace `YOUR-USERNAME`):
+   ```
+   git remote add origin https://github.com/YOUR-USERNAME/break-the-cloud.git
+   git push -u origin main
+   ```
+   When git asks for a password, paste a personal access token (GitHub → Settings → Developer settings → Personal access tokens), not your account password.
+3. In the repository: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+4. Optional, for the shared leaderboard: **Settings → Secrets and variables → Actions → New repository secret**, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (the same values as `.env.local`). Never add the service-role key here.
+5. **Actions** tab → "Test and deploy" → **Run workflow** (or push any commit). After about 2 minutes the site is live at `https://YOUR-USERNAME.github.io/break-the-cloud/`.
+
+Later updates: `git add -A`, `git commit -m "..."`, `git push`. Every push redeploys.
+
+The Playwright suite is not run in CI (it takes about 15 minutes); run `npm run e2e` locally before pushing big changes.
 
 ## Showing usage numbers
 
