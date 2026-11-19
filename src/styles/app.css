@@ -628,3 +628,34 @@ svg.as-chart{display:block;width:100%;height:auto;border:1px solid var(--line);b
 .br-opt .small{grid-area:det}
 .br-opt .cost{grid-area:cost;font-family:var(--mono);font-size:12px;color:var(--vote);align-self:center}
 .br-opt[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+
+/* ---------- Partition ---------- */
+.pt-map{display:grid;grid-template-columns:minmax(0,1fr) 60px minmax(0,1fr);gap:8px;align-items:center;padding:14px 14px 0}
+.pt-city{border:1.5px solid var(--ok);border-radius:6px;padding:10px;display:grid;gap:4px;justify-items:start}
+.pt-city.lon{border-color:var(--vote)}
+.pt-city b{font-family:var(--display);font-stretch:112%;font-weight:800}
+.pt-reps{display:flex;gap:4px}
+.pt-reps i{width:16px;height:16px;border-radius:50%;background:var(--ok)}
+.pt-city.lon .pt-reps i{background:var(--vote)}
+.pt-link{position:relative;height:20px}
+.pt-link .line{position:absolute;left:0;right:0;top:9px;height:3px;background:var(--ok)}
+.pt-link .x{position:absolute;left:50%;top:-4px;transform:translateX(-50%);color:var(--bad);font-size:20px;display:none}
+.pt-link.cut .line{background:repeating-linear-gradient(90deg,var(--bad) 0 6px,transparent 6px 12px)}
+.pt-link.cut .x{display:block}
+#pt-cut{margin:10px 14px 0;justify-self:start}
+.pt-panel{padding:14px;display:grid;gap:12px}
+.pt-panel>*{min-width:0}
+.pt-prompt{border:1.5px solid var(--accent);border-radius:6px;padding:12px;min-height:70px}
+.pt-prompt p{margin:6px 0 0;font-size:16px}
+.tag.vt{border-color:var(--vote);color:var(--vote)}
+.pt-logs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:560px){.pt-logs{grid-template-columns:minmax(0,1fr)}}
+.pt-log{border:1px solid var(--line);border-radius:6px;padding:10px;font-size:13px}
+.pt-log .eyebrow{margin:0 0 4px}
+.pt-log p{margin:0}
+.pt-log ul{margin:0 0 4px;padding-left:0;list-style:none;font-family:var(--mono);font-size:12px}
+.pt-log li.add{color:var(--ok)}.pt-log li.remove{color:var(--bad)}
+#pt-merge{justify-self:start}
+.pt-sys{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.pt-sys>div:first-child{display:grid}
+.pt-sys.done{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 7%,var(--panel))}
