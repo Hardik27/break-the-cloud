@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="11"';
 const pt = (pos: number, r: number) => {
@@ -57,6 +58,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['the-ring'].minTimeMs,
   parMs: RULES['the-ring'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'Consistent hashing was introduced by Karger and colleagues in 1997 for web caches. Servers and keys are hashed onto the same circle; each key is stored on the first server clockwise. When a server joins or leaves, only the keys in its arc move, about K/N of K keys.',

@@ -1,6 +1,7 @@
 /** Autoscaler view. Instance boxes (a fixed pool), gauges and controls are built once; frames update text and classes. */
 import { el, onPress, setText } from '../../lib/dom';
 import { makeFlow } from '../flow';
+import { predictAndReveal, replayBusy } from '../replay';
 import type { Game, GameApi } from '../types';
 import { meta } from './meta';
 import * as sim from './sim';
@@ -168,13 +169,21 @@ export const game: Game = {
       render();
     }
 
-    function runIt() {
+    async function runIt() {
       if (flow.guard()) return;
       if (flow.task < 2) return api.toast('Autoscaler settings unlock in the next task.');
+      if (replayBusy()) return api.toast('Watch the replay first.');
       api.move();
       const sale = flow.task === 3;
       const r = sim.runDay(opts, sale);
       drawDay(r, sale);
+      const outcome = r.overloadMin ? 0 : sim.dayOk(r, sale) ? 2 : 1;
+      await predictAndReveal(api, res, {
+        title: sale ? 'The flash-sale day' : 'A day of traffic',
+        simMs: 8 * 3600_000,
+        predict: { q: `With these settings${sale ? ', when traffic triples at noon' : ''}, what will the day look like?`, options: ['Some overloaded minutes', 'No overload, but over budget', 'No overload, within budget'], answer: outcome, why: outcome === 0 ? 'New instances take minutes to boot. If CPU is kept too close to 100%, a spike overloads the servers before help arrives.' : outcome === 1 ? 'Plenty of headroom means plenty of idle machines, and you pay for every one.' : 'Enough headroom to absorb spikes while new instances boot, and no more.' },
+      });
+      if (!alive) return;
       if (sim.dayOk(r, sale)) {
         api.hit(`$${r.cost.toFixed(2)}`, run);
         return flow.done();

@@ -923,3 +923,6 @@ svg.as-chart{display:block;width:100%;height:auto;border:1px solid var(--line);b
 .gs-swim p{margin:0 0 4px}.gs-swim p:last-child{margin:0}
 .gs-probe{font-family:var(--mono)}
 .btn.gs-deadbtn{border-color:var(--bad);color:var(--bad)}
+.reveal-wrap{position:relative}
+.reveal-veil{position:absolute;top:0;bottom:0;right:0;left:0;background:color-mix(in srgb,var(--panel) 90%,transparent);border-left:2px solid var(--accent)}
+.playing .mrow,.playing .rl-result,.playing .as-res>p{visibility:hidden}

@@ -3,7 +3,7 @@ import { meta } from '../../src/games/the-ring/meta';
 import { KEYS, NEW_SERVER, RING_SERVERS, hash100, owner } from '../../src/games/the-ring/sim';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask, answerPredict, skipReplay,
 } from './helpers';
 
 const T = meta.tasks.length;
@@ -44,9 +44,13 @@ test('solver completes every task with real mouse clicks, no console errors', as
   // Task 4: one virtual node is lopsided; 50 balances the ring.
   await waitTask(page, 4);
   await realClick(page, page.locator('#rg-run'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expect(page.locator('#rg-imb')).toHaveClass(/bad-pill/);
   await realClick(page, page.locator('[data-vn="50"]'));
   await realClick(page, page.locator('#rg-run'));
+  await answerPredict(page);
+  await skipReplay(page);
 
   await expectFinished(page, T);
   await expectNoHorizontalScroll(page);

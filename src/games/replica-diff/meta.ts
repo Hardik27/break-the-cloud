@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="12"';
 const disp = 'font-family="Archivo, Arial Narrow, sans-serif" font-weight="800" font-size="14"';
@@ -59,6 +60,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['replica-diff'].minTimeMs,
   parMs: RULES['replica-diff'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'Replication copies each new object from a source bucket to a replica, usually <b>asynchronously</b>: the write succeeds first and the copy follows seconds or minutes later. Replication can skip objects without telling you (objects written before the rule existed, or copies that failed), so teams verify it instead of trusting it.',

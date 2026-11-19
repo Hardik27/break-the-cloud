@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { meta } from '../../src/games/thundering-herd/meta';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks, hudTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask, answerPredict, skipReplay,
 } from './helpers';
 
 const T = meta.tasks.length;
@@ -34,21 +34,31 @@ test('solver completes every task with real mouse clicks, no console errors', as
   // Task 3: coalescing alone keeps users waiting; stale-while-revalidate fixes it.
   await waitTask(page, 3);
   await realClick(page, page.locator('#th-run2'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expect(page.locator('#th-q')).toHaveText('300');
   await realClick(page, page.locator('#th-coal'));
   await realClick(page, page.locator('#th-run2'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expect(page.locator('#th-p99')).toHaveText('300 ms');
   await realClick(page, page.locator('#th-swr'));
   await realClick(page, page.locator('#th-run2'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expectTasks(page, 3, T);
 
   // Task 4: ±5% is not enough; ±20% is.
   await waitTask(page, 4);
   await realClick(page, page.locator('[data-jitter="5"]'));
   await realClick(page, page.locator('#th-run3'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expect(page.locator('#th-peak')).toHaveText('45');
   await realClick(page, page.locator('[data-jitter="20"]'));
   await realClick(page, page.locator('#th-run3'));
+  await answerPredict(page);
+  await skipReplay(page);
 
   await expectFinished(page, T);
   await expectNoHorizontalScroll(page);

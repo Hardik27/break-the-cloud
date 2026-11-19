@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const box = (x: number, y: number, w: number, label: string, fill = 'var(--panel)', ink = 'var(--ink)') =>
   `<rect x="${x}" y="${y}" width="${w}" height="34" rx="6" style="fill:${fill};stroke:var(--line);stroke-width:1.5"/><text x="${x + w / 2}" y="${y + 22}" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" style="fill:${ink}">${label}</text>`;
@@ -54,6 +55,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['dns-detective'].minTimeMs,
   parMs: RULES['dns-detective'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'DNS is a distributed database split into <b>zones</b>. The root zone delegates .com to Verisign’s servers, .com delegates shop.com to its owner’s name servers, and so on. A resolver follows these <b>referrals</b> until an authoritative server answers.',

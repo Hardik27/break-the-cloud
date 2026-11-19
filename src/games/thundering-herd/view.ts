@@ -1,6 +1,7 @@
 /** Thundering Herd view. The TTL bar, DB meter and herd dots are built once; frames update styles only. */
 import { el, onPress, setText } from '../../lib/dom';
 import { makeFlow } from '../flow';
+import { predictAndReveal, replayBusy } from '../replay';
 import type { Game, GameApi } from '../types';
 import { meta } from './meta';
 import * as sim from './sim';
@@ -161,11 +162,20 @@ export const game: Game = {
       render();
     }
 
-    function runHot() {
+    async function runHot() {
       if (flow.guard()) return;
       if (flow.task !== 2) return api.toast('Running the test is for the next task.');
+      if (replayBusy()) return api.toast('Watch the replay first.');
       api.move();
       const r = sim.hotKeyExpiry(hotOpts);
+      r2.innerHTML = '';
+      await predictAndReveal(api, r2, {
+        title: 'The homepage key expires',
+        simMs: 1000,
+        realMs: 2500,
+        predict: { q: 'The homepage key expires while hundreds of users are asking for it. With your protections, how many go to the database?', options: ['Just one', 'Hundreds'], answer: r.dbOk ? 0 : 1, why: r.dbOk ? 'A lock lets only one request reload the key; the rest wait for it (or get the old copy).' : 'Without a lock, every request that misses goes to the database at the same moment: a stampede.' },
+      });
+      if (!alive) return;
       r2.innerHTML = `<div class="mrow"><span>Database queries when the key expired</span><span class="${r.dbOk ? 'ok-pill' : 'bad-pill'}" id="th-q">${r.queries}</span></div>
         <div class="mrow"><span>Slowest 1% of users waited</span><span class="${r.fastOk ? 'ok-pill' : 'bad-pill'}" id="th-p99">${r.p99Ms} ms</span></div>`;
       if (r.dbOk && r.fastOk) {
@@ -184,9 +194,10 @@ export const game: Game = {
       render();
     }
 
-    function runMany() {
+    async function runMany() {
       if (flow.guard()) return;
       if (flow.task !== 3) return api.toast('Running the test is for the last task.');
+      if (replayBusy()) return api.toast('Watch the replay first.');
       api.move();
       const xs = sim.expirySchedule(jitter);
       const pk = sim.peak(xs);
@@ -195,6 +206,12 @@ export const game: Game = {
       const capY = H - (H * sim.SPREAD_CAP) / 60;
       r3.innerHTML = `<svg viewBox="0 0 ${W} ${H + 14}" class="th-chart" role="img" aria-label="Refreshes per second over 5 minutes">${bars}<line x1="0" y1="${capY}" x2="${W}" y2="${capY}" stroke="var(--muted)" stroke-dasharray="4 4"/><text x="0" y="${H + 12}" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">0</text><text x="${W}" y="${H + 12}" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">5 min</text></svg>
         <div class="mrow"><span>Most refreshes in one second</span><span class="${pk <= sim.SPREAD_CAP ? 'ok-pill' : 'bad-pill'}" id="th-peak">${pk}</span></div>`;
+      await predictAndReveal(api, r3, {
+        title: '5 minutes of expiries',
+        simMs: 300_000,
+        predict: { q: `All ${sim.KEYS} keys were cached at the same moment. With ${jitter ? `±${jitter}%` : 'no'} jitter on the TTL, what will the refreshes look like?`, options: ['Tall spikes: many keys expire in the same second', 'A smooth, low line'], answer: pk <= sim.SPREAD_CAP ? 1 : 0, why: pk <= sim.SPREAD_CAP ? 'Random jitter gives each key a slightly different TTL, so expiries spread out.' : 'Keys cached together expire together, every TTL, unless the jitter spreads them wide enough.' },
+      });
+      if (!alive) return;
       if (pk <= sim.SPREAD_CAP) {
         api.hit('smooth', run3);
         return flow.done();

@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { meta } from '../../src/games/backpressure/meta';
 import {
   expectFinished, expectNoHorizontalScroll, expectStageControlsFocusable, expectTasks, hudTasks,
-  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask,
+  keyboardStart, keyboardTutorial, openGame, playTutorial, realClick, watchErrors, waitTask, answerPredict, skipReplay,
 } from './helpers';
 
 const T = meta.tasks.length;
@@ -40,9 +40,13 @@ test('solver completes every task with real mouse clicks, no console errors', as
   // Task 4: 1 try loses good orders; 3 tries is right.
   await waitTask(page, 4);
   await realClick(page, page.locator('#bp-run'));
+  await answerPredict(page);
+  await skipReplay(page);
   await expect(page.locator('#bp-lost')).toHaveText('6');
   await realClick(page, page.locator('[data-maxr="3"]'));
   await realClick(page, page.locator('#bp-run'));
+  await answerPredict(page);
+  await skipReplay(page);
 
   await expectFinished(page, T);
   await expectNoHorizontalScroll(page);

@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="11"';
 const diagram = `<svg viewBox="0 0 520 200" role="img" aria-label="Traffic jumps sharply at noon. Reactive scaling adds capacity two minutes later, leaving a gap where users get errors. A scheduled pre-warm adds capacity before the jump.">
@@ -47,6 +48,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['autoscaler'].minTimeMs,
   parMs: RULES['autoscaler'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'Autoscalers come in three flavours. <b>Reactive</b> policies (target tracking, step scaling) watch a metric such as CPU or requests per instance. <b>Scheduled</b> scaling changes capacity at known times. <b>Predictive</b> scaling forecasts traffic from history and scales ahead of it.',

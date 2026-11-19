@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const box = 'style="fill:var(--panel);stroke:var(--line);stroke-width:1.5"';
 const ink = 'style="fill:var(--ink)"';
@@ -64,6 +65,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['traffic-cop'].minTimeMs,
   parMs: RULES['traffic-cop'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'A load balancer spreads requests over a pool of servers, so no single machine is overwhelmed and one dead machine does not take the service down. Layer 4 balancers route TCP connections by address and port. Layer 7 balancers understand HTTP, so they can also route by path or header.',

@@ -1,6 +1,7 @@
 /** Backpressure view. Consumer icons, queue rows (a fixed pool) and controls are built once; frames update text and classes. */
 import { el, onPress, setAttr, setText } from '../../lib/dom';
 import { makeFlow } from '../flow';
+import { predictAndReveal, replayBusy } from '../replay';
 import type { Game, GameApi } from '../types';
 import { meta } from './meta';
 import * as sim from './sim';
@@ -200,11 +201,21 @@ export const game: Game = {
       render();
     }
 
-    function runIt() {
+    async function runIt() {
       if (flow.guard()) return;
       if (flow.task !== 3) return;
+      if (replayBusy()) return api.toast('Watch the replay first.');
       api.move();
       const r = sim.runDlq(maxR);
+      res.innerHTML = '';
+      const outcome = r.lostGood ? 1 : r.leftGood || r.crashes > sim.CRASH_BUDGET ? 0 : 2;
+      await predictAndReveal(api, res, {
+        title: '2 minutes of orders',
+        simMs: 120_000,
+        realMs: 3000,
+        predict: { q: `Each message gets ${maxR} tr${maxR === 1 ? 'y' : 'ies'} before the queue moves it to the DLQ. What happens?`, options: ['Poison messages keep crashing consumers and block the queue', 'Good orders that hit a brief blip end up in the DLQ', 'Everything gets processed, poison is quarantined'], answer: outcome, why: outcome === 0 ? 'Too many tries: a poison message is retried again and again, crashing the consumer each time while everything behind it waits.' : outcome === 1 ? 'Too few tries: a good order that failed once because of a network blip is given up on immediately.' : 'A few tries absorb brief blips; after that, the poison is moved aside.' },
+      });
+      if (!alive) return;
       res.innerHTML = `<div class="mrow"><span>Good orders lost to the DLQ</span><span class="${r.lostGood ? 'bad-pill' : 'ok-pill'}" id="bp-lost">${r.lostGood}</span></div>
         <div class="mrow"><span>Good orders never processed (queue stuck)</span><span class="${r.leftGood ? 'bad-pill' : 'ok-pill'}" id="bp-left">${r.leftGood}</span></div>
         <div class="mrow"><span>Consumer crashes</span><span class="${r.crashes > sim.CRASH_BUDGET ? 'bad-pill' : 'ok-pill'}" id="bp-crash">${r.crashes}</span></div>

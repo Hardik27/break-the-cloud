@@ -9,9 +9,9 @@ type Phase = 'pre' | 'tutorial' | 'play' | 'solved' | 'done';
 
 const INFO = [
   { h: 'Something is missing', p: 'The replica should hold every object in the source. One did not make it across.' },
-  { h: 'Same size, different bytes', p: 'One copy has the right name and size but different contents. Sizes match, so look at the checksum (etag).' },
-  { h: 'Same bytes, different permissions', p: 'Every checksum matches now. But one object’s tags differ, and in S3 tags can decide who may read an object.' },
-  { h: 'The lock that disappeared', p: 'One replica lost its retention lock. Its bytes and tags are fine, but it can now be deleted.' },
+  { h: 'Something changed inside', p: '<b>Goal:</b> flag the replica copy that differs from its source.<br><b>Your tools:</b> click a row to flag it. A wrong flag costs points and 3 seconds.' },
+  { h: 'Something changed again', p: '<b>Goal:</b> flag the replica copy that differs from its source.<br><b>Your tools:</b> click a row to flag it. Compare every column.' },
+  { h: 'One more difference', p: '<b>Goal:</b> flag the replica copy that differs from its source.<br><b>Your tools:</b> click a row to flag it.' },
   { h: 'Speed round', p: 'Fourteen objects, three problems of different kinds. Find all three. Wrong clicks still cost points and 3 seconds.' },
 ];
 

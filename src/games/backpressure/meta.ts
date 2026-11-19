@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="11"';
 const box = (x: number, y: number, w: number, label: string, fill: string, ink: string) =>
@@ -51,6 +52,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['backpressure'].minTimeMs,
   parMs: RULES['backpressure'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'A queue turns a synchronous call (“process this payment now”) into an asynchronous one (“process it soon”). That buys resilience: a slow or failed consumer just means a longer queue, not failed checkouts. The price is latency and the need to monitor queue depth and message age.',

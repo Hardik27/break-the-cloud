@@ -1,5 +1,6 @@
 import { RULES } from '../../../supabase/functions/_shared/rules.ts';
 import type { GameMeta } from '../types';
+import { hints, learn, pager } from './learn';
 
 const mono = 'font-family="IBM Plex Mono, monospace" font-size="11"';
 const bars = (x0: number, y0: number, vals: number[], col: string) =>
@@ -48,6 +49,9 @@ export const meta: GameMeta = {
   ],
   minTimeMs: RULES['thundering-herd'].minTimeMs,
   parMs: RULES['thundering-herd'].parMs,
+  pager,
+  learn,
+  hints,
   learnMore: {
     paragraphs: [
       'A stampede needs three things: a key that is very hot, a reload that is slow, and many requests arriving during that reload. Remove any one and the herd disappears: keep the key warm (refresh-ahead), make one request do the work (coalescing, also called single-flight), or don’t make anyone wait (stale-while-revalidate).',

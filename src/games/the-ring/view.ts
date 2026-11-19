@@ -1,6 +1,7 @@
 /** The Ring view. Buttons are built once; the ring picture (not interactive) is redrawn after each action. */
 import { el, esc, onPress } from '../../lib/dom';
 import { makeFlow } from '../flow';
+import { predictAndReveal, replayBusy } from '../replay';
 import type { Game, GameApi } from '../types';
 import { meta } from './meta';
 import * as sim from './sim';
@@ -249,12 +250,20 @@ export const game: Game = {
       render();
     }
 
-    function runVn() {
+    async function runVn() {
       if (flow.guard()) return;
       if (flow.task !== 3 || vnSolved) return;
+      if (replayBusy()) return api.toast('Watch first.');
       api.move();
       const sh = sim.shares(vn);
       const imb = sim.imbalance(vn);
+      vnOut.innerHTML = '';
+      await predictAndReveal(api, vnOut, {
+        title: 'Placing the points',
+        simMs: 1000,
+        realMs: 1500,
+        predict: { q: `Each server gets ${vn} point${vn > 1 ? 's' : ''} on the ring. Will the biggest server own close to a fair third?`, options: ['Yes, close to a third each', 'No, one server owns far more'], answer: sim.balanced(vn) ? 0 : 1, why: sim.balanced(vn) ? 'Many random points per server average out the gaps between them.' : 'With few points, the gaps between them are random, and one server ends up with a huge gap.' },
+      });
       vnOut.innerHTML = `<div class="rg-vnring">${ringPicture(sim.vnodePositions(vn), [], sim.VN_RING, true)}</div>
         <div class="rg-shares">${sim.VN_SERVERS.map((s) => `<div class="mrow"><span><b style="color:${COLORS[s]}">${s}</b> owns</span><span class="rg-bar"><i style="width:${(sh[s] * 100).toFixed(1)}%;background:${COLORS[s]}"></i></span><span>${(sh[s] * 100).toFixed(0)}%</span></div>`).join('')}
         <div class="mrow"><span>Biggest share vs fair (33%)</span><span class="${imb <= sim.BALANCE_GOAL ? 'ok-pill' : 'bad-pill'}" id="rg-imb">${imb.toFixed(2)}×</span></div></div>`;
