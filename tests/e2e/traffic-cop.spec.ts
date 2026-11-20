@@ -77,12 +77,19 @@ test('solver completes every task with real mouse clicks; scores, posts and shar
 
   // Task 3: round robin autopilot; pull crashed servers and return them.
   await waitTask(page, 3);
+  // Traffic waits for autopilot: the request box says so and the Round robin button pulses.
+  await expect(page.locator('[data-s="rr"]')).toHaveClass(/callout/);
+  await expect(page.locator('#stage')).toContainText('paused: switch on round robin');
   await realClick(page, page.locator('[data-s="rr"]'));
   await expect(page.locator('[data-s="rr"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-s="rr"]')).not.toHaveClass(/callout/);
   await until(page, `3/${T}`, keepRotation(page));
 
   // Task 4: override round robin on heavy requests.
   await waitTask(page, 4);
+  // Locked strategies say why, instead of just looking grey.
+  await expect(page.locator('#tc-locknote')).toContainText('Least loaded unlocks in task 5');
+  await expect(page.locator('[data-s="least"]')).toHaveAttribute('aria-disabled', 'true');
   await until(page, `4/${T}`, routeRequests(page, true));
 
   // Task 5: boss wave: least loaded, and pull the dead server.

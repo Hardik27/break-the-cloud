@@ -56,7 +56,9 @@ export const game: Game = {
       stratGrp.appendChild(b);
       return { k, b };
     });
-    ctl.append(stratGrp);
+    // Why a strategy button is greyed out right now (no silent locks).
+    const lockNote = el('span', { class: 'small locknote', id: 'tc-locknote', role: 'status' });
+    ctl.append(stratGrp, lockNote);
     const strip = el('div', { class: 'strip', 'aria-label': 'Recent requests: green served, red dropped' });
     const stripCells = Array.from({ length: 60 }, () => strip.appendChild(el('span')));
     const flyers = Array.from({ length: 8 }, () => el('span', { class: 'flyer', 'aria-hidden': 'true', style: 'opacity:0' }));
@@ -272,7 +274,9 @@ export const game: Game = {
       const hl = sim.holdLeft(s);
       hold.hidden = !(hl > 0 && phase === 'play');
       if (hl > 0) holdFill.style.width = `${(100 * hl) / sim.STAGES[s.stage].holdHeavyMs}%`;
-      setText(rqTxt, q ? (q.heavy ? 'heavy · 3 units' : 'request · 1 unit') : phase === 'pre' ? 'press Start' : 'next request…');
+      // Task 3 starts paused until autopilot is on: say so, and make the button to press pulse.
+      const awaitAuto = s.stage === 2 && phase === 'play' && s.strategy === 'manual';
+      setText(rqTxt, q ? (q.heavy ? 'heavy · 3 units' : 'request · 1 unit') : phase === 'pre' ? 'press Start' : awaitAuto ? 'paused: switch on round robin ↓' : 'next request…');
       const target = s.stage === 3 && q?.heavy && phase === 'play' ? sim.peek(s) : -1;
       const onAuto = autopilot() && phase === 'play';
       s.servers.forEach((srv, i) => {
@@ -293,12 +297,25 @@ export const game: Game = {
         const cls = pct >= 100 ? 'full' : pct >= 75 ? 'hot' : '';
         if (e.bar.className !== cls) e.bar.className = cls;
         setText(e.st, !srv.up ? (srv.inRotation ? 'DOWN!' : 'down') : !srv.inRotation ? 'OUT' : `${l}/${sim.CAP}`);
-        setText(e.next, i === target ? ' ← round robin' : '');
+        setText(e.next, i === target ? 'round robin picks this' : '');
       });
       for (const c of chips) {
         setAttr(c.b, 'aria-pressed', String(s.strategy === c.k));
         setAttr(c.b, 'aria-disabled', String(!!lockReason(c.k) && phase === 'play'));
+        c.b.classList.toggle('callout', awaitAuto && c.k === 'rr');
       }
+      setText(
+        lockNote,
+        phase !== 'play'
+          ? ''
+          : s.stage === 1
+            ? '🔒 By hand only in rush hour. Algorithms unlock in task 3.'
+            : s.stage === 2 && s.strategy !== 'manual'
+              ? '🔒 Least loaded unlocks in task 5, the boss wave.'
+              : s.stage === 3
+                ? '🔒 Round robin stays on in this task: beat it by clicking a server with 3 free units when a heavy request waits. Least loaded unlocks in task 5.'
+                : '',
+      );
       const goal = sim.STAGES[s.stage].goal;
       setText($('tc-strategy'), sim.STRATEGY_NAMES[s.strategy]);
       setText($('tc-streak'), s.stage === 0 ? '–' : sim.STAGES[s.stage].goalKind === 'heavy' ? `${s.heavyStreak}/${goal} heavy` : `${s.streak}/${goal} in a row`);

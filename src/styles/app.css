@@ -1062,3 +1062,13 @@ body.tv #comp-gate{display:none}
 #learn.flash{animation:boxpulse 1.2s ease-in-out 2;border-color:var(--accent)}
 #learn:focus{outline:none}
 @media (prefers-reduced-motion: reduce){.learnjump,.learnjump .lj-arrow,#learn.flash{animation:none}}
+/* A control the coach is asking for right now */
+.chip.callout{border-color:var(--accent);color:var(--accent);font-weight:600;animation:spotpulse 1.2s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){.chip.callout{animation:none;outline:2px solid var(--accent)}}
+/* Traffic Cop: locked strategies say why; round robin's pick is a small tag on the row's top edge */
+[data-s][aria-disabled="true"]::after{content:" 🔒";font-size:11px}
+.lbctl .locknote{flex-basis:100%;margin:0;color:var(--muted)}
+.lbctl .locknote:empty{display:none}
+.srv{position:relative}
+.srv .tag-next{position:absolute;top:-9px;left:10px;margin:0;padding:0 6px;background:var(--panel);border:1px solid var(--vote);border-radius:999px;white-space:nowrap;line-height:16px}
+.srv .tag-next:empty{display:none}
