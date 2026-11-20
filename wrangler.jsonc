@@ -1,0 +1,11 @@
+// Cloudflare Workers config: serves the built static site (dist/) on Cloudflare's network.
+// Cloudflare runs `npm run build`, then `npx wrangler deploy` on every push to main.
+// No server code: the games run in the browser and talk to Supabase directly.
+// "name" must match the Worker's name in the Cloudflare dashboard.
+{
+  "name": "break-the-cloud",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./dist"
+  }
+}
