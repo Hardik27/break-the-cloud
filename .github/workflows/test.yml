@@ -1,0 +1,25 @@
+# Runs the unit tests and checks that the site builds, on every push to main and every pull request.
+# Hosting is done by Cloudflare Pages, which builds and publishes the site itself (see docs/DEPLOY.md).
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build

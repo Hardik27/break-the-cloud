@@ -43,24 +43,17 @@
    ```
 6. Restart `npm run dev`. The leaderboard switches on by itself; without the `.env.local` values the game runs offline and keeps best scores in the browser.
 
-## Deploying to GitHub Pages
+## Deploying (Cloudflare Pages, your own domain)
 
-`.github/workflows/deploy.yml` runs the unit tests, builds the site and publishes it on every push to `main`.
-
-1. On github.com, create an **empty** repository named `break-the-cloud` (no README, no .gitignore, no licence).
-2. Push this folder (replace `YOUR-USERNAME`):
+1. Push this folder to a GitHub repository (private is fine):
    ```
    git remote add origin https://github.com/YOUR-USERNAME/break-the-cloud.git
    git push -u origin main
    ```
-   When git asks for a password, paste a personal access token (GitHub → Settings → Developer settings → Personal access tokens), not your account password.
-3. In the repository: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-4. Optional, for the shared leaderboard: **Settings → Secrets and variables → Actions → New repository secret**, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (the same values as `.env.local`). Never add the service-role key here.
-5. **Actions** tab → "Test and deploy" → **Run workflow** (or push any commit). After about 2 minutes the site is live at `https://YOUR-USERNAME.github.io/break-the-cloud/`.
+2. On dash.cloudflare.com: **Workers & Pages → Create → Pages → Connect to Git**, pick the repository. Build command `npm run build`, output `dist`, environment variables `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (same as `.env.local`) and `NODE_VERSION=22`. Never add the service-role or secret key.
+3. **Custom domains** → add your domain. Every push to `main` redeploys.
 
-Later updates: `git add -A`, `git commit -m "..."`, `git push`. Every push redeploys.
-
-The Playwright suite is not run in CI (it takes about 15 minutes); run `npm run e2e` locally before pushing big changes.
+`.github/workflows/test.yml` runs the unit tests and a build on every push and pull request; it does not publish anything. The Playwright suite is not run in CI (it takes about 15 minutes); run `npm run e2e` locally before pushing big changes.
 
 Own domain, Supabase in Mumbai, and what to do before a training centre relies on it: see [docs/DEPLOY.md](docs/DEPLOY.md).
 

@@ -7,10 +7,10 @@ Break the Cloud is a **static site**: after `npm run build` it is just HTML, CSS
 | Piece | What it does | Who provides it | Cost |
 |---|---|---|---|
 | **Domain name** | The address people type, e.g. `breakthecloud.in` | A registrar: Cloudflare Registrar, Namecheap, GoDaddy, BigRock… | about ₹600–1,500 a year (`.in` cheaper, `.com` / `.dev` more) |
-| **Static hosting** | Serves the files in `dist/` over HTTPS, worldwide | GitHub Pages (already set up in this repo) or Cloudflare Pages | Free |
+| **Static hosting** | Serves the files in `dist/` over HTTPS, worldwide | Cloudflare Pages (works with a private repository) | Free |
 | **Backend** | Leaderboard, play counts, classes for training centres | Supabase (Postgres + anonymous sign-in + one Edge Function) | Free tier; Pro is $25/month when real classes depend on it |
 
-How a visit works: the browser asks **DNS** where your domain lives → DNS answers with GitHub's servers → GitHub sends the files → the games run in the browser and talk to Supabase directly for scores and classes.
+How a visit works: the browser asks **DNS** where your domain lives → DNS answers with Cloudflare's servers → Cloudflare sends the files → the games run in the browser and talk to Supabase directly for scores and classes.
 
 A VM would only make sense if you had your own server code to run. You don't: Supabase is your server.
 
@@ -18,14 +18,14 @@ A VM would only make sense if you had your own server code to run. You don't: Su
 
 ## Step 1: put the code on GitHub (once)
 
-See the README section “Deploying to GitHub Pages”. In short:
-
 ```bash
 git remote add origin https://github.com/YOUR-USERNAME/break-the-cloud.git
+```
+```bash
 git push -u origin main
 ```
 
-Then on github.com: **Settings → Pages → Source: GitHub Actions**. Every push now runs the tests and publishes the site to `https://YOUR-USERNAME.github.io/break-the-cloud/`.
+The repository can stay **private**. On every push, GitHub Actions (`.github/workflows/test.yml`) runs the unit tests and checks that the site builds. A green ✓ in the **Actions** tab means nothing broke. GitHub does not publish the site; Cloudflare does (Step 4).
 
 ## Step 2: set up Supabase (the backend)
 
@@ -46,30 +46,29 @@ supabase db push
 supabase functions deploy finish-run
 ```
 
-4. In GitHub: **Settings → Secrets and variables → Actions**, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (Supabase → Project Settings → API). The anon key is meant to be public; never put the `service_role` key anywhere in the site or GitHub.
-5. Push any commit (or Actions → Run workflow). The leaderboard and classes switch on.
+4. Note the **Project URL** and the **anon / publishable key** (Supabase → Project Settings → API). You add them to Cloudflare in Step 4. The anon key is meant to be public; never put the `service_role` or secret key anywhere in the site, GitHub or Cloudflare.
 
 ## Step 3: buy the domain
 
-1. Pick a registrar. **Cloudflare Registrar** sells at cost with no markup and has free DNS; Indian registrars (BigRock, GoDaddy India) accept UPI. Check that the name you want is free there.
+1. Use **Cloudflare Registrar** (dash.cloudflare.com → **Domain Registration → Register Domains**): it sells at cost with no markup, and the domain then sits next to the hosting, so DNS and HTTPS are set up for you. It takes a card or PayPal (not UPI). If you buy elsewhere (BigRock, GoDaddy India accept UPI), you will add the domain to Cloudflare in Step 4 and change its nameservers at that registrar.
 2. Buy it for 1–2 years and turn on **auto-renew**. A lapsed domain can be bought by someone else.
 3. Keep the registrar account safe (two-factor login): whoever controls it controls the site.
 
-## Step 4: point the domain at GitHub Pages
+## Step 4: host the site on Cloudflare Pages and attach the domain
 
-In your registrar's **DNS** settings, add these records (replace `YOUR-USERNAME`):
+1. dash.cloudflare.com → **Workers & Pages → Create → Pages → Connect to Git**. Allow Cloudflare to read your GitHub account and pick `break-the-cloud` (private is fine).
+2. Build settings:
+   - **Framework preset:** None (or Vite)
+   - **Build command:** `npm run build`
+   - **Build output directory:** `dist`
+   - **Environment variables:** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (from Step 2), and `NODE_VERSION` = `22`
+3. **Save and Deploy.** After about a minute the site is live at `https://break-the-cloud.pages.dev`. Every `git push` to `main` redeploys it.
+4. In the project: **Custom domains → Set up a custom domain**: enter `breakthecloud.in` (your domain), then add `www.breakthecloud.in` as well. If the domain is on Cloudflare, the DNS records and the HTTPS certificate are created for you, usually within minutes.
+5. If you change the Supabase values later, edit them in **Settings → Variables and secrets** and redeploy (**Deployments → … → Retry deployment**): they are baked in at build time.
 
-| Type | Name | Value |
-|---|---|---|
-| A | `@` | `185.199.108.153` |
-| A | `@` | `185.199.109.153` |
-| A | `@` | `185.199.110.153` |
-| A | `@` | `185.199.111.153` |
-| CNAME | `www` | `YOUR-USERNAME.github.io` |
+### Alternative: GitHub Pages
 
-Then on GitHub: **Settings → Pages → Custom domain**: type your domain (e.g. `breakthecloud.in`), save, wait for the DNS check (minutes to a few hours), and tick **Enforce HTTPS**. GitHub gets a free HTTPS certificate for you.
-
-If you use Cloudflare for DNS, set those records to **DNS only** (grey cloud) at first, so GitHub can issue the certificate.
+Only for a **public** repository on a free GitHub account (private needs a paid plan). Add a Pages deploy job to the workflow (`actions/upload-pages-artifact` + `actions/deploy-pages`), turn on **Settings → Pages → Source: GitHub Actions**, add the two `VITE_SUPABASE_*` values as repository secrets, and point the domain at GitHub (`A` records `185.199.108.153`–`185.199.111.153`, `CNAME www` → `YOUR-USERNAME.github.io`).
 
 ## Step 5: check it
 
@@ -91,7 +90,7 @@ git commit -m "Describe the change"
 git push
 ```
 
-GitHub tests and redeploys in about 2 minutes. If you add a new file to `supabase/migrations/`, also run `supabase db push`.
+GitHub runs the tests and Cloudflare redeploys in about a minute (watch it under **Workers & Pages → break-the-cloud → Deployments**). If you add a new file to `supabase/migrations/`, also run `supabase db push`.
 
 ## Before a training centre relies on it
 
