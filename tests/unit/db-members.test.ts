@@ -228,3 +228,22 @@ describe('telemetry', () => {
       expect((await owner<{ n: number }>(`select count(*)::int as n from ${t} where user_id = $1`, [C]))[0].n).toBe(0);
   });
 });
+
+describe('feedback', () => {
+  it('players send it; nobody reads it through the API; spam is capped at 5 an hour', async () => {
+    await as(B, `insert into feedback (page, game_id, rating, message) values ('play', 'traffic-cop', 4, 'Loved the boss wave!')`);
+    await expect(as(B, `select * from feedback`)).rejects.toThrow(/permission denied/);
+    await expect(as(null, `insert into feedback (message) values ('anon spam')`)).rejects.toThrow(/permission denied/);
+    await expect(as(B, `insert into feedback (user_id, message) values ($1, 'as someone else')`, [A])).rejects.toThrow(/permission denied/);
+    await expect(as(B, `insert into feedback (message) values ('x')`)).rejects.toThrow(/check/);
+    await expect(as(B, `insert into feedback (message, rating) values ('bad rating', 9)`)).rejects.toThrow(/check/);
+    for (let i = 0; i < 4; i++) await as(B, `insert into feedback (message) values ($1)`, [`message ${i}`]);
+    await expect(as(B, `insert into feedback (message) values ('one too many')`)).rejects.toThrow(/too much feedback/);
+    const [r] = await owner<{ n: number; rating: number }>(`select count(*)::int as n, max(rating) as rating from feedback where user_id = $1`, [B]);
+    expect(r).toMatchObject({ n: 5, rating: 4 });
+  });
+  it('delete my data removes it', async () => {
+    await as(B, `select delete_my_data()`);
+    expect((await owner<{ n: number }>(`select count(*)::int as n from feedback where user_id = $1`, [B]))[0].n).toBe(0);
+  });
+});

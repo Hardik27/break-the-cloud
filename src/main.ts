@@ -7,6 +7,7 @@ import { renderCompetition, renderCompetitionAdmin, renderCompetitionMe, renderN
 import { renderDeck } from './shell/deck';
 import { renderHome } from './shell/home';
 import { renderHost } from './shell/host';
+import { listenForFeedback } from './shell/feedback';
 import { trackVisit } from './lib/telemetry';
 import { renderPlay } from './shell/play';
 import { renderPrivacy } from './shell/privacy';
@@ -80,4 +81,5 @@ window.addEventListener('hashchange', () => {
   window.scrollTo(0, 0);
 });
 showNoticeOnce();
+listenForFeedback();
 route();

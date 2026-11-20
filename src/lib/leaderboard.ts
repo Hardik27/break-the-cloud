@@ -76,6 +76,7 @@ export type Fail = { ok: false; reason: string };
 export type Claim = { ok: true; claim: string } | Fail;
 export interface JoinTarget { kind: 'class' | 'competition'; id: string; name: string }
 /** One learning-activity event (see supabase/migrations/*_telemetry.sql for the types). */
+export interface FeedbackInput { message: string; rating: number | null; page: string; game_id: string | null }
 export interface TelemetryEvent {
   session_id: string;
   type: string;
@@ -117,6 +118,8 @@ export interface Backend {
   reinstate(id: string, key: string, nickname: string): Promise<{ ok: true } | Fail>;
   /** Learning telemetry (fire and forget). */
   logEvents(rows: TelemetryEvent[]): Promise<void>;
+  /** Anonymous feedback: a message, an optional 1-4 rating, and the page it was sent from. */
+  sendFeedback(f: FeedbackInput): Promise<{ ok: true } | Fail>;
   competitionInfo(id: string): Promise<CompInfo | null>;
   activeCompetitions(): Promise<CompInfo[]>;
   /** Overall (level null) or one level's board for a competition. */
@@ -150,6 +153,7 @@ export const offlineBackend: Backend = {
   disqualify: async () => ({ ok: false, reason: 'Competitions need the shared leaderboard, which is not set up on this site yet.' }),
   reinstate: async () => ({ ok: false, reason: 'Competitions need the shared leaderboard, which is not set up on this site yet.' }),
   logEvents: async () => {},
+  sendFeedback: async () => ({ ok: false, reason: 'Feedback needs the shared leaderboard, which is not set up on this site yet.' }),
   competitionInfo: async () => null,
   activeCompetitions: async () => [],
   competitionBoard: async () => null,
@@ -454,6 +458,14 @@ export function mockBackend(): Backend {
     },
     async logEvents(rows) {
       events.push(...rows);
+    },
+    async sendFeedback(f) {
+      const msg = f.message.trim();
+      if (msg.length < 3) return { ok: false, reason: 'Write a few words first.' };
+      const box = ((window as unknown as { __BTC_FEEDBACK__?: FeedbackInput[] }).__BTC_FEEDBACK__ ??= []);
+      if (box.length >= 5) return { ok: false, reason: 'Thanks! That is a lot of feedback for one hour. Try again later.' };
+      box.push({ ...f, message: msg });
+      return { ok: true };
     },
     async deleteMyData() {
       for (const ms of [...members.values(), ...classMembers.values()]) ms.delete(me);

@@ -20,6 +20,8 @@ export function renderPrivacy(app: HTMLElement): () => void {
       <li>your <b>device type</b> (phone or computer) and your <b>country</b>, as our hosting provider Cloudflare sees it. We do not store your IP address.</li>
     </ul>
     <p>We use it for statistics such as how many people learned here, for how long and from how many countries, and to find games that are too hard. It is not sold, not shared with advertisers and not used to identify you. Only the site owner can read it; other players cannot.</p>
+    <h3>Feedback</h3>
+    <p>If you send feedback, we store your message, the rating you picked and the page (and game) you sent it from, linked to your anonymous id. Only the site owner reads it. Please don’t put personal details in it.</p>
     <h3>Nickname and leaderboards</h3>
     <p>To appear on leaderboards you pick a nickname; it is public. Other players see your nickname, points, stars and time, never your id. Use a nickname you are happy to show; avoid your full name. The leaderboard stores your runs (game, start and finish time, points, stars, mistakes, moves, time per task).</p>
     <h3>Classes</h3>
@@ -29,7 +31,7 @@ export function renderPrivacy(app: HTMLElement): () => void {
     <h3>Fonts</h3>
     <p>Typefaces (Archivo, IBM Plex Sans, IBM Plex Mono) load from Google Fonts. Google receives your IP address when the page loads, as with any web request.</p>
     <h3>Delete your data</h3>
-    <p>This button deletes everything linked to you on the server (runs, nickname, class and competition memberships, learning activity) and clears everything this site saved in this browser.</p>
+    <p>This button deletes everything linked to you on the server (runs, nickname, class and competition memberships, learning activity, feedback) and clears everything this site saved in this browser.</p>
     <p><button class="btn" id="delete-data" type="button">Delete my data</button></p>
     <p class="small" id="delete-msg" role="status"></p>
     </article>` +

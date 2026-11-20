@@ -1072,3 +1072,13 @@ body.tv #comp-gate{display:none}
 .srv{position:relative}
 .srv .tag-next{position:absolute;top:-9px;left:10px;margin:0;padding:0 6px;background:var(--panel);border:1px solid var(--vote);border-radius:999px;white-space:nowrap;line-height:16px}
 .srv .tag-next:empty{display:none}
+/* Feedback window and buttons */
+.fbchip{border-color:var(--accent);color:var(--accent)}
+.fbask{display:block;margin-top:10px;font-size:14px}
+.fb-dialog textarea{width:100%;min-height:110px;resize:vertical;font:inherit;font-size:15px;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.fb-rates{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.fb-rate{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);font-size:12px;cursor:pointer}
+.fb-rate span{font-size:24px}
+.fb-rate[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--panel));font-weight:600}
+.fb-note{color:var(--muted)}
+footer .linkbtn{font:inherit;color:inherit;text-decoration:underline}

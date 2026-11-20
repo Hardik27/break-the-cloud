@@ -268,6 +268,7 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
       <p class="small">${rank.title !== rankBefore ? `<b class="pb">Promoted to ${rank.title}!</b> ` : `Rank: <b>${rank.title}</b>. `}${rank.next ? `${fmtPts(rank.next.min - careerAfter)} pts to ${rank.next.title}.` : ''}</p>
       <div class="row" style="margin-top:10px"><button class="btn go" id="share-btn" type="button">Share score</button><button class="btn" id="again" type="button">Play again</button>
         <a class="btn ghost" id="next-game" href="#/play/${nextGame.id}" style="text-decoration:none">Next: ${esc(nextGame.title)} →</a></div>
+      <button class="linkbtn fbask" type="button" id="result-feedback" data-feedback="${esc(meta.title)}">💬 How was this game? Tell us what to fix →</button>
       <button class="btn learnjump" type="button" id="learn-jump"><span>📖 Learn more: <b>${esc(meta.concept)}</b> in depth</span><span class="lj-arrow" aria-hidden="true">↓</span></button>
       <div id="post-status" class="small" style="margin-top:10px" role="status"></div><div id="result-nick"></div>`;
     // count-up

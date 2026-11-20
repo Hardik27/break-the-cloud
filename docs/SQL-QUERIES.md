@@ -76,6 +76,22 @@ select data ->> 'where' as place, count(*) as clicks, count(distinct user_id) as
 from public.events where type = 'book_click' group by 1 order by clicks desc;
 ```
 
+### Feedback: newest first
+```sql
+select f.created_at, coalesce(p.nickname, 'anonymous') as who, f.rating, f.page, f.game_id, f.message
+from public.feedback f left join public.profiles p using (user_id)
+order by f.created_at desc
+limit 50;
+```
+`rating`: 1 = confusing, 2 = OK, 3 = good, 4 = loved it.
+
+### Feedback per game (average rating)
+```sql
+select game_id, count(*) as messages, round(avg(rating), 1) as avg_rating
+from public.feedback where game_id is not null
+group by game_id order by avg_rating;
+```
+
 ### I. Competition members and who was removed
 ```sql
 select c.name, count(*) as members, count(*) filter (where m.disqualified_at is not null) as removed

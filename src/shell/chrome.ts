@@ -23,7 +23,7 @@ export function topbar(): string {
   return `<div class="topbar"><a class="brand" href="#/">Break the <span>Cloud</span></a>
    <nav>${(() => { const c = myClass(); return c ? `<a class="classchip" id="classchip" href="#/join/${c.code}" title="Your runs count for this class">🏫 ${esc(c.name)}</a>` : ''; })()}<span class="rankchip" id="rankchip" title="Your career rank: the sum of your best score in every game">${r.title} · ${fmtPts(pts)} pts</span>
    <button class="chip" type="button" id="sound-toggle" aria-pressed="${!sfx.muted}">${sfx.muted ? 'Sound off' : 'Sound on'}</button>
-   <a href="#/">All games</a><a href="#/host" id="nav-host">Teach or host</a><a href="#/privacy">Privacy</a></nav></div>`;
+   <a href="#/">All games</a><a href="#/host" id="nav-host">Teach or host</a><a href="#/privacy">Privacy</a><button class="chip fbchip" type="button" id="nav-feedback" data-feedback="">💬 Feedback</button></nav></div>`;
 }
 
 /** Wire up controls in the top bar after it is rendered. */
@@ -44,7 +44,7 @@ export function refreshRankChip(): void {
 }
 
 export const footer = (): string =>
-  `<footer><span>Break the Cloud: learn distributed systems by breaking them. Free, for students and engineers.</span><span class="footlinks"><a href="#/host">Join with a code</a><a href="#/classes/new">For instructors: create a class</a><a href="#/competitions/new">Host a competition</a><a href="#/privacy">Privacy &amp; data</a></span></footer>`;
+  `<footer><span>Break the Cloud: learn distributed systems by breaking them. Free, for students and engineers.</span><span class="footlinks"><a href="#/host">Join with a code</a><a href="#/classes/new">For instructors: create a class</a><a href="#/competitions/new">Host a competition</a><a href="#/privacy">Privacy &amp; data</a><button class="linkbtn" type="button" data-feedback="">Send feedback</button></span></footer>`;
 
 /** One-time dismissible notice about local storage (no cookies are used). */
 export function showNoticeOnce(): void {

@@ -175,6 +175,14 @@ export function supabaseBackend(url: string, anonKey: string): Backend {
       if (error || !data) return { ok: false, reason: explain(error?.message, 'Could not reinstate. Try again.') };
       return data.ok ? { ok: true } : { ok: false, reason: 'No member with that nickname.' };
     },
+    async sendFeedback(f) {
+      const message = f.message.trim();
+      if (message.length < 3) return { ok: false, reason: 'Write a few words first.' };
+      if (!(await userId())) return { ok: false, reason: 'Could not reach the server. Try again.' };
+      const { error } = await sb.from('feedback').insert({ message: message.slice(0, 2000), rating: f.rating, page: f.page.slice(0, 80), game_id: f.game_id });
+      if (!error) return { ok: true };
+      return { ok: false, reason: /too much/i.test(error.message) ? 'Thanks! That is a lot of feedback for one hour. Try again later.' : 'Could not send it. Try again.' };
+    },
     async logEvents(rows) {
       if (!rows.length || !(await userId())) return;
       await sb.from('events').insert(rows);
