@@ -1034,3 +1034,7 @@ body.tv #comp-title{font-size:clamp(40px,5vw,80px)}
 .claim-ack input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent)}
 body.claim-open{overflow:hidden}
 body.tv #comp-gate{display:none}
+/* Free companion book offer */
+.book{display:flex;gap:8px;align-items:flex-start;margin:0;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);font-size:14px;line-height:1.45}
+.book a{color:var(--accent);font-weight:600;white-space:nowrap}
+.reportcard .book{margin-top:10px}

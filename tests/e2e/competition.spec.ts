@@ -15,14 +15,19 @@ async function saveClaimCode(page: Page, nick: string, keyboard = false): Promis
   await expect(ov).toContainText('screenshot');
   await expect(ov).toContainText('need this code to collect a prize');
   await expect(page.locator('#claim-done')).toBeDisabled();
+  // The free book is offered next to the screenshot step and opens in a new tab.
+  await expect(page.locator('#claim-book')).toHaveAttribute('href', 'https://zenodo.org/records/23031568');
+  await expect(page.locator('#claim-book')).toHaveAttribute('target', '_blank');
   await page.waitForTimeout(5000);
   await expect(ov).toBeVisible();
   await expectNoHorizontalScroll(page);
   const code = (await page.locator('#claim-code').textContent())!.trim();
   if (keyboard) {
-    // Focus starts on Copy; Tab → Download → the checkbox, Space ticks it, Tab → Continue, Enter.
+    // Focus starts on Copy; Tab → Download → book link → the checkbox, Space ticks it, Tab → Continue, Enter.
     await expect(page.locator('#claim-copy')).toBeFocused();
     await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await expect(page.locator('#claim-book')).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(page.locator('#claim-ack')).toBeFocused();
     await page.keyboard.press('Space');
@@ -113,6 +118,7 @@ test('organiser creates a competition; a player gets a nickname and claim code, 
   await realClick(page, page.locator('#comp-me'));
   await expect(page.locator('#rc-nick')).toHaveText('VJTI_Ace');
   await expect(page.locator('#rc-rank')).toHaveText(`#${rank}`);
+  await expect(page.locator('#report-card #rc-book')).toHaveAttribute('href', 'https://zenodo.org/records/23031568');
   await expectNoHorizontalScroll(page);
 
   // Organiser: standings and claim verification (wrong code, then the right one).

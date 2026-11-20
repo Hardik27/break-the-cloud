@@ -9,6 +9,7 @@ import { GAMES, LEVELS } from '../games/registry';
 import { esc, fmtTime } from '../lib/dom';
 import { getBackend, withTimeout, type CompAdmin, type CompInfo, type CompRow } from '../lib/leaderboard';
 import { bindTopbar, fmtPts, footer, toast, topbar } from './chrome';
+import { bookHtml } from './book';
 import { nicknameGate, showClaimDialog } from './identity';
 
 const site = () => location.href.split('#')[0];
@@ -138,7 +139,8 @@ export function renderCompetitionMe(app: HTMLElement, id: string): () => void {
           const games = GAMES.filter((g) => g.level === L.n);
           return `<tr><td>${L.n} · ${esc(L.name)}</td><td>${l ? fmtPts(l.points) : '–'}</td><td>${l?.rank ? `#${l.rank}` : '–'}</td><td>${games.map((g) => { const x = byGame.get(g.id); return `<span class="rc-game ${x ? 'done' : ''}" title="${esc(g.title)}${x ? `: ${x.points} pts` : ''}">${esc(g.title)}${x ? ` ${'★'.repeat(x.stars)}` : ''}</span>`; }).join('')}</td></tr>`;
         }).join('')}</tbody></table>
-        <p class="small" style="margin:8px 0 0">📸 Screenshot this card. Labs powered by Break the Cloud · ${esc(site())}</p></div>
+        <p class="small" style="margin:8px 0 0">📸 Screenshot this card. Labs powered by Break the Cloud · ${esc(site())}</p>
+        ${bookHtml('rc-book')}</div>
       <div class="card"><p class="eyebrow">Claim code</p><p class="small">Your claim code was shown when you picked your nickname. Lost it? Get a new one: the old one stops working.</p><button class="btn ghost" type="button" id="rc-reissue">Get a new claim code</button><div id="rc-claim"></div></div>`;
     box.querySelector('#rc-reissue')!.addEventListener('click', async () => {
       if (!confirm('Get a new claim code? Your old code will stop working.')) return;

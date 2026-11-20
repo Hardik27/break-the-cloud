@@ -7,6 +7,7 @@
 import { esc } from '../lib/dom';
 import type { Backend } from '../lib/leaderboard';
 import { storage, today } from '../lib/storage';
+import { BOOK, bookHtml } from './book';
 import { toast } from './chrome';
 
 const ADJ = ['Swift', 'Quiet', 'Brave', 'Lucky', 'Clever', 'Rapid', 'Steady', 'Bold', 'Sharp', 'Cosmic', 'Turbo', 'Chill'];
@@ -43,6 +44,7 @@ export function showClaimDialog(nick: string, code: string): Promise<void> {
     ov.innerHTML = `<div class="card claim-dialog" role="dialog" aria-modal="true" aria-labelledby="claim-title">
       <h2 id="claim-title">Save your claim code</h2>
       ${claimCardHtml(nick, code)}
+      ${bookHtml('claim-book')}
       <label class="claim-ack"><input type="checkbox" id="claim-ack"> I took a screenshot (or copied or downloaded it)</label>
       <div class="row"><button class="btn go" type="button" id="claim-done" disabled>Continue →</button></div>
     </div>`;
@@ -67,7 +69,7 @@ export function showClaimDialog(nick: string, code: string): Promise<void> {
     // Keep keyboard focus inside the window.
     ov.addEventListener('keydown', (e) => {
       if (e.key !== 'Tab') return;
-      const f = [...ov.querySelectorAll<HTMLElement>('button:not([disabled]), input')];
+      const f = [...ov.querySelectorAll<HTMLElement>('button:not([disabled]), input, a[href]')];
       const i = f.indexOf(document.activeElement as HTMLElement);
       if (e.shiftKey && i <= 0) (e.preventDefault(), f[f.length - 1].focus());
       else if (!e.shiftKey && i === f.length - 1) (e.preventDefault(), f[0].focus());
@@ -118,7 +120,10 @@ export function downloadPlayerCard(nick: string, code: string): void {
   g.fillStyle = '#5b6878';
   g.font = '20px "IBM Plex Sans", sans-serif';
   g.fillText('To claim a prize, show the organiser your nickname and this claim code.', 90, 420);
-  g.fillText(`Issued ${new Date().toLocaleString()}`, 90, 455);
+  g.fillText(`Issued ${new Date().toLocaleString()}`, 90, 452);
+  g.fillStyle = '#d9480f';
+  g.font = '600 19px "IBM Plex Sans", sans-serif';
+  g.fillText(`Free book: ${BOOK.title} · ${BOOK.short}`, 90, 488);
   const a = document.createElement('a');
   a.href = c.toDataURL('image/png');
   a.download = `break-the-cloud-${nick}.png`;
