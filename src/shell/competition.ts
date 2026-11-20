@@ -9,7 +9,7 @@ import { GAMES, LEVELS } from '../games/registry';
 import { esc, fmtTime } from '../lib/dom';
 import { getBackend, withTimeout, type CompAdmin, type CompInfo, type CompRow } from '../lib/leaderboard';
 import { bindTopbar, fmtPts, footer, toast, topbar } from './chrome';
-import { bindClaimCard, claimCardHtml } from './identity';
+import { nicknameGate, showClaimDialog } from './identity';
 
 const site = () => location.href.split('#')[0];
 const page = (inner: string) => topbar() + `<section class="classpage comppage">${inner}</section>` + footer();
@@ -55,7 +55,7 @@ export function renderCompetition(app: HTMLElement, id: string): () => void {
     }
     app.querySelector('#comp-title')!.innerHTML = `🏆 ${esc(c.name)}`;
     const st = compStatus(c);
-    body.innerHTML = `<div class="card compstatus ${st.phase}"><b id="comp-status">${esc(st.text)}</b>
+    body.innerHTML = `<div id="comp-gate"></div><div class="card compstatus ${st.phase}"><b id="comp-status">${esc(st.text)}</b>
         <div class="row"><a class="btn go" href="#/" style="text-decoration:none">${st.phase === 'ended' ? 'Practise the games' : 'Play now'} →</a><a class="btn ghost" href="#/c/${esc(c.id)}/me" style="text-decoration:none" id="comp-me">My report card</a><button class="btn ghost" type="button" id="comp-tv">Projector mode</button></div></div>
       <div class="card"><div class="boardhead"><p class="eyebrow" style="margin:0">Leaderboard</p><span class="small" id="comp-upd"></span></div>
         <div class="tabs comptabs" role="tablist"><button class="chip" type="button" role="tab" data-lv="" aria-selected="true">Overall</button>${LEVELS.map((L) => `<button class="chip" type="button" role="tab" data-lv="${L.n}" aria-selected="false" title="${esc(L.name)}">Level ${L.n}</button>`).join('')}</div>
@@ -83,6 +83,11 @@ export function renderCompetition(app: HTMLElement, id: string): () => void {
     });
     await load();
     timer = window.setInterval(() => void load(), 30_000);
+    // Arriving from the poster's QR code: join with a nickname straight away (unless the competition is over).
+    if (b.kind !== 'offline' && st.phase !== 'ended' && !(await withTimeout(b.nickname(), 3000, null)) && alive) {
+      await nicknameGate(app.querySelector<HTMLElement>('#comp-gate')!, b, () => {}, () => {}, { save: 'Join the competition', skip: 'Just look around', skipToast: 'You can join any time: open this page again or start any game.', rememberSkip: false });
+      if (alive) void load();
+    }
   })();
   return () => {
     alive = false;
@@ -143,8 +148,8 @@ export function renderCompetitionMe(app: HTMLElement, id: string): () => void {
         slot.innerHTML = '<p class="small">Could not create a code. Try again.</p>';
         return;
       }
-      slot.innerHTML = claimCardHtml(me.nickname!, code);
-      bindClaimCard(slot, me.nickname!, code);
+      slot.innerHTML = '';
+      await showClaimDialog(me.nickname!, code);
     });
   })();
   return () => {

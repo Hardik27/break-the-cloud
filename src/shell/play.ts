@@ -16,7 +16,7 @@ import { finishHeadline, GRADE_EMOJI, gradeWord } from './cheer';
 import { bindTopbar, fmtPts, footer, refreshRankChip, toast, topbar } from './chrome';
 import { createCoach } from './coach';
 import { createHints, createStageUi } from './stageui';
-import { bindClaimCard, claimCardHtml, gateSkippedToday, nicknameGate } from './identity';
+import { gateSkippedToday, nicknameGate, showClaimDialog } from './identity';
 
 const titleHtml = (t: string) => {
   const i = t.lastIndexOf(' ');
@@ -396,12 +396,10 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
         toast('Nickname saved. You are on the board!');
         const nick = input.value.trim();
         document.querySelectorAll('#board-nick, #result-nick').forEach((s) => (s.innerHTML = `<p class="small" style="margin:6px 0 0">Playing as <b>${esc(nick)}</b>.</p>`));
+        // The code opens in its own window: the board reload below must not wipe it.
         const code = await b.issueClaimCode();
-        if (code && slot) {
-          slot.innerHTML = claimCardHtml(nick, code);
-          bindClaimCard(slot, nick, code);
-        }
         void loadBoard();
+        if (code) await showClaimDialog(nick, code);
       } else msg.textContent = r.reason ?? 'Could not save.';
     });
   }
@@ -550,15 +548,12 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
     ($('brief-details') as HTMLDetailsElement).open = false;
     renderTasks();
     void (async () => {
-      // Nickname first, so the run counts on the leaderboard (players may skip and play unranked).
-      const b = await backendReady;
-      if (b.kind !== 'offline' && !gateSkippedToday()) {
-        const nick = await withTimeout(b.nickname(), 3000, null);
-        if (!nick && alive) {
-          coach.shellSay('Pick a nickname to get on the leaderboard, or play without ranking.', 'act');
-          await nicknameGate($('teach-slot'), b, () => { stage.inert = true; stage.classList.add('dimmed'); }, () => { stage.inert = false; stage.classList.remove('dimmed'); });
-        }
+      // The nickname card (opened when the page loaded) must be finished or skipped first.
+      if (gateOpen) {
+        coach.shellSay('First pick a nickname above, or press <b>Play without ranking</b>.', 'act');
+        $('nick-gate')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       }
+      await gateDone;
       if (!alive) return;
       coach.shellSay('Read the explainer below. Click through it at your own pace.', 'watch');
       await ui.learn(meta.learn?.[0], 'Before you play');
@@ -568,6 +563,35 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
       beginCbs.forEach((cb) => cb());
     });
   }
+  // While the nickname card is open, the stage waits behind it; clicks there say why instead of doing nothing.
+  const gateBlock = (e: Event) => {
+    if (!gateOpen) return;
+    if (e instanceof KeyboardEvent && e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type !== 'click') {
+      toast('First pick a nickname above, or press “Play without ranking”.');
+      $('nick-gate')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  };
+  for (const t of ['pointerdown', 'click', 'keydown']) stage.addEventListener(t, gateBlock, true);
+
+  // Nickname first, as soon as the page opens, so the run counts on the leaderboard (players may skip and play unranked).
+  let gateOpen = false;
+  const gateDone = (async () => {
+    const b = await backendReady;
+    if (b.kind === 'offline' || gateSkippedToday() || !alive) return;
+    const nick = await withTimeout(b.nickname(), 3000, null);
+    if (nick || !alive) return;
+    gateOpen = true;
+    if (!run.begun) coach.shellSay('Pick a nickname to get on the leaderboard, or play without ranking.', 'act');
+    stage.classList.add('dimmed');
+    await nicknameGate($('teach-slot'), b, () => {}, () => {});
+    stage.classList.remove('dimmed');
+    gateOpen = false;
+    if (alive && !run.begun) coach.shellSay('Press <b>Start</b>. A one-minute explainer comes first, then a guided tutorial.', 'act');
+    if (alive) void loadBoard();
+  })();
   $('start-btn').addEventListener('click', begin);
   coachStart.addEventListener('click', begin);
 

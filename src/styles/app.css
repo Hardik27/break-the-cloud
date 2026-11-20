@@ -1025,3 +1025,12 @@ body.tv #comp-title{font-size:clamp(40px,5vw,80px)}
 #me-body,#adm-body,#comp-body{display:grid;gap:14px;min-width:0}
 #me-body>*,#adm-body>*,#comp-body>*{min-width:0}
 #vf .joinnick{max-width:220px}
+/* Claim code window: stays above the page until the player confirms they saved the code. */
+.claim-ov{position:fixed;inset:0;z-index:200;background:rgba(5,10,18,.62);display:grid;place-items:center;padding:16px;overflow-y:auto}
+.claim-dialog{width:min(560px,100%);display:grid;gap:12px;margin:auto;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.claim-dialog h2{margin:0}
+.claim-warn{margin:0;font-size:15px;border-left:3px solid var(--accent);padding-left:10px}
+.claim-ack{display:flex;gap:8px;align-items:flex-start;font-size:15px;cursor:pointer}
+.claim-ack input{width:18px;height:18px;margin-top:2px;accent-color:var(--accent)}
+body.claim-open{overflow:hidden}
+body.tv #comp-gate{display:none}

@@ -12,6 +12,9 @@ let db: PGlite;
 
 const SUPABASE_STUB = `
   create role anon nologin; create role authenticated nologin;
+  -- Like newer Supabase projects: service_role bypasses RLS but has no table privileges unless granted.
+  create role service_role nologin bypassrls;
+  grant usage on schema public to service_role;
   create schema auth;
   create table auth.users (id uuid primary key);
   create function auth.uid() returns uuid language sql stable as
@@ -41,6 +44,7 @@ beforeAll(async () => {
   await db.exec(readFileSync('supabase/migrations/20261118000000_leaderboard.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/20261120000000_classes.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/20261121000000_class_leaderboard.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/20261123000000_service_role_grants.sql', 'utf8'));
 }, 60_000);
 
 describe('runs: clients can start runs but never set times or points', () => {
@@ -134,5 +138,20 @@ describe('abuse and deletion', () => {
     expect(await admin(`select id from runs where user_id = '${A}'`)).toHaveLength(0);
     expect(await admin(`select 1 from profiles where user_id = '${A}'`)).toHaveLength(0);
     expect((await admin(`select id from runs where user_id = '${B}'`)).length).toBeGreaterThan(0);
+  });
+});
+
+describe('service role (the finish-run Edge Function)', () => {
+  it('can read a started run and record its result', async () => {
+    const [r] = await as<{ id: string }>(A, `insert into runs (game_id, client_version) values ('heartbeat', 'web-1') returning id`);
+    await db.exec('set role service_role');
+    try {
+      const rows = (await db.query<{ status: string }>(`select id, user_id, game_id, status, started_at from runs where id = $1`, [r.id])).rows;
+      expect(rows[0].status).toBe('started');
+      const up = await db.query(`update runs set status = 'finished', finished_at = now(), ms = 20000, points = 900, stars = 3 where id = $1 and status = 'started'`, [r.id]);
+      expect(up.affectedRows).toBe(1);
+    } finally {
+      await db.exec('reset role');
+    }
   });
 });

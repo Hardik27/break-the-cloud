@@ -21,13 +21,61 @@ export const gateSkippedToday = (): boolean => storage.get<string>('nickSkip', '
 /** The claim-code card: big, screenshot-friendly, with copy and download. */
 export function claimCardHtml(nick: string, code: string): string {
   return `<div class="claimcard" id="claim-card">
-    <p class="eyebrow">Your claim code · screenshot this now</p>
+    <p class="eyebrow">📸 Your claim code · take a screenshot now</p>
     <div class="claim-who">Playing as <b id="claim-nick">${esc(nick)}</b></div>
     <div class="claim-code" id="claim-code">${esc(code)}</div>
-    <p class="small">If you win a prize, the organiser asks for your <b>nickname and this code</b>. It proves you are you, without any email or phone number. It is shown only once: take a screenshot or download it. Keep playing in this same browser (not incognito).</p>
+    <p class="claim-warn"><b>In a competition? You need this code to collect a prize.</b> The organiser asks for your nickname and this code. It proves the nickname is yours, without any email or phone number.</p>
+    <p class="small">It is shown only once. Screenshot it, copy it or download the player card. Keep playing in this same browser (not incognito).</p>
     <div class="row"><button class="btn" type="button" id="claim-copy">Copy code</button><button class="btn ghost" type="button" id="claim-dl">Download player card</button></div>
   </div>`;
 }
+
+/**
+ * Shows the claim code in its own window, above the page, so nothing on the page can redraw it away.
+ * It stays until the player confirms they saved it. Resolves when they press Continue.
+ */
+export function showClaimDialog(nick: string, code: string): Promise<void> {
+  return new Promise((resolve) => {
+    document.getElementById('claim-ov')?.remove();
+    const ov = document.createElement('div');
+    ov.className = 'claim-ov';
+    ov.id = 'claim-ov';
+    ov.innerHTML = `<div class="card claim-dialog" role="dialog" aria-modal="true" aria-labelledby="claim-title">
+      <h2 id="claim-title">Save your claim code</h2>
+      ${claimCardHtml(nick, code)}
+      <label class="claim-ack"><input type="checkbox" id="claim-ack"> I took a screenshot (or copied or downloaded it)</label>
+      <div class="row"><button class="btn go" type="button" id="claim-done" disabled>Continue →</button></div>
+    </div>`;
+    document.body.appendChild(ov);
+    document.body.classList.add('claim-open');
+    bindClaimCard(ov, nick, code);
+    const ack = ov.querySelector<HTMLInputElement>('#claim-ack')!;
+    const go = ov.querySelector<HTMLButtonElement>('#claim-done')!;
+    // Copying or downloading counts as saving it.
+    const saved = () => {
+      ack.checked = true;
+      go.disabled = false;
+    };
+    ov.querySelector('#claim-copy')!.addEventListener('click', saved);
+    ov.querySelector('#claim-dl')!.addEventListener('click', saved);
+    ack.addEventListener('change', () => (go.disabled = !ack.checked));
+    go.addEventListener('click', () => {
+      ov.remove();
+      document.body.classList.remove('claim-open');
+      resolve();
+    });
+    // Keep keyboard focus inside the window.
+    ov.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab') return;
+      const f = [...ov.querySelectorAll<HTMLElement>('button:not([disabled]), input')];
+      const i = f.indexOf(document.activeElement as HTMLElement);
+      if (e.shiftKey && i <= 0) (e.preventDefault(), f[f.length - 1].focus());
+      else if (!e.shiftKey && i === f.length - 1) (e.preventDefault(), f[0].focus());
+    });
+    ov.querySelector<HTMLElement>('#claim-copy')!.focus({ preventScroll: true });
+  });
+}
+
 export function bindClaimCard(root: ParentNode, nick: string, code: string): void {
   root.querySelector('#claim-copy')?.addEventListener('click', () => {
     navigator.clipboard?.writeText(`${nick} ${code}`).then(() => toast('Copied. Keep it somewhere safe.')).catch(() => toast(code));
@@ -78,10 +126,16 @@ export function downloadPlayerCard(nick: string, code: string): void {
 }
 
 /**
- * Before the first ranked game: pick a nickname (or play without ranking), then see the claim code once.
- * Resolves when the player is ready to play.
+ * Pick a nickname (or play without ranking), then save the claim code (shown once, in its own window).
+ * Shown when a game page or a competition page opens and the player has no nickname. Resolves when they are done.
  */
-export function nicknameGate(slot: HTMLElement, b: Backend, onBlock: () => void, onUnblock: () => void): Promise<void> {
+export function nicknameGate(
+  slot: HTMLElement,
+  b: Backend,
+  onBlock: () => void,
+  onUnblock: () => void,
+  labels: { save?: string; skip?: string; skipToast?: string; rememberSkip?: boolean } = {},
+): Promise<void> {
   return new Promise((resolve) => {
     onBlock();
     const p = document.createElement('section');
@@ -90,11 +144,11 @@ export function nicknameGate(slot: HTMLElement, b: Backend, onBlock: () => void,
     const suggestion = suggestNickname();
     p.innerHTML = `<div class="tp-head"><p class="eyebrow">Get on the leaderboard</p></div>
       <h2>Pick a nickname</h2>
-      <p class="tp-text" style="font-size:16px">Your nickname is how you appear on the leaderboards and how a prize winner is found. No email, no phone number, nothing else.</p>
+      <p class="tp-text" style="font-size:16px">Your nickname is how you appear on the leaderboards and how a prize winner is found. No email, no phone number, nothing else. Next you get a secret claim code: <b>screenshot it</b>, because competition prizes need it.</p>
       <label class="small" for="gate-nick">Nickname (3–20 letters, digits, _ . -)</label>
       <div class="row"><input id="gate-nick" class="joinnick" maxlength="20" autocomplete="nickname" value="${esc(suggestion)}"><button class="btn ghost" type="button" id="gate-shuffle" title="Suggest another">🎲</button></div>
       <p class="small" id="gate-msg" role="status"></p>
-      <div class="row"><button class="btn go" type="button" id="gate-save">Save and play</button><button class="linkbtn" type="button" id="gate-skip">Play without ranking</button></div>`;
+      <div class="row"><button class="btn go" type="button" id="gate-save">${esc(labels.save ?? 'Save and play')}</button><button class="linkbtn" type="button" id="gate-skip">${esc(labels.skip ?? 'Play without ranking')}</button></div>`;
     slot.appendChild(p);
     p.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     const input = p.querySelector<HTMLInputElement>('#gate-nick')!;
@@ -106,8 +160,8 @@ export function nicknameGate(slot: HTMLElement, b: Backend, onBlock: () => void,
     };
     p.querySelector('#gate-shuffle')!.addEventListener('click', () => (input.value = suggestNickname()));
     p.querySelector('#gate-skip')!.addEventListener('click', () => {
-      storage.set('nickSkip', today());
-      toast('Playing without ranking. You can pick a nickname after any game.');
+      if (labels.rememberSkip !== false) storage.set('nickSkip', today());
+      toast(labels.skipToast ?? 'Playing without ranking. You can pick a nickname after any game.');
       done();
     });
     p.querySelector('#gate-save')!.addEventListener('click', async () => {
@@ -119,11 +173,10 @@ export function nicknameGate(slot: HTMLElement, b: Backend, onBlock: () => void,
       }
       const nick = input.value.trim();
       const code = await b.issueClaimCode();
-      if (!code) return done();
-      p.innerHTML = `${claimCardHtml(nick, code)}<div class="row"><button class="btn go" type="button" id="gate-go">I saved it. Let’s play →</button></div>`;
-      bindClaimCard(p, nick, code);
-      p.querySelector<HTMLElement>('#gate-go')!.addEventListener('click', done);
-      p.querySelector<HTMLElement>('#gate-go')!.focus({ preventScroll: true });
+      p.remove();
+      if (code) await showClaimDialog(nick, code);
+      else toast('Nickname saved, but the claim code could not be created. Get one from your competition report card.');
+      done();
     });
     input.focus({ preventScroll: true });
   });
