@@ -23,7 +23,7 @@ export function topbar(): string {
   return `<div class="topbar"><a class="brand" href="#/">Break the <span>Cloud</span></a>
    <nav>${(() => { const c = myClass(); return c ? `<a class="classchip" id="classchip" href="#/join/${c.code}" title="Your runs count for this class">🏫 ${esc(c.name)}</a>` : ''; })()}<span class="rankchip" id="rankchip" title="Your career rank: the sum of your best score in every game">${r.title} · ${fmtPts(pts)} pts</span>
    <button class="chip" type="button" id="sound-toggle" aria-pressed="${!sfx.muted}">${sfx.muted ? 'Sound off' : 'Sound on'}</button>
-   <a href="#/">All games</a><a href="#/privacy">Privacy</a></nav></div>`;
+   <a href="#/">All games</a><a href="#/host" id="nav-host">Teach or host</a><a href="#/privacy">Privacy</a></nav></div>`;
 }
 
 /** Wire up controls in the top bar after it is rendered. */
@@ -44,7 +44,7 @@ export function refreshRankChip(): void {
 }
 
 export const footer = (): string =>
-  `<footer><span>Break the Cloud: learn distributed systems by breaking them. Free, for students and engineers.</span><span class="footlinks"><a href="#/classes/new">For instructors: create a class</a><a href="#/competitions/new">Host a competition</a><a href="#/privacy">Privacy &amp; data</a></span></footer>`;
+  `<footer><span>Break the Cloud: learn distributed systems by breaking them. Free, for students and engineers.</span><span class="footlinks"><a href="#/host">Join with a code</a><a href="#/classes/new">For instructors: create a class</a><a href="#/competitions/new">Host a competition</a><a href="#/privacy">Privacy &amp; data</a></span></footer>`;
 
 /** One-time dismissible notice about local storage (no cookies are used). */
 export function showNoticeOnce(): void {
@@ -52,7 +52,7 @@ export function showNoticeOnce(): void {
   const n = el(
     'div',
     { class: 'notice', role: 'region', 'aria-label': 'Privacy notice' },
-    `<p><b>No cookies here.</b> Your progress is saved in this browser. If you post to the leaderboard, only your nickname and scores are shared. <a href="#/privacy">Privacy &amp; data</a></p>`,
+    `<p><b>No cookies here.</b> Your progress is saved in this browser. To improve the games we record anonymous learning activity (pages, games, time spent), never your name or email. Leaderboards show only your nickname and scores. <a href="#/privacy">Privacy &amp; data</a></p>`,
   );
   const ok = el('button', { class: 'btn', type: 'button' }, 'Got it');
   ok.addEventListener('click', () => {

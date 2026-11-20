@@ -31,8 +31,21 @@ test('an instructor creates a class, a learner joins and plays, and the report s
   // A name is required so the instructor can tell learners apart.
   await realClick(page, page.locator('#join-btn'));
   await expect(page.locator('#join-msg')).toContainText('Type your name');
+  // Restoring needs the right nickname and claim code.
+  await realClick(page, page.locator('#cr summary'));
+  await page.fill('#cr-nick', 'riya_k');
+  await page.fill('#cr-code', 'BTC-WRNG-CODE');
+  await realClick(page, page.locator('#cr-go'));
+  await expect(page.locator('#cr-msg')).toContainText('do not match');
   await page.fill('#join-nick', 'riya_k');
   await realClick(page, page.locator('#join-btn'));
+  // Joining issues a claim code for this class (it restores progress on another device).
+  await expect(page.locator('#claim-ov')).toBeVisible();
+  await expect(page.locator('#claim-scope')).toHaveText('Jetking Nashik');
+  await expect(page.locator('#claim-ov')).toContainText('keeps your progress in Jetking Nashik safe');
+  await expectNoHorizontalScroll(page);
+  await realClick(page, page.locator('#claim-ack'));
+  await realClick(page, page.locator('#claim-done'));
   await expect(page.locator('#classchip')).toContainText('Jetking Nashik');
 
   // Play a game far enough to start a run (the clock starts after the tutorial).
@@ -49,6 +62,7 @@ test('an instructor creates a class, a learner joins and plays, and the report s
   await expect(page.locator('#rep-name')).toHaveText('Jetking Nashik');
   await expect(page.locator('#rep-learners')).toHaveText('1');
   await expect(page.locator('#report')).toContainText('riya_k');
+  await expect(page.locator('#report')).toContainText('Minutes');
   await expect(page.locator('[data-rep-game="cache-hit"] td').nth(2)).toHaveText('1');
   await expectNoHorizontalScroll(page);
 

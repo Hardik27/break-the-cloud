@@ -6,6 +6,8 @@ import { renderClassReport, renderJoin, renderNewClass } from './shell/classes';
 import { renderCompetition, renderCompetitionAdmin, renderCompetitionMe, renderNewCompetition } from './shell/competition';
 import { renderDeck } from './shell/deck';
 import { renderHome } from './shell/home';
+import { renderHost } from './shell/host';
+import { trackVisit } from './lib/telemetry';
 import { renderPlay } from './shell/play';
 import { renderPrivacy } from './shell/privacy';
 import { parseHash } from './shell/router';
@@ -19,6 +21,12 @@ async function route() {
   unmount?.();
   unmount = null;
   const r = parseHash(location.hash);
+  trackVisit(r.page, r.page === 'play' || r.page === 'comp' || r.page === 'join' ? r.id : null);
+  if (r.page === 'host') {
+    unmount = renderHost(app);
+    document.title = 'Teach or host · Break the Cloud';
+    return;
+  }
   if (r.page === 'privacy') {
     unmount = renderPrivacy(app);
     document.title = 'Privacy · Break the Cloud';
@@ -40,7 +48,7 @@ async function route() {
     return;
   }
   if (r.page === 'comp' || r.page === 'compme' || r.page === 'compadmin' || r.page === 'newcomp') {
-    unmount = r.page === 'comp' ? renderCompetition(app, r.id!) : r.page === 'compme' ? renderCompetitionMe(app, r.id!) : r.page === 'compadmin' ? renderCompetitionAdmin(app, r.id!, r.key) : renderNewCompetition(app);
+    unmount = r.page === 'comp' ? renderCompetition(app, r.id!, r.code) : r.page === 'compme' ? renderCompetitionMe(app, r.id!) : r.page === 'compadmin' ? renderCompetitionAdmin(app, r.id!, r.key) : renderNewCompetition(app);
     document.title = `${r.page === 'newcomp' ? 'Host a competition' : 'Competition'} · Break the Cloud`;
     return;
   }

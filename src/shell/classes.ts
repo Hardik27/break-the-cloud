@@ -9,6 +9,7 @@ import { esc } from '../lib/dom';
 import { getBackend, withTimeout, type ClassReport } from '../lib/leaderboard';
 import { joinClass, leaveClass, myClass } from '../lib/storage';
 import { bindTopbar, footer, toast, topbar } from './chrome';
+import { showClaimDialog } from './identity';
 
 const siteUrl = () => location.href.split('#')[0];
 const page = (inner: string) => topbar() + `<section class="classpage">${inner}</section>` + footer();
@@ -44,9 +45,13 @@ export function renderJoin(app: HTMLElement, code: string): () => void {
     const nick = await withTimeout(b.nickname(), 4000, null);
     if (!alive) return;
     card.innerHTML = `<p class="eyebrow">Class ${esc(info.code)}</p><h2 id="join-name">${esc(info.name)}</h2><p class="small">${esc(info.city)}${info.course ? ` · ${esc(info.course)}` : ''}</p>
-      <p>Joining means your game results (points, stars, time, and your name below) are shared with this class’s instructor and its class leaderboard. Nothing else.</p>
+      <p>Joining shares your game results (points, stars, time), your learning activity in this class (minutes spent, concepts learned) and your nickname below with this class’s instructor and its class leaderboard. Nothing else.</p>
       ${joined ? '' : `<label class="small" for="join-nick">Your name in this class (3–20 letters, shown to your instructor and classmates)</label><input id="join-nick" class="joinnick" maxlength="20" autocomplete="nickname" value="${esc(nick ?? '')}" placeholder="e.g. riya_k"><p class="small" id="join-msg" role="status"></p>`}
-      <div class="row">${joined ? `<span class="ok-pill">You are in this class</span><button class="btn ghost" type="button" id="leave-btn">Leave class</button>` : `<button class="btn go" type="button" id="join-btn">Join ${esc(info.name)}</button>`}<a class="btn ghost" href="#/" style="text-decoration:none">Go to the games →</a></div>`;
+      <div class="row">${joined ? `<span class="ok-pill">You are in this class</span><button class="btn ghost" type="button" id="leave-btn">Leave class</button>` : `<button class="btn go" type="button" id="join-btn">Join ${esc(info.name)}</button>`}<a class="btn ghost" href="#/" style="text-decoration:none">Go to the games →</a></div>
+      ${joined ? '' : `<details class="restore" id="cr"><summary>Joined before on another phone or browser? Get your progress back</summary>
+        <form class="classform" id="cr-form" novalidate><label class="small" for="cr-nick">Your nickname</label><input id="cr-nick" class="joinnick" maxlength="20" autocomplete="off">
+        <label class="small" for="cr-code">Your claim code for this class</label><input id="cr-code" class="joinnick codein" maxlength="13" autocomplete="off" spellcheck="false" placeholder="BTC-XXXX-XXXX">
+        <p class="small" id="cr-msg" role="status"></p><div class="row"><button class="btn" type="submit" id="cr-go">Restore my progress</button></div></form></details>`}`;
     card.querySelector('#join-btn')?.addEventListener('click', async () => {
       const name = card.querySelector<HTMLInputElement>('#join-nick')?.value.trim() ?? '';
       const msg = card.querySelector('#join-msg')!;
@@ -61,8 +66,30 @@ export function renderJoin(app: HTMLElement, code: string): () => void {
         msg.textContent = 'Type your name so your instructor knows which results are yours.';
         return;
       }
+      msg.textContent = 'Joining…';
+      const r = await withTimeout(b.classJoin(info.code), 8000, { ok: false as const, reason: 'The server did not answer. Try again.' });
+      if (!alive) return;
+      if (!r.ok) {
+        msg.textContent = r.reason;
+        return;
+      }
+      await showClaimDialog(name || nick || '', r.claim, { kind: 'class', name: info.name });
       joinClass({ code: info.code, name: info.name, city: info.city });
       toast(`Joined ${info.name}. Your runs now count for this class.`);
+      location.hash = '#/';
+    });
+    card.querySelector('#cr-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = card.querySelector('#cr-msg')!;
+      msg.textContent = 'Checking…';
+      const r = await b.restoreProgress('class', info.code, card.querySelector<HTMLInputElement>('#cr-nick')!.value, card.querySelector<HTMLInputElement>('#cr-code')!.value);
+      if (!alive) return;
+      if (!r.ok) {
+        msg.textContent = r.reason;
+        return;
+      }
+      joinClass({ code: info.code, name: info.name, city: info.city });
+      toast(`Welcome back, ${r.nickname}. Your progress is in this browser now.`);
       location.hash = '#/';
     });
     card.querySelector('#leave-btn')?.addEventListener('click', () => {
@@ -80,7 +107,7 @@ export function renderJoin(app: HTMLElement, code: string): () => void {
 export function renderNewClass(app: HTMLElement): () => void {
   let alive = true;
   app.innerHTML = page(`<p class="eyebrow"><a href="#/">← All games</a> · for instructors</p><h1>Create a <span>class</span></h1>
-    <p class="lede">For training centres and colleges. Your learners join with a short code; you get a live report of who played what, how far they got and how well they did. Free.</p>
+    <p class="lede">For training centres and colleges. Your learners join with a short code; you get a live report of who played what, how far they got, how well they did, minutes spent and concepts learned. Free.</p>
     <form class="card classform" id="class-form" novalidate>
       <label for="cf-name">Centre or class name</label><input id="cf-name" maxlength="80" placeholder="e.g. Jetking Nashik, Cloud batch 3" autocomplete="organization">
       <label for="cf-city">City</label><input id="cf-city" maxlength="60" placeholder="e.g. Nashik" autocomplete="address-level2">
@@ -175,13 +202,13 @@ function draw(box: HTMLElement, rep: ClassReport) {
         return `<tr data-rep-game="${g.id}"><td>${g.level}</td><td>${esc(g.title)}</td><td>${x?.learners_started ?? 0}</td><td>${x?.learners_finished ?? 0}</td><td>${x?.avg_points ?? '–'}</td><td>${x?.avg_stars ?? '–'}</td></tr>`;
       })
       .join('')}</tbody></table></div></div>
-    <div class="card"><p class="eyebrow">Learners</p>${rep.learners.length ? `<div class="tablewrap"><table class="rep"><thead><tr><th>Learner</th><th>Games finished</th><th>Points</th><th>Last active</th></tr></thead><tbody>${rep.learners
-      .map((l) => `<tr><td>${esc(l.name)}</td><td>${l.games_finished} / ${built.length}</td><td>${l.points}</td><td>${day(l.last_active)}</td></tr>`)
+    <div class="card"><p class="eyebrow">Learners</p>${rep.learners.length ? `<div class="tablewrap"><table class="rep"><thead><tr><th>Learner</th><th>Games finished</th><th>Points</th><th>Minutes</th><th>Concepts</th><th>Last active</th></tr></thead><tbody>${rep.learners
+      .map((l) => `<tr><td>${esc(l.name)}</td><td>${l.games_finished} / ${built.length}</td><td>${l.points}</td><td>${l.minutes ?? 0}</td><td>${l.concepts ?? 0}</td><td>${day(l.last_active)}</td></tr>`)
       .join('')}</tbody></table></div>` : `<p class="small">Nobody has joined yet. Share the join link: <b>${esc(siteUrl())}#/join/${esc(rep.class.code)}</b></p>`}</div>`;
   box.querySelector('#rep-print')!.addEventListener('click', () => window.print());
   box.querySelector('#rep-csv')!.addEventListener('click', () => {
     const q = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const rows = [['learner', 'games_finished', 'points', 'last_active'], ...rep.learners.map((l) => [l.name, l.games_finished, l.points, l.last_active])];
+    const rows = [['learner', 'games_finished', 'points', 'minutes', 'concepts', 'last_active'], ...rep.learners.map((l) => [l.name, l.games_finished, l.points, l.minutes ?? 0, l.concepts ?? 0, l.last_active])];
     rows.push([], ['game', 'learners_started', 'learners_finished', 'avg_points', 'avg_stars']);
     built.forEach((g) => {
       const x = byGame.get(g.id);

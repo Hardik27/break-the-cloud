@@ -104,14 +104,13 @@ test('solver completes every task with real mouse clicks; scores, posts and shar
   await expect(page.locator('#result-nick .nickmsg')).toContainText('taken');
   await nick.fill('test_cop');
   await nick.press('Enter');
-  // The claim code opens in its own window and stays until the player confirms they saved it.
-  await expect(page.locator('#claim-ov')).toBeVisible();
-  await expect(page.locator('#claim-nick')).toHaveText('test_cop');
+  // The welcome window (with the free book) opens above the page and stays until the player continues.
+  await expect(page.locator('#welcome-ov')).toBeVisible();
+  await expect(page.locator('#welcome-nick')).toHaveText('test_cop');
   await expect(page.locator('#board-body')).toContainText('test_cop (you)');
-  await expect(page.locator('#claim-ov')).toBeVisible();
-  await realClick(page, page.locator('#claim-ack'));
-  await realClick(page, page.locator('#claim-done'));
-  await expect(page.locator('#claim-ov')).toHaveCount(0);
+  await expect(page.locator('#welcome-ov')).toBeVisible();
+  await realClick(page, page.locator('#welcome-go'));
+  await expect(page.locator('#welcome-ov')).toHaveCount(0);
   await expect(page.locator('#board-me')).toContainText('Your rank');
   await realClick(page, page.locator('[data-range="week"]'));
   await expect(page.locator('[data-range="week"]')).toHaveAttribute('aria-selected', 'true');

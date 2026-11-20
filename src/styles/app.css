@@ -1038,3 +1038,19 @@ body.tv #comp-gate{display:none}
 .book{display:flex;gap:8px;align-items:flex-start;margin:0;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);font-size:14px;line-height:1.45}
 .book a{color:var(--accent);font-weight:600;white-space:nowrap}
 .reportcard .book{margin-top:10px}
+/* Teach or host: join with a code, create a class, host a competition */
+.teach{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-block:28px 8px}
+.teach-h{grid-column:1/-1;margin:0;font-family:var(--display);font-stretch:125%;font-weight:900;font-size:24px}
+.teach h3{margin:2px 0 6px;font-family:var(--display);font-stretch:125%;font-weight:800;font-size:19px}
+.teach .card{display:flex;flex-direction:column;gap:6px;margin:0}
+.teach .small{margin:0}
+.hostcard{text-decoration:none;color:inherit}
+.hostcard:hover{border-color:var(--accent)}
+.hostcard .btn{align-self:flex-start;margin-top:auto}
+.joinany .row{flex-wrap:nowrap}
+.joinany input{min-width:0;flex:1}
+.codein{text-transform:uppercase;font-family:var(--mono);letter-spacing:.12em}
+.joincard,.joined{border-color:var(--accent)}
+.restore summary{cursor:pointer;font-weight:600}
+.restore form{margin-top:10px}
+@media (max-width:880px){.teach{grid-template-columns:minmax(0,1fr)}}

@@ -9,6 +9,7 @@
  */
 import type { CheckQuestion, Hint, LearnCard, Playback } from '../games/types';
 import { el, esc } from '../lib/dom';
+import { track } from '../lib/telemetry';
 
 export interface StageUiDeps {
   slot: HTMLElement;
@@ -55,7 +56,9 @@ export function createStageUi(d: StageUiDeps) {
       const p = panel('learn-card', 'learn-ov');
       let i = 0;
       const n = card.frames.length;
-      const done = () => {
+      let answered = false;
+      const done = (skipped = false) => {
+        track('learn_done', { title: card.title.replace(/<[^>]+>/g, '').slice(0, 80), frames: n, ...(skipped ? { skipped: true } : {}) });
         p.remove();
         unblock();
         resolve();
@@ -82,6 +85,8 @@ export function createStageUi(d: StageUiDeps) {
           p.querySelectorAll<HTMLButtonElement>('.tp-opt').forEach((b) =>
             b.addEventListener('click', () => {
               const ok = Number(b.dataset.opt) === c.answer;
+              if (!answered) track('check', { ok, pick: Number(b.dataset.opt) });
+              answered = true;
               p.querySelectorAll<HTMLButtonElement>('.tp-opt').forEach((x) => {
                 x.disabled = true;
                 x.classList.toggle('right', Number(x.dataset.opt) === c.answer);
@@ -95,13 +100,13 @@ export function createStageUi(d: StageUiDeps) {
               go.focus();
             }),
           );
-          p.querySelector('#learn-go')!.addEventListener('click', done);
+          p.querySelector('#learn-go')!.addEventListener('click', () => done());
           p.querySelector('#learn-back')!.addEventListener('click', () => {
             i = n - 1;
             draw();
           });
         }
-        p.querySelector('#learn-skip')!.addEventListener('click', done);
+        p.querySelector('#learn-skip')!.addEventListener('click', () => done(true));
         p.querySelector<HTMLElement>('#learn-next, .tp-opt')?.focus({ preventScroll: true });
       };
       draw();
@@ -120,6 +125,7 @@ export function createStageUi(d: StageUiDeps) {
         b.addEventListener('click', () => {
           const ok = Number(b.dataset.opt) === c.answer;
           stats.predictions++;
+          track('predict', { ok });
           if (ok) stats.called++;
           lastPrediction = { ok, why: c.why, pick: c.options[Number(b.dataset.opt)] };
           p.remove();
@@ -316,6 +322,7 @@ export function createHints(h: HintDeps) {
     h.card.querySelector('#hint-btn')?.addEventListener('click', () => {
       h.charge(COST[shown]);
       shown++;
+      track('hint', { level: shown });
       pulsed = false;
       if (shown === 3 && hint?.target) {
         document.querySelectorAll(hint.target).forEach((e) => {

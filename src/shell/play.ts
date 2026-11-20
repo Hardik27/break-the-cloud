@@ -16,7 +16,8 @@ import { finishHeadline, GRADE_EMOJI, gradeWord } from './cheer';
 import { bindTopbar, fmtPts, footer, refreshRankChip, toast, topbar } from './chrome';
 import { createCoach } from './coach';
 import { createHints, createStageUi } from './stageui';
-import { gateSkippedToday, nicknameGate, showClaimDialog } from './identity';
+import { gateSkippedToday, nicknameGate, showWelcomeDialog } from './identity';
+import { setGameContext, setTaskContext, track } from '../lib/telemetry';
 
 const titleHtml = (t: string) => {
   const i = t.lastIndexOf(' ');
@@ -231,6 +232,7 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
     $('hud-time').textContent = fmtTime(run.elapsed);
     const inputs = sc.taskMs.map((t, i) => ({ ms: i === 0 ? 0 : t - sc.taskMs[i - 1], mistakes: sc.mistakes[i], comboPoints: sc.comboPts[i] }));
     const rs = scoreRun(inputs, meta.parMs);
+    track('game_finish', { points: rs.total, stars: rs.stars, ms: Math.round(run.elapsed) }, { task: null });
     const streakNow = markPlayedToday();
     if (meta.id === dailyGameId()) markDailyDone();
     const careerBefore = careerPoints();
@@ -396,10 +398,9 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
         toast('Nickname saved. You are on the board!');
         const nick = input.value.trim();
         document.querySelectorAll('#board-nick, #result-nick').forEach((s) => (s.innerHTML = `<p class="small" style="margin:6px 0 0">Playing as <b>${esc(nick)}</b>.</p>`));
-        // The code opens in its own window: the board reload below must not wipe it.
-        const code = await b.issueClaimCode();
+        // The welcome window sits above the page: the board reload below cannot wipe it.
         void loadBoard();
-        if (code) await showClaimDialog(nick, code);
+        await showWelcomeDialog(nick);
       } else msg.textContent = r.reason ?? 'Could not save.';
     });
   }
@@ -434,6 +435,7 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
       lastActivity = performance.now();
       hintsUsed += hints.used;
       hints.set(null);
+      track(i === 0 ? 'tutorial_done' : 'task_done', {}, { task: i });
       let title: string, pts: string, detail: string;
       if (i === 0) {
         sc.tutorialPts = TUTORIAL_POINTS;
@@ -467,6 +469,7 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
       if (last) ui.whenClear(() => finish());
     },
     ready(t, go) {
+      setTaskContext(t);
       ui.whenClear(() => {
         ui.closeReplay();
         void ui.learn(meta.learn?.[t], t === 0 ? 'Before you play' : `Before task ${t + 1}`).then(() => {
@@ -543,6 +546,7 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
     if (run.begun) return;
     sfx.unlock();
     run.begun = true;
+    setTaskContext(0);
     $('start-row').remove();
     coachStart.remove();
     ($('brief-details') as HTMLDetailsElement).open = false;
@@ -596,9 +600,13 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
   coachStart.addEventListener('click', begin);
 
   const unmountGame = mod.game.mount(stage, api);
+  setGameContext(meta.id);
+  track('game_open');
 
   return {
     unmount() {
+      if (run.begun && !run.finished) track('abandon', { ms: Math.round(run.t0 === null ? 0 : clock()) }, { task: curTask() });
+      setGameContext(null);
       alive = false;
       clearInterval(timer);
       cancelAnimationFrame(ptsRaf);

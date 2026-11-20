@@ -53,11 +53,15 @@ Own domain, Supabase in Mumbai, and what to do before a training centre relies o
 
 ## Classes (training centres and colleges)
 
-An instructor opens `#/classes/new`, enters the centre name and city, and gets a 6-character join code plus a private instructor link (shown once). Learners open `#/join/<CODE>`; from then on every run they start is tagged with the class. The instructor link shows learners, per-game progress and a CSV export. It needs Supabase (the `classes` migration).
+An instructor opens **Teach or host → Create a class** (`#/classes/new`), enters the centre name and city, and gets a 6-character join code plus a private instructor link (shown once). Learners open `#/join/<CODE>` (or type the code under **Teach or host → Join with a code**); joining gives them a claim code for that class, which restores their progress on another device. The instructor link shows learners, per-game progress, minutes spent and concepts learned, with a CSV export.
 
 ## Competitions
 
-Host one from the footer (`#/competitions/new`): players need only a nickname, winners prove themselves with a claim code, and you get live per-level and overall leaderboards, report cards and an organiser desk. Step-by-step for an event: [docs/COMPETITION.md](docs/COMPETITION.md).
+Host one from **Teach or host → Host a competition** (`#/competitions/new`). Players join with the competition's join code (the poster's QR link contains it) and a nickname; only members are ranked. Joining gives a claim code for that competition, which winners show to prove a nickname is theirs. Live per-level and overall boards, report cards, and an organiser desk with winner checks and disqualify. Step-by-step for an event: [docs/COMPETITION.md](docs/COMPETITION.md).
+
+## Learning telemetry
+
+The site records anonymous learning activity (pages, games, explainers, quick-check answers, hints, tasks, active minutes, device type, country; never IP addresses, names or emails), disclosed on `#/privacy` and removed by **Delete my data**. Only the site owner reads it, through the `learner_summary`, `impact_summary` and `impact_weekly` views in the Supabase SQL editor: see [docs/SQL-QUERIES.md](docs/SQL-QUERIES.md).
 
 ## Showing usage numbers
 

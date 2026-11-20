@@ -7,6 +7,7 @@ import { allBest, careerPoints, careerStars, dailyDone, deckCount, saveStandup, 
 import { compStatus } from './competition';
 import { dailyGameId } from './daily';
 import { bindTopbar, fmtPts, footer, topbar } from './chrome';
+import { bindTeachHost, teachHostHtml } from './host';
 
 const starsHtml = (n: number, of = 3) => `<span class="stars" aria-label="${n} of ${of} stars">${'★'.repeat(n)}<span class="off">${'★'.repeat(of - n)}</span></span>`;
 
@@ -62,9 +63,10 @@ export function renderHome(app: HTMLElement): () => void {
     }
     h += `</div></section>`;
   }
-  h += footer();
+  h += teachHostHtml() + footer();
   app.innerHTML = h;
   bindTopbar(app);
+  bindTeachHost(app);
 
   // Public stats line (shared leaderboard only).
   void (async () => {

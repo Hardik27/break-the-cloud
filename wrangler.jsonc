@@ -1,12 +1,16 @@
 // Cloudflare Workers config: serves the built static site (dist/) on Cloudflare's network.
 // Cloudflare runs `npm run build`, then `npx wrangler deploy` on every push to main.
-// No server code: the games run in the browser and talk to Supabase directly.
+// The games run in the browser and talk to Supabase directly. The small script in worker/ answers
+// only /api/* (the visitor's country for anonymous statistics); everything else is a static file.
 // "name" must match the Worker's name in the Cloudflare dashboard.
 {
   "name": "break-the-cloud",
+  "main": "worker/index.js",
   "compatibility_date": "2025-09-01",
   "assets": {
-    "directory": "./dist"
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
   },
   // The site lives only at its own domain; Cloudflare creates the DNS records and HTTPS certificates.
   "routes": [

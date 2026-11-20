@@ -1,10 +1,23 @@
 /** Supabase backend for the leaderboard. Loaded only when the Supabase env vars are set. */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { checkNickname } from './nickname';
-import type { Backend, ClassReport, CompAdmin, CompMe, CompRow, LbRow, Range } from './leaderboard';
+import type { Backend, ClassReport, CompAdmin, CompMe, CompRow, JoinTarget, LbRow, Range } from './leaderboard';
 
 const CLIENT_VERSION = 'web-1';
 const weekAgo = () => new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+
+/** Server messages (raise exception …) → what we tell the player. */
+function explain(msg: string | undefined, fallback: string): string {
+  const m = msg ?? '';
+  if (/nickname/i.test(m)) return 'Pick a nickname first.';
+  if (/wrong competition code/i.test(m)) return 'That join code is not right for this competition. Check it with the organiser.';
+  if (/has ended/i.test(m)) return 'This competition has ended.';
+  if (/wrong class code/i.test(m)) return 'No class with that code. Check it with your instructor.';
+  if (/do not match/i.test(m)) return 'The nickname and claim code do not match.';
+  if (/organiser key/i.test(m)) return 'Wrong competition link or organiser key.';
+  if (/join the competition first/i.test(m)) return 'Join the competition first.';
+  return fallback;
+}
 
 export function supabaseBackend(url: string, anonKey: string): Backend {
   const sb: SupabaseClient = createClient(url, anonKey, { auth: { persistSession: true, autoRefreshToken: true } });
@@ -117,16 +130,54 @@ export function supabaseBackend(url: string, anonKey: string): Backend {
       if (error || !Array.isArray(data)) return null;
       return data.reduce((a, r) => ({ started: a.started + Number(r.started), finished: a.finished + Number(r.finished) }), { started: 0, finished: 0 });
     },
-    async issueClaimCode() {
-      if (!(await userId())) return null;
-      const { data, error } = await sb.rpc('issue_claim_code');
-      return error || typeof data !== 'string' ? null : data;
-    },
     async createCompetition(id, name, starts, ends) {
       if (!(await userId())) return { ok: false, reason: 'Could not reach the server. Try again.' };
       const { data, error } = await sb.rpc('create_competition', { p_id: id, p_name: name, p_starts: starts, p_ends: ends });
-      if (error || typeof data !== 'string') return { ok: false, reason: error?.message?.includes('taken') ? 'That competition link is taken.' : error?.message?.includes('too many') ? 'Too many competitions created today.' : 'Could not create the competition. Check the name, link and dates.' };
-      return { ok: true, key: data };
+      const row = Array.isArray(data) ? data[0] : null;
+      if (error || !row) return { ok: false, reason: error?.message?.includes('taken') ? 'That competition link is taken.' : error?.message?.includes('too many') ? 'Too many competitions created today.' : 'Could not create the competition. Check the name, link and dates.' };
+      return { ok: true, key: row.admin_key as string, joinCode: row.join_code as string };
+    },
+    async joinCompetition(id, code) {
+      if (!(await userId())) return { ok: false, reason: 'Could not reach the server. Try again.' };
+      const { data, error } = await sb.rpc('join_competition', { p_comp: id, p_code: code });
+      if (error || typeof data !== 'string') return { ok: false, reason: explain(error?.message, 'Could not join. Try again.') };
+      return { ok: true, claim: data };
+    },
+    async competitionNewClaim(id) {
+      if (!(await userId())) return null;
+      const { data, error } = await sb.rpc('competition_new_claim', { p_comp: id });
+      return error || typeof data !== 'string' ? null : data;
+    },
+    async classJoin(code) {
+      if (!(await userId())) return { ok: false, reason: 'Could not reach the server. Try again.' };
+      const { data, error } = await sb.rpc('join_class', { p_code: code });
+      if (error || typeof data !== 'string') return { ok: false, reason: explain(error?.message, 'Could not join the class. Try again.') };
+      return { ok: true, claim: data };
+    },
+    async findJoinCode(code) {
+      const { data, error } = await sb.rpc('find_join_code', { p_code: code });
+      const row = Array.isArray(data) ? data[0] : null;
+      return error || !row ? null : (row as JoinTarget);
+    },
+    async restoreProgress(kind, id, nickname, code) {
+      if (!(await userId())) return { ok: false, reason: 'Could not reach the server. Try again.' };
+      const { data, error } = await sb.rpc('restore_progress', { p_kind: kind, p_id: id, p_nickname: nickname, p_code: code });
+      if (error || typeof data !== 'string') return { ok: false, reason: explain(error?.message, 'Could not restore. Try again.') };
+      return { ok: true, nickname: data };
+    },
+    async disqualify(id, key, nickname, reason) {
+      const { data, error } = await sb.rpc('competition_disqualify', { p_comp: id, p_key: key, p_nickname: nickname, p_reason: reason });
+      if (error || !data) return { ok: false, reason: explain(error?.message, 'Could not disqualify. Try again.') };
+      return data.ok ? { ok: true } : { ok: false, reason: 'No member with that nickname.' };
+    },
+    async reinstate(id, key, nickname) {
+      const { data, error } = await sb.rpc('competition_reinstate', { p_comp: id, p_key: key, p_nickname: nickname });
+      if (error || !data) return { ok: false, reason: explain(error?.message, 'Could not reinstate. Try again.') };
+      return data.ok ? { ok: true } : { ok: false, reason: 'No member with that nickname.' };
+    },
+    async logEvents(rows) {
+      if (!rows.length || !(await userId())) return;
+      await sb.from('events').insert(rows);
     },
     async competitionInfo(id) {
       const { data, error } = await sb.rpc('competition_info', { p_comp: id });
@@ -161,11 +212,18 @@ export function supabaseBackend(url: string, anonKey: string): Backend {
     async deleteMyData() {
       const uid = await userId();
       if (!uid) return true;
-      const r1 = await sb.from('runs').delete().eq('user_id', uid);
-      const r2 = await sb.from('profiles').delete().eq('user_id', uid);
+      // One call removes runs, nickname, class and competition memberships and learning activity.
+      const { data, error } = await sb.rpc('delete_my_data');
+      let ok = !error && data === true;
+      if (error) {
+        // Older database without the function: remove what the client may delete itself.
+        const r1 = await sb.from('runs').delete().eq('user_id', uid);
+        const r2 = await sb.from('profiles').delete().eq('user_id', uid);
+        ok = !r1.error && !r2.error;
+      }
       await sb.auth.signOut();
       session = null;
-      return !r1.error && !r2.error;
+      return ok;
     },
   };
 }
