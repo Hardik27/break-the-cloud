@@ -52,6 +52,10 @@ describe('router', () => {
     expect(parseHash('#/classes/new')).toEqual({ page: 'newclass', seed: null });
     expect(parseHash('#/class/AB3K9Z?key=XYZ123')).toEqual({ page: 'class', id: 'AB3K9Z', seed: null, key: 'XYZ123' });
     expect(parseHash('#/class/AB3K9Z')).toEqual({ page: 'class', id: 'AB3K9Z', seed: null, key: undefined });
+    expect(parseHash('#/competitions/new')).toEqual({ page: 'newcomp', seed: null });
+    expect(parseHash('#/c/VJTI-2026')).toEqual({ page: 'comp', id: 'vjti-2026', seed: null });
+    expect(parseHash('#/c/vjti-2026/me')).toEqual({ page: 'compme', id: 'vjti-2026', seed: null });
+    expect(parseHash('#/c/vjti-2026/admin?key=K123')).toEqual({ page: 'compadmin', id: 'vjti-2026', seed: null, key: 'K123' });
   });
 });
 

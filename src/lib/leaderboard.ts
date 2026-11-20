@@ -36,6 +36,27 @@ export interface ClassReport {
   learners: { name: string; games_finished: number; points: number; last_active: string }[];
 }
 
+export interface CompInfo { id: string; name: string; starts_at: string; ends_at: string }
+export interface CompRow { rank: number; nickname: string; points: number; games: number; stars: number; reached_at: string; me: boolean }
+export interface CompMe {
+  nickname: string | null;
+  rank: number | null;
+  of: number;
+  points: number;
+  stars: number;
+  games: number;
+  per_game: { game_id: string; level: number; points: number; stars: number }[];
+  per_level: { level: number; points: number; rank: number | null }[];
+}
+export interface CompAdmin {
+  competition: CompInfo;
+  players: number;
+  standings: Omit<CompRow, 'me'>[];
+  level_winners: { level: number; winner: string | null; points: number | null }[];
+  finalists: { nickname: string; rank: number; runs: { game_id: string; points: number; ms: number; mistakes: number; task_ms: number[]; finished_at: string }[] | null }[];
+}
+export type Fail = { ok: false; reason: string };
+
 export interface Backend {
   kind: 'supabase' | 'mock' | 'offline';
   /** Records a run start on the server (server timestamp), tagged with the learner's class if any. Returns the run id, or null if offline. */
@@ -53,6 +74,16 @@ export interface Backend {
   nickname(): Promise<string | null>;
   setNickname(n: string): Promise<{ ok: boolean; reason?: string }>;
   stats(): Promise<{ started: number; finished: number } | null>;
+  /** A new secret claim code for the caller (needs a nickname). Replaces any older code. */
+  issueClaimCode(): Promise<string | null>;
+  createCompetition(id: string, name: string, starts: string, ends: string): Promise<{ ok: true; key: string } | Fail>;
+  competitionInfo(id: string): Promise<CompInfo | null>;
+  activeCompetitions(): Promise<CompInfo[]>;
+  /** Overall (level null) or one level's board for a competition. */
+  competitionBoard(id: string, level: number | null): Promise<CompRow[] | null>;
+  competitionMe(id: string): Promise<CompMe | null>;
+  competitionAdmin(id: string, key: string): Promise<{ ok: true; data: CompAdmin } | Fail>;
+  verifyClaim(id: string, key: string, nickname: string, code: string): Promise<{ ok: true; valid: boolean; reason?: string; rank?: number; points?: number } | Fail>;
   /** Deletes the player's runs and nickname from the server. */
   deleteMyData(): Promise<boolean>;
 }
@@ -70,12 +101,23 @@ export const offlineBackend: Backend = {
   createClass: async () => ({ ok: false, reason: 'Classes need the shared leaderboard, which is not set up on this site yet.' }),
   classInfo: async () => null,
   classReport: async () => ({ ok: false, reason: 'Classes need the shared leaderboard, which is not set up on this site yet.' }),
+  issueClaimCode: async () => null,
+  createCompetition: async () => ({ ok: false, reason: 'Competitions need the shared leaderboard, which is not set up on this site yet.' }),
+  competitionInfo: async () => null,
+  activeCompetitions: async () => [],
+  competitionBoard: async () => null,
+  competitionMe: async () => null,
+  competitionAdmin: async () => ({ ok: false, reason: 'Competitions need the shared leaderboard, which is not set up on this site yet.' }),
+  verifyClaim: async () => ({ ok: false, reason: 'Competitions need the shared leaderboard, which is not set up on this site yet.' }),
 };
 
 /** In-memory backend that behaves like the real one, including server-side validation. */
 export function mockBackend(): Backend {
   interface Run { id: string; user: string; game: string; started: number; status: 'started' | 'finished' | 'rejected'; points: number; ms: number; stars: number; at: number; cls?: string | null }
   const classes = new Map<string, ClassInfo & { key: string; created_at: string }>();
+  const comps = new Map<string, CompInfo & { key: string }>();
+  const claims = new Map<string, string>();
+  const LEVEL: Record<string, number> = {};
   const me = 'me';
   const runs: Run[] = [];
   const names = new Map<string, string>([['bot1', 'packet_pusher'], ['bot2', 'raft_raccoon'], ['bot3', 'quorum_queen']]);
@@ -86,6 +128,30 @@ export function mockBackend(): Backend {
     }
   });
   let seq = 0;
+  /** Best finished run per player per game inside the competition window (players with a nickname only). */
+  const compTotals = (id: string, level: number | null) => {
+    const c = comps.get(id);
+    if (!c) return [];
+    const from = Date.parse(c.starts_at), to = Date.parse(c.ends_at);
+    const best = new Map<string, Run>();
+    for (const r of runs) {
+      if (r.status !== 'finished' || r.at < from || r.at > to || !names.has(r.user)) continue;
+      if (level !== null && (LEVEL[r.game] ?? 0) !== level) continue;
+      const k = `${r.user}|${r.game}`;
+      const b = best.get(k);
+      if (!b || r.points > b.points) best.set(k, r);
+    }
+    const tot = new Map<string, { user: string; points: number; games: number; stars: number; reached: number }>();
+    for (const r of best.values()) {
+      const t = tot.get(r.user) ?? { user: r.user, points: 0, games: 0, stars: 0, reached: 0 };
+      t.points += r.points;
+      t.games++;
+      t.stars += r.stars;
+      t.reached = Math.max(t.reached, r.at);
+      tot.set(r.user, t);
+    }
+    return [...tot.values()].sort((a, b) => b.points - a.points || b.stars - a.stars || a.reached - b.reached);
+  };
   const board = (game: string, cls?: string | null) => {
     const best = new Map<string, Run>();
     for (const r of runs) {
@@ -140,7 +206,7 @@ export function mockBackend(): Backend {
         r.status = 'rejected';
         return { ok: false, reason: v.reason };
       }
-      Object.assign(r, { status: 'finished', points: v.total, ms: v.ms, stars: v.stars });
+      Object.assign(r, { status: 'finished', points: v.total, ms: v.ms, stars: v.stars, at: Date.now() });
       return { ok: true, points: v.total, stars: v.stars };
     },
     async top(game, range, cls) {
@@ -164,7 +230,92 @@ export function mockBackend(): Backend {
     async stats() {
       return { started: runs.length, finished: runs.filter((r) => r.status === 'finished').length };
     },
+    async issueClaimCode() {
+      if (!names.has(me)) return null;
+      const code = `BTC-${String(1000 + ++seq).slice(-4).replace(/[01]/g, '7')}-MOCK`;
+      claims.set(me, code);
+      return code;
+    },
+    async createCompetition(id, name, starts, ends) {
+      if (!/^[a-z0-9][a-z0-9-]{2,39}$/.test(id)) return { ok: false, reason: 'The link may use only lowercase letters, digits and dashes (3–40).' };
+      if (comps.has(id)) return { ok: false, reason: 'That competition link is taken.' };
+      if (Date.parse(ends) <= Date.parse(starts)) return { ok: false, reason: 'The end must be after the start.' };
+      const key = `ORGKEY${++seq}ABCDEFGHJKLMN`.slice(0, 20);
+      comps.set(id, { id, name, starts_at: new Date(starts).toISOString(), ends_at: new Date(ends).toISOString(), key });
+      const reg = await import('../games/registry');
+      reg.GAMES.forEach((g) => (LEVEL[g.id] = g.level));
+      return { ok: true, key };
+    },
+    async competitionInfo(id) {
+      const c = comps.get(id);
+      return c ? { id: c.id, name: c.name, starts_at: c.starts_at, ends_at: c.ends_at } : null;
+    },
+    async activeCompetitions() {
+      return [...comps.values()].map(({ id, name, starts_at, ends_at }) => ({ id, name, starts_at, ends_at }));
+    },
+    async competitionBoard(id, level) {
+      if (!comps.has(id)) return null;
+      return compTotals(id, level).slice(0, 50).map((t, i) => ({ rank: i + 1, nickname: names.get(t.user)!, points: t.points, games: t.games, stars: t.stars, reached_at: new Date(t.reached).toISOString(), me: t.user === me }));
+    },
+    async competitionMe(id) {
+      if (!comps.has(id)) return null;
+      const all = compTotals(id, null);
+      const i = all.findIndex((t) => t.user === me);
+      const c = comps.get(id)!;
+      const from = Date.parse(c.starts_at), to = Date.parse(c.ends_at);
+      const best = new Map<string, Run>();
+      runs.filter((r) => r.user === me && r.status === 'finished' && r.at >= from && r.at <= to).forEach((r) => {
+        const b = best.get(r.game);
+        if (!b || r.points > b.points) best.set(r.game, r);
+      });
+      const per_game = [...best.values()].map((r) => ({ game_id: r.game, level: LEVEL[r.game] ?? 0, points: r.points, stars: r.stars }));
+      const levels = [...new Set(per_game.map((g) => g.level))].sort();
+      return {
+        nickname: names.get(me) ?? null,
+        rank: i < 0 ? null : i + 1,
+        of: all.length,
+        points: i < 0 ? 0 : all[i].points,
+        stars: i < 0 ? 0 : all[i].stars,
+        games: i < 0 ? 0 : all[i].games,
+        per_game,
+        per_level: levels.map((l) => {
+          const lb = compTotals(id, l);
+          const j = lb.findIndex((t) => t.user === me);
+          return { level: l, points: per_game.filter((g) => g.level === l).reduce((a, g) => a + g.points, 0), rank: j < 0 ? null : j + 1 };
+        }),
+      };
+    },
+    async competitionAdmin(id, key) {
+      const c = comps.get(id);
+      if (!c || c.key !== key) return { ok: false, reason: 'wrong competition link or organiser key' };
+      const all = compTotals(id, null);
+      const standings = all.map((t, i) => ({ rank: i + 1, nickname: names.get(t.user)!, points: t.points, games: t.games, stars: t.stars, reached_at: new Date(t.reached).toISOString() }));
+      return {
+        ok: true,
+        data: {
+          competition: { id: c.id, name: c.name, starts_at: c.starts_at, ends_at: c.ends_at },
+          players: all.length,
+          standings,
+          level_winners: [1, 2, 3, 4, 5, 6, 7, 8].map((l) => {
+            const w = compTotals(id, l)[0];
+            return { level: l, winner: w ? names.get(w.user)! : null, points: w ? w.points : null };
+          }),
+          finalists: standings.slice(0, 20).map((s) => ({ nickname: s.nickname, rank: s.rank, runs: runs.filter((r) => names.get(r.user) === s.nickname && r.status === 'finished').map((r) => ({ game_id: r.game, points: r.points, ms: r.ms, mistakes: 0, task_ms: [], finished_at: new Date(r.at).toISOString() })) })),
+        },
+      };
+    },
+    async verifyClaim(id, key, nickname, code) {
+      const c = comps.get(id);
+      if (!c || c.key !== key) return { ok: false, reason: 'wrong competition link or organiser key' };
+      const user = [...names.entries()].find(([, n]) => n.toLowerCase() === nickname.trim().toLowerCase())?.[0];
+      if (!user) return { ok: true, valid: false, reason: 'no player with that nickname' };
+      if (claims.get(user) !== code.trim().toUpperCase()) return { ok: true, valid: false, reason: 'the claim code does not match this nickname' };
+      const all = compTotals(id, null);
+      const i = all.findIndex((t) => t.user === user);
+      return { ok: true, valid: true, rank: i < 0 ? undefined : i + 1, points: i < 0 ? 0 : all[i].points };
+    },
     async deleteMyData() {
+      claims.delete(me);
       for (let i = runs.length - 1; i >= 0; i--) if (runs[i].user === me) runs.splice(i, 1);
       names.delete(me);
       return true;

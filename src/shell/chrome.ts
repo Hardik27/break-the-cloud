@@ -44,7 +44,7 @@ export function refreshRankChip(): void {
 }
 
 export const footer = (): string =>
-  `<footer><span>Break the Cloud: learn distributed systems by breaking them. Free, for students and engineers.</span><span class="footlinks"><a href="#/classes/new">For instructors: create a class</a><a href="#/privacy">Privacy &amp; data</a></span></footer>`;
+  `<footer><span>Break the Cloud: learn distributed systems by breaking them. Free, for students and engineers.</span><span class="footlinks"><a href="#/classes/new">For instructors: create a class</a><a href="#/competitions/new">Host a competition</a><a href="#/privacy">Privacy &amp; data</a></span></footer>`;
 
 /** One-time dismissible notice about local storage (no cookies are used). */
 export function showNoticeOnce(): void {

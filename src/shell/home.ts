@@ -4,6 +4,7 @@ import { esc } from '../lib/dom';
 import { getBackend, withTimeout } from '../lib/leaderboard';
 import type { GameMeta } from '../games/types';
 import { allBest, careerPoints, careerStars, dailyDone, deckCount, saveStandup, standup, streak, today } from '../lib/storage';
+import { compStatus } from './competition';
 import { dailyGameId } from './daily';
 import { bindTopbar, fmtPts, footer, topbar } from './chrome';
 
@@ -40,6 +41,7 @@ export function renderHome(app: HTMLElement): () => void {
        <div><b>03</b><span>Stuck? Hints. The clock pauses whenever you read or watch.</span></div>
        <div><b>04</b><span>Every task adds a card to your concept deck.</span></div>
       </div></div></section>
+    <section class="compbanner" id="comp-banner" hidden></section>
     <section class="today"><div class="card daily" id="daily"><p class="eyebrow">📟 Today’s incident · ${today()}</p><h2><a href="#/play/${daily.id}">${esc(daily.title)}</a></h2><p class="pager" id="daily-pager">…</p>
       <div class="row"><a class="btn go" href="#/play/${daily.id}">${dailyDone() ? 'Solved today ✓ · play again' : 'Take the incident →'}</a><span class="small">The same incident for everyone today. Keep your streak alive.</span></div></div>
       <div class="card standupc" id="standup" hidden></div></section>`;
@@ -70,6 +72,17 @@ export function renderHome(app: HTMLElement): () => void {
     const s = await withTimeout(be.stats(), 4000, null);
     const line = app.querySelector('#home-stats');
     if (alive && line && s && s.finished > 0) line.textContent = `${fmtPts(s.started)} runs started · ${fmtPts(s.finished)} finished by players so far`;
+  })();
+  // A competition running now (or about to start): banner.
+  void (async () => {
+    const be = await getBackend();
+    const list = await withTimeout(be.activeCompetitions(), 4000, []);
+    const ban = app.querySelector<HTMLElement>('#comp-banner');
+    if (!alive || !ban || !list.length) return;
+    const c = list[0];
+    const st = compStatus(c);
+    ban.hidden = false;
+    ban.innerHTML = `<a class="card compban ${st.phase}" href="#/c/${esc(c.id)}" id="comp-ban-link"><span class="eyebrow" style="margin:0">🏆 Competition</span><b>${esc(c.name)}</b><span class="small">${esc(st.text)}</span><span class="btn go">Leaderboard →</span></a>`;
   })();
   // Today's incident pager line, and the stand-up recall question (from a game you have finished).
   void (async () => {

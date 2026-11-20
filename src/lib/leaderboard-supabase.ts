@@ -1,7 +1,7 @@
 /** Supabase backend for the leaderboard. Loaded only when the Supabase env vars are set. */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { checkNickname } from './nickname';
-import type { Backend, ClassReport, LbRow, Range } from './leaderboard';
+import type { Backend, ClassReport, CompAdmin, CompMe, CompRow, LbRow, Range } from './leaderboard';
 
 const CLIENT_VERSION = 'web-1';
 const weekAgo = () => new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
@@ -116,6 +116,47 @@ export function supabaseBackend(url: string, anonKey: string): Backend {
       const { data, error } = await sb.rpc('play_counts');
       if (error || !Array.isArray(data)) return null;
       return data.reduce((a, r) => ({ started: a.started + Number(r.started), finished: a.finished + Number(r.finished) }), { started: 0, finished: 0 });
+    },
+    async issueClaimCode() {
+      if (!(await userId())) return null;
+      const { data, error } = await sb.rpc('issue_claim_code');
+      return error || typeof data !== 'string' ? null : data;
+    },
+    async createCompetition(id, name, starts, ends) {
+      if (!(await userId())) return { ok: false, reason: 'Could not reach the server. Try again.' };
+      const { data, error } = await sb.rpc('create_competition', { p_id: id, p_name: name, p_starts: starts, p_ends: ends });
+      if (error || typeof data !== 'string') return { ok: false, reason: error?.message?.includes('taken') ? 'That competition link is taken.' : error?.message?.includes('too many') ? 'Too many competitions created today.' : 'Could not create the competition. Check the name, link and dates.' };
+      return { ok: true, key: data };
+    },
+    async competitionInfo(id) {
+      const { data, error } = await sb.rpc('competition_info', { p_comp: id });
+      const row = Array.isArray(data) ? data[0] : null;
+      return error || !row ? null : row;
+    },
+    async activeCompetitions() {
+      const { data, error } = await sb.rpc('active_competitions');
+      return error || !Array.isArray(data) ? [] : data;
+    },
+    async competitionBoard(id, level) {
+      await userId();
+      const { data, error } = await sb.rpc('competition_board', { p_comp: id, p_level: level, p_limit: 50 });
+      if (error || !Array.isArray(data)) return null;
+      return data.map((r): CompRow => ({ rank: Number(r.rank), nickname: r.nickname, points: r.points, games: r.games, stars: r.stars, reached_at: r.reached_at, me: r.is_me }));
+    },
+    async competitionMe(id) {
+      if (!(await userId())) return null;
+      const { data, error } = await sb.rpc('competition_me', { p_comp: id });
+      return error || !data ? null : (data as CompMe);
+    },
+    async competitionAdmin(id, key) {
+      const { data, error } = await sb.rpc('competition_admin', { p_comp: id, p_key: key, p_top: 20 });
+      if (error || !data) return { ok: false, reason: error?.message?.includes('wrong') ? 'Wrong competition link or organiser key.' : 'Could not load the standings.' };
+      return { ok: true, data: data as CompAdmin };
+    },
+    async verifyClaim(id, key, nickname, code) {
+      const { data, error } = await sb.rpc('verify_claim', { p_comp: id, p_key: key, p_nickname: nickname, p_code: code });
+      if (error || !data) return { ok: false, reason: error?.message?.includes('wrong') ? 'Wrong competition link or organiser key.' : 'Could not check the claim.' };
+      return { ok: true, ...(data as { valid: boolean; reason?: string; rank?: number; points?: number }) };
     },
     async deleteMyData() {
       const uid = await userId();

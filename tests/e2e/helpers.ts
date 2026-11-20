@@ -131,6 +131,14 @@ export async function expectFinished(page: Page, total: number, timeout = 40_000
 
 /** Clicks through a concept card (frames, then the quick check) if one is open or about to open. */
 export async function passLearn(page: Page): Promise<void> {
+  // With a shared leaderboard, the nickname screen may come first: play without ranking.
+  const gate = page.locator('#nick-gate');
+  try {
+    await gate.waitFor({ state: 'visible', timeout: 800 });
+    await realClick(page, page.locator('#gate-skip'));
+  } catch {
+    /* no gate */
+  }
   const ov = page.locator('#learn-ov');
   try {
     await ov.waitFor({ state: 'visible', timeout: 1500 });

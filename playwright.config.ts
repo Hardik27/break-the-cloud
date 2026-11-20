@@ -20,9 +20,10 @@ export default defineConfig({
     { name: 'phone', use: { browserName: 'chromium', viewport: { width: 390, height: 844 } } },
   ],
   webServer: {
-    command: `npm run build && npx vite preview --port ${PORT} --strictPort`,
+    // Blank Supabase keys: tests must never touch a real project, even when .env.local exists.
+    command: `VITE_SUPABASE_URL= VITE_SUPABASE_ANON_KEY= npm run build && npx vite preview --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}/`,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

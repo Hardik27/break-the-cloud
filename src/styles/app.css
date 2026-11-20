@@ -984,3 +984,44 @@ table.rep th{font-family:var(--mono);font-size:11px;text-transform:uppercase;let
 .classpage>*,#report,#report>*{min-width:0}
 #report{display:grid;gap:14px}
 .joinnick{font:inherit;padding:9px 10px;border:1.5px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);max-width:320px;width:100%}
+
+/* ---------- Identity: nickname gate and claim card ---------- */
+.gate-card{border-color:var(--accent)}
+.claimcard{display:grid;gap:8px;border:2px dashed var(--accent);border-radius:8px;padding:16px;background:color-mix(in srgb,var(--accent) 5%,var(--panel))}
+.claimcard .eyebrow{margin:0;color:var(--accent)}
+.claim-who{font-size:15px}
+.claim-code{font-family:var(--mono);font-weight:700;font-size:clamp(28px,7vw,44px);letter-spacing:.06em;color:var(--accent);user-select:all}
+.claimcard .small{margin:0}
+
+/* ---------- Competitions ---------- */
+.compstatus{display:grid;gap:10px;border-width:2px}
+.compstatus.live{border-color:var(--ok)}.compstatus.upcoming{border-color:var(--vote)}.compstatus.ended{border-color:var(--line)}
+.comptabs{flex-wrap:wrap;margin:8px 0}
+.compboard tr.me td{background:color-mix(in srgb,var(--accent) 10%,var(--panel));font-weight:600}
+.compboard td:first-child{font-size:18px}
+.rules{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;font-size:14px}
+.compbanner{margin-block:6px 0}
+.compban{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;text-decoration:none;color:var(--ink);border:2px solid var(--accent)}
+.compban b{font-family:var(--display);font-stretch:112%;font-weight:800;font-size:20px}
+.compban .btn{margin-left:auto}
+.reportcard{display:grid;gap:12px;border:2px solid var(--accent)}
+.reportcard .eyebrow{margin:0}
+.rc-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.rc-nick{font-family:var(--display);font-stretch:125%;font-weight:900;font-size:clamp(28px,6vw,44px);line-height:1}
+.rc-rank{display:grid;text-align:right}
+.rc-rank b{font-family:var(--display);font-stretch:125%;font-weight:900;font-size:clamp(34px,7vw,52px);color:var(--accent);line-height:1}
+.rc-rank span{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.rc-game{display:inline-block;font-size:12px;margin:2px 6px 2px 0;color:var(--muted);white-space:nowrap}
+.rc-game.done{color:var(--ok);font-weight:600}
+.finalist summary{cursor:pointer;font-family:var(--mono);font-size:13px;padding:6px 0}
+body.tv .topbar,body.tv footer,body.tv .comppage>.eyebrow,body.tv details.card,body.tv .compstatus .row{display:none}
+body.tv .comppage{max-width:none;padding:24px 4vw}
+body.tv .compboard{font-size:clamp(18px,2.2vw,30px)}
+body.tv .compboard td,body.tv .compboard th{padding:10px 14px}
+body.tv #comp-title{font-size:clamp(40px,5vw,80px)}
+.reportcard,.reportcard>*{min-width:0}
+.reportcard table.rep td{white-space:normal;vertical-align:top}
+.reportcard .rc-game{white-space:normal}
+#me-body,#adm-body,#comp-body{display:grid;gap:14px;min-width:0}
+#me-body>*,#adm-body>*,#comp-body>*{min-width:0}
+#vf .joinnick{max-width:220px}

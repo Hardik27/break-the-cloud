@@ -3,6 +3,7 @@ import './styles/app.css';
 import { findGame } from './games/registry';
 import { showNoticeOnce } from './shell/chrome';
 import { renderClassReport, renderJoin, renderNewClass } from './shell/classes';
+import { renderCompetition, renderCompetitionAdmin, renderCompetitionMe, renderNewCompetition } from './shell/competition';
 import { renderDeck } from './shell/deck';
 import { renderHome } from './shell/home';
 import { renderPlay } from './shell/play';
@@ -36,6 +37,11 @@ async function route() {
   if (r.page === 'class') {
     unmount = renderClassReport(app, r.id!, r.key);
     document.title = `Class ${r.id} · Break the Cloud`;
+    return;
+  }
+  if (r.page === 'comp' || r.page === 'compme' || r.page === 'compadmin' || r.page === 'newcomp') {
+    unmount = r.page === 'comp' ? renderCompetition(app, r.id!) : r.page === 'compme' ? renderCompetitionMe(app, r.id!) : r.page === 'compadmin' ? renderCompetitionAdmin(app, r.id!, r.key) : renderNewCompetition(app);
+    document.title = `${r.page === 'newcomp' ? 'Host a competition' : 'Competition'} · Break the Cloud`;
     return;
   }
   if (r.page === 'deck') {
