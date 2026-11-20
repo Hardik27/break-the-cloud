@@ -80,17 +80,17 @@ export function supabaseBackend(url: string, anonKey: string): Backend {
       }
       return { ok: !!data?.ok, points: data?.points, stars: data?.stars, reason: data?.reason };
     },
-    async top(gameId, range: Range) {
+    async top(gameId, range: Range, classCode) {
       await userId();
-      const { data, error } = await sb.rpc('leaderboard', { p_game: gameId, p_since: range === 'week' ? weekAgo() : null, p_limit: 20 });
+      const { data, error } = await sb.rpc('leaderboard', { p_game: gameId, p_since: range === 'week' ? weekAgo() : null, p_limit: 20, p_class: range === 'class' ? classCode ?? null : null });
       if (error || !data) return null;
       return (data as { rank: number; nickname: string; points: number; ms: number; stars: number; is_me: boolean }[]).map(
         (r): LbRow => ({ rank: Number(r.rank), nickname: r.nickname, points: r.points, ms: r.ms, stars: r.stars, me: r.is_me }),
       );
     },
-    async myRank(gameId, range: Range) {
+    async myRank(gameId, range: Range, classCode) {
       if (!(await userId())) return null;
-      const { data, error } = await sb.rpc('my_rank', { p_game: gameId, p_since: range === 'week' ? weekAgo() : null });
+      const { data, error } = await sb.rpc('my_rank', { p_game: gameId, p_since: range === 'week' ? weekAgo() : null, p_class: range === 'class' ? classCode ?? null : null });
       const row = Array.isArray(data) ? data[0] : null;
       if (error || !row) return null;
       return { rank: Number(row.rank), points: row.points, of: Number(row.total) };

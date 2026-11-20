@@ -62,7 +62,7 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
         <div class="card hints" id="hints" hidden></div>
         <div class="card"><p class="eyebrow">Tasks</p><ol class="tasks" id="tasks"></ol></div>
         <div class="card" id="board"><div class="boardhead"><p class="eyebrow" style="margin:0">Leaderboard</p>
-          <div class="tabs" role="tablist"><button class="chip" type="button" role="tab" data-range="all" aria-selected="true">All time</button><button class="chip" type="button" role="tab" data-range="week" aria-selected="false">This week</button></div></div>
+          <div class="tabs" role="tablist">${myClass() ? `<button class="chip" type="button" role="tab" data-range="class" aria-selected="true">My class</button>` : ''}<button class="chip" type="button" role="tab" data-range="all" aria-selected="${myClass() ? 'false' : 'true'}">All time</button><button class="chip" type="button" role="tab" data-range="week" aria-selected="false">This week</button></div></div>
           <div id="board-body" class="small">Loading…</div><p class="small" id="board-me" style="margin:8px 0 0"></p><div id="board-nick"></div></div>
       </aside>
     </div>
@@ -311,9 +311,9 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
       { ok: false, reason: 'the leaderboard did not answer in time' },
     );
     if (!alive) return;
-    const rank = r.ok ? await withTimeout(b.myRank(meta.id, 'all'), 5000, null) : null;
+    const rank = r.ok ? await withTimeout(b.myRank(meta.id, cls ? 'class' : 'all', cls), 5000, null) : null;
     const s = status();
-    if (s) s.innerHTML = r.ok ? `Posted: <b>${fmtPts(r.points ?? 0)}</b> points.${rank ? ` You are <b>#${rank.rank}</b> of ${rank.of} all time.` : ''}` : `Not posted: ${esc(r.reason ?? 'unknown error')}. Your best is saved in this browser.`;
+    if (s) s.innerHTML = r.ok ? `Posted: <b>${fmtPts(r.points ?? 0)}</b> points.${rank ? ` You are <b>#${rank.rank}</b> of ${rank.of} ${cls ? 'in your class' : 'all time'}.` : ''}` : `Not posted: ${esc(r.reason ?? 'unknown error')}. Your best is saved in this browser.`;
     await renderNickForm(app.querySelector('#result-nick'));
     void loadBoard();
   }
@@ -334,7 +334,8 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
   }
 
   // ---------- leaderboard ----------
-  let range: Range = 'all';
+  let range: Range = myClass() ? 'class' : 'all';
+  const cls = myClass()?.code ?? null;
   async function loadBoard() {
     const b = await backendReady;
     const body = app.querySelector<HTMLElement>('#board-body');
@@ -347,18 +348,18 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
       meLine.innerHTML = localLine;
       return;
     }
-    const rows = await withTimeout(b.top(meta.id, range), 6000, null);
+    const rows = await withTimeout(b.top(meta.id, range, cls), 6000, null);
     if (!alive) return;
     if (!rows) {
       body.innerHTML = `<p style="margin:0">Could not load the leaderboard.</p>`;
     } else if (!rows.length) {
-      body.innerHTML = `<p style="margin:0">${range === 'week' ? 'No scores this week yet.' : 'No scores yet.'} Be the first!</p>`;
+      body.innerHTML = `<p style="margin:0">${range === 'week' ? 'No scores this week yet.' : range === 'class' ? `Nobody in ${esc(myClass()?.name ?? 'your class')} has finished this game yet.` : 'No scores yet.'} Be the first!</p>`;
     } else {
       body.innerHTML = `<table class="lb"><tbody>${rows
         .map((r) => `<tr class="${r.me ? 'me' : ''}"><td>${r.rank}.</td><td>${esc(r.nickname)}${r.me ? ' (you)' : ''}</td><td>${'★'.repeat(r.stars)}</td><td>${fmtPts(r.points)}</td><td>${fmtTime(r.ms)}</td></tr>`)
         .join('')}</tbody></table>`;
     }
-    const mine = await withTimeout(b.myRank(meta.id, range), 5000, null);
+    const mine = await withTimeout(b.myRank(meta.id, range, cls), 5000, null);
     if (!alive) return;
     meLine.innerHTML = mine ? `Your rank: <b>#${mine.rank}</b> of ${mine.of} · ${fmtPts(mine.points)} pts` : localLine;
     await renderNickForm(app.querySelector('#board-nick'));

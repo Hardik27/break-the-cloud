@@ -39,6 +39,8 @@ beforeAll(async () => {
   db = new PGlite();
   await db.exec(SUPABASE_STUB);
   await db.exec(readFileSync('supabase/migrations/20261118000000_leaderboard.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/20261120000000_classes.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/20261121000000_class_leaderboard.sql', 'utf8'));
 }, 60_000);
 
 describe('runs: clients can start runs but never set times or points', () => {

@@ -10,7 +10,7 @@ import { validateRun } from '../../supabase/functions/_shared/validate.ts';
 import { checkNickname } from './nickname';
 
 export type { FinishPayload };
-export type Range = 'all' | 'week';
+export type Range = 'all' | 'week' | 'class';
 
 export interface LbRow {
   rank: number;
@@ -47,8 +47,9 @@ export interface Backend {
   /** Instructor: the class report (needs the key). */
   classReport(code: string, key: string): Promise<{ ok: true; report: ClassReport } | { ok: false; reason: string }>;
   finishRun(runId: string, payload: FinishPayload): Promise<FinishResult>;
-  top(gameId: string, range: Range): Promise<LbRow[] | null>;
-  myRank(gameId: string, range: Range): Promise<{ rank: number; points: number; of: number } | null>;
+  /** range 'class' needs classCode: only runs played in that class. */
+  top(gameId: string, range: Range, classCode?: string | null): Promise<LbRow[] | null>;
+  myRank(gameId: string, range: Range, classCode?: string | null): Promise<{ rank: number; points: number; of: number } | null>;
   nickname(): Promise<string | null>;
   setNickname(n: string): Promise<{ ok: boolean; reason?: string }>;
   stats(): Promise<{ started: number; finished: number } | null>;
@@ -85,10 +86,11 @@ export function mockBackend(): Backend {
     }
   });
   let seq = 0;
-  const board = (game: string) => {
+  const board = (game: string, cls?: string | null) => {
     const best = new Map<string, Run>();
     for (const r of runs) {
       if (r.game !== game || r.status !== 'finished') continue;
+      if (cls && r.cls !== cls) continue;
       const b = best.get(r.user);
       if (!b || r.points > b.points || (r.points === b.points && r.ms < b.ms)) best.set(r.user, r);
     }
@@ -141,11 +143,11 @@ export function mockBackend(): Backend {
       Object.assign(r, { status: 'finished', points: v.total, ms: v.ms, stars: v.stars });
       return { ok: true, points: v.total, stars: v.stars };
     },
-    async top(game) {
-      return board(game).slice(0, 20).map((r, i) => ({ rank: i + 1, nickname: names.get(r.user) ?? 'anonymous', points: r.points, ms: r.ms, stars: r.stars, me: r.user === me }));
+    async top(game, range, cls) {
+      return board(game, range === 'class' ? cls : null).slice(0, 20).map((r, i) => ({ rank: i + 1, nickname: names.get(r.user) ?? 'anonymous', points: r.points, ms: r.ms, stars: r.stars, me: r.user === me }));
     },
-    async myRank(game) {
-      const b = board(game);
+    async myRank(game, range, cls) {
+      const b = board(game, range === 'class' ? cls : null);
       const i = b.findIndex((r) => r.user === me);
       return i < 0 ? null : { rank: i + 1, points: b[i].points, of: b.length };
     },

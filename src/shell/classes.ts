@@ -41,10 +41,26 @@ export function renderJoin(app: HTMLElement, code: string): () => void {
       return;
     }
     const joined = myClass()?.code === info.code;
+    const nick = await withTimeout(b.nickname(), 4000, null);
+    if (!alive) return;
     card.innerHTML = `<p class="eyebrow">Class ${esc(info.code)}</p><h2 id="join-name">${esc(info.name)}</h2><p class="small">${esc(info.city)}${info.course ? ` · ${esc(info.course)}` : ''}</p>
-      <p>Joining means your game results (points, stars, time, and your nickname if you set one) are shared with this class’s instructor. Nothing else.</p>
+      <p>Joining means your game results (points, stars, time, and your name below) are shared with this class’s instructor and its class leaderboard. Nothing else.</p>
+      ${joined ? '' : `<label class="small" for="join-nick">Your name in this class (3–20 letters, shown to your instructor and classmates)</label><input id="join-nick" class="joinnick" maxlength="20" autocomplete="nickname" value="${esc(nick ?? '')}" placeholder="e.g. riya_k"><p class="small" id="join-msg" role="status"></p>`}
       <div class="row">${joined ? `<span class="ok-pill">You are in this class</span><button class="btn ghost" type="button" id="leave-btn">Leave class</button>` : `<button class="btn go" type="button" id="join-btn">Join ${esc(info.name)}</button>`}<a class="btn ghost" href="#/" style="text-decoration:none">Go to the games →</a></div>`;
-    card.querySelector('#join-btn')?.addEventListener('click', () => {
+    card.querySelector('#join-btn')?.addEventListener('click', async () => {
+      const name = card.querySelector<HTMLInputElement>('#join-nick')?.value.trim() ?? '';
+      const msg = card.querySelector('#join-msg')!;
+      if (name && name !== nick) {
+        msg.textContent = 'Saving your name…';
+        const r = await b.setNickname(name);
+        if (!r.ok) {
+          msg.textContent = r.reason ?? 'Could not save that name.';
+          return;
+        }
+      } else if (!name && !nick) {
+        msg.textContent = 'Type your name so your instructor knows which results are yours.';
+        return;
+      }
       joinClass({ code: info.code, name: info.name, city: info.city });
       toast(`Joined ${info.name}. Your runs now count for this class.`);
       location.hash = '#/';

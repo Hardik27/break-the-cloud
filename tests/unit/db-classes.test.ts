@@ -41,6 +41,7 @@ beforeAll(async () => {
   await db.exec(STUB);
   await db.exec(readFileSync('supabase/migrations/20261118000000_leaderboard.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/20261120000000_classes.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/20261121000000_class_leaderboard.sql', 'utf8'));
 }, 60_000);
 
 describe('creating a class', () => {
@@ -92,6 +93,15 @@ describe('learners and the report', () => {
     expect(ch).toMatchObject({ learners_started: 2, learners_finished: 2, avg_points: 1050 });
     expect(r.learners[0]).toMatchObject({ name: 'riya_k', points: 1200, games_finished: 1 });
     expect(r.learners[1].name).toMatch(/^learner-[0-9a-f]{4}$/);
+  });
+  it('the class leaderboard ranks only this class; the global one ranks everyone', async () => {
+    await admin(`update runs set status = 'finished', points = 500, stars = 1, ms = 90000 where user_id = $1`, [X]);
+    const cls = await as<{ nickname: string; points: number }>(null, `select * from leaderboard('cache-hit', null, 20, $1)`, [code.toLowerCase()]);
+    expect(cls.map((r) => r.points)).toEqual([1200, 900]);
+    const all = await as<{ points: number }>(null, `select * from leaderboard('cache-hit')`);
+    expect(all.map((r) => r.points)).toEqual([1200, 900, 500]);
+    const [mine] = await as<{ rank: number; total: number }>(L2, `select * from my_rank('cache-hit', null, $1)`, [code]);
+    expect(mine).toMatchObject({ rank: 2, total: 2 });
   });
   it('a learner who deletes their data disappears from the report', async () => {
     await as(L2, `delete from runs where user_id = $1`, [L2]);

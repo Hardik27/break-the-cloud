@@ -983,3 +983,4 @@ table.rep th{font-family:var(--mono);font-size:11px;text-transform:uppercase;let
 @media print{body.print-poster *{visibility:hidden}body.print-poster .poster,body.print-poster .poster *{visibility:visible}body.print-poster .poster{display:block;position:fixed;inset:0;text-align:center;padding-top:15vh;font-size:22px}body.print-poster .poster .bigcode{font-size:96px}}
 .classpage>*,#report,#report>*{min-width:0}
 #report{display:grid;gap:14px}
+.joinnick{font:inherit;padding:9px 10px;border:1.5px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);max-width:320px;width:100%}

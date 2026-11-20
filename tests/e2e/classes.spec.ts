@@ -28,6 +28,10 @@ test('an instructor creates a class, a learner joins and plays, and the report s
   // The learner joins (same browser here, same in-memory backend).
   await page.evaluate((c) => (location.hash = `#/join/${c}`), code);
   await expect(page.locator('#join-name')).toHaveText('Jetking Nashik');
+  // A name is required so the instructor can tell learners apart.
+  await realClick(page, page.locator('#join-btn'));
+  await expect(page.locator('#join-msg')).toContainText('Type your name');
+  await page.fill('#join-nick', 'riya_k');
   await realClick(page, page.locator('#join-btn'));
   await expect(page.locator('#classchip')).toContainText('Jetking Nashik');
 
@@ -36,11 +40,15 @@ test('an instructor creates a class, a learner joins and plays, and the report s
   await realClick(page, page.locator('#start-btn'));
   await playTutorial(page, meta.walkthrough);
   await expect(page.locator('#hud-tasks')).toHaveText('1/4');
+  // The leaderboard opens on the class tab.
+  await expect(page.locator('[data-range="class"]')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#board-body')).toContainText('Jetking Nashik');
 
   // The instructor report counts the learner and the game.
   await page.evaluate((h) => (location.hash = h.slice(h.indexOf('#'))), adminLink);
   await expect(page.locator('#rep-name')).toHaveText('Jetking Nashik');
   await expect(page.locator('#rep-learners')).toHaveText('1');
+  await expect(page.locator('#report')).toContainText('riya_k');
   await expect(page.locator('[data-rep-game="cache-hit"] td').nth(2)).toHaveText('1');
   await expectNoHorizontalScroll(page);
 
