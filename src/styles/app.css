@@ -1054,3 +1054,11 @@ body.tv #comp-gate{display:none}
 .restore summary{cursor:pointer;font-weight:600}
 .restore form{margin-top:10px}
 @media (max-width:880px){.teach{grid-template-columns:minmax(0,1fr)}}
+/* After a game: jump to Learn more (it sits at the bottom of the page) */
+.learnjump{display:flex;width:100%;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;text-align:left;border:1px solid var(--accent);color:var(--ink);background:color-mix(in srgb,var(--accent) 8%,var(--panel));animation:boxpulse 1.6s ease-in-out 4}
+.learnjump b{color:var(--accent)}
+.learnjump .lj-arrow{font-size:20px;color:var(--accent);animation:ljbob 1.2s ease-in-out infinite}
+@keyframes ljbob{50%{transform:translateY(4px)}}
+#learn.flash{animation:boxpulse 1.2s ease-in-out 2;border-color:var(--accent)}
+#learn:focus{outline:none}
+@media (prefers-reduced-motion: reduce){.learnjump,.learnjump .lj-arrow,#learn.flash{animation:none}}

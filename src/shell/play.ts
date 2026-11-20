@@ -268,6 +268,7 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
       <p class="small">${rank.title !== rankBefore ? `<b class="pb">Promoted to ${rank.title}!</b> ` : `Rank: <b>${rank.title}</b>. `}${rank.next ? `${fmtPts(rank.next.min - careerAfter)} pts to ${rank.next.title}.` : ''}</p>
       <div class="row" style="margin-top:10px"><button class="btn go" id="share-btn" type="button">Share score</button><button class="btn" id="again" type="button">Play again</button>
         <a class="btn ghost" id="next-game" href="#/play/${nextGame.id}" style="text-decoration:none">Next: ${esc(nextGame.title)} →</a></div>
+      <button class="btn learnjump" type="button" id="learn-jump"><span>📖 Learn more: <b>${esc(meta.concept)}</b> in depth</span><span class="lj-arrow" aria-hidden="true">↓</span></button>
       <div id="post-status" class="small" style="margin-top:10px" role="status"></div><div id="result-nick"></div>`;
     // count-up
     const t0 = performance.now();
@@ -289,10 +290,27 @@ export async function renderPlay(app: HTMLElement, entry: GameEntry, seedParam: 
     const lm = meta.learnMore;
     const learn = $('learn');
     learn.hidden = false;
+    learn.tabIndex = -1;
     learn.innerHTML = `<div class="learn"><div><p class="eyebrow">Learn more</p><h2>${esc(meta.concept)} in depth</h2>${lm.paragraphs.map((p) => `<p>${p}</p>`).join('')}<p class="eyebrow" style="margin-top:14px">Primary sources</p><ul>${lm.links
       .map((l) => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a></li>`)
       .join('')}</ul></div><figure>${lm.diagram}<figcaption>${lm.caption}</figcaption></figure></div>`;
-    coach.shellSay(`${rs.stars === 3 ? 'Three stars!' : 'All tasks done.'} Share your score, then scroll down to <b>Learn more</b>.`, 'watch');
+    coach.shellSay(`${rs.stars === 3 ? 'Three stars!' : 'All tasks done.'} Now go deeper: press <b>Learn more</b>.`, 'act');
+    // Learn more sits at the bottom of the page: two buttons jump there and highlight it.
+    const jumpToLearn = () => {
+      learn.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+      learn.classList.remove('flash');
+      void learn.offsetWidth;
+      learn.classList.add('flash');
+      learn.focus({ preventScroll: true });
+    };
+    const coachJump = document.createElement('button');
+    coachJump.className = 'btn go';
+    coachJump.type = 'button';
+    coachJump.id = 'coach-learn';
+    coachJump.textContent = 'Learn more ↓';
+    coachJump.addEventListener('click', jumpToLearn);
+    coach.actions.prepend(coachJump);
+    $('learn-jump').addEventListener('click', jumpToLearn);
     res.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     void postRun(sc.taskMs.map((t, i) => (i === 0 ? 0 : Math.round(t))));
   }

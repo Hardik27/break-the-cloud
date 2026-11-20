@@ -127,6 +127,11 @@ export async function expectFinished(page: Page, total: number, timeout = 40_000
   await expect(page.locator('#result-cheer')).not.toBeEmpty();
   await expect(page.locator('#learn')).toBeVisible();
   await expect(page.locator('#learn a[href^="https://"]')).toHaveCount(3);
+  // Learn more sits at the bottom: the result card's button (and the coach bar's) jumps there.
+  await expect(page.locator('#coach-learn')).toBeVisible();
+  await realClick(page, page.locator('#learn-jump'));
+  await expect(page.locator('#learn')).toBeInViewport();
+  await expect(page.locator('#learn')).toHaveClass(/flash/);
 }
 
 /** Clicks through a concept card (frames, then the quick check) if one is open or about to open. */
