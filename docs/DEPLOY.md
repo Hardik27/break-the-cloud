@@ -7,7 +7,7 @@ Break the Cloud is a **static site**: after `npm run build` it is just HTML, CSS
 | Piece | What it does | Who provides it | Cost |
 |---|---|---|---|
 | **Domain name** | The address people type, e.g. `breakthecloud.in` | A registrar: Cloudflare Registrar, Namecheap, GoDaddy, BigRock… | about ₹600–1,500 a year (`.in` cheaper, `.com` / `.dev` more) |
-| **Static hosting** | Serves the files in `dist/` over HTTPS, worldwide | Cloudflare Pages (works with a private repository) | Free |
+| **Static hosting** | Serves the files in `dist/` over HTTPS, worldwide | Cloudflare Workers static assets (works with a private repository) | Free |
 | **Backend** | Leaderboard, play counts, classes for training centres | Supabase (Postgres + anonymous sign-in + one Edge Function) | Free tier; Pro is $25/month when real classes depend on it |
 
 How a visit works: the browser asks **DNS** where your domain lives → DNS answers with Cloudflare's servers → Cloudflare sends the files → the games run in the browser and talk to Supabase directly for scores and classes.
@@ -54,17 +54,19 @@ supabase functions deploy finish-run
 2. Buy it for 1–2 years and turn on **auto-renew**. A lapsed domain can be bought by someone else.
 3. Keep the registrar account safe (two-factor login): whoever controls it controls the site.
 
-## Step 4: host the site on Cloudflare Pages and attach the domain
+## Step 4: host the site on Cloudflare and attach the domain
 
-1. dash.cloudflare.com → **Workers & Pages → Create → Pages → Connect to Git**. Allow Cloudflare to read your GitHub account and pick `break-the-cloud` (private is fine).
-2. Build settings:
-   - **Framework preset:** None (or Vite)
+Live setup: **https://breakthecloud.dev**, served by a Cloudflare Worker named `break-the-cloud` with static assets. The repo's `wrangler.jsonc` says where the built files are (`dist/`), which domains the site answers on (`breakthecloud.dev`, `www.breakthecloud.dev`), and turns off the `*.workers.dev` address.
+
+1. dash.cloudflare.com → **Workers & Pages → Create → Import a repository** → connect GitHub (only this repository) → pick `break-the-cloud`.
+2. Settings:
+   - **Project name:** `break-the-cloud` (must match `name` in `wrangler.jsonc`)
    - **Build command:** `npm run build`
-   - **Build output directory:** `dist`
-   - **Environment variables:** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (from Step 2), and `NODE_VERSION` = `22`
-3. **Save and Deploy.** After about a minute the site is live at `https://break-the-cloud.pages.dev`. Every `git push` to `main` redeploys it.
-4. In the project: **Custom domains → Set up a custom domain**: enter `breakthecloud.in` (your domain), then add `www.breakthecloud.in` as well. If the domain is on Cloudflare, the DNS records and the HTTPS certificate are created for you, usually within minutes.
-5. If you change the Supabase values later, edit them in **Settings → Variables and secrets** and redeploy (**Deployments → … → Retry deployment**): they are baked in at build time.
+   - **Deploy command:** `npx wrangler deploy` (the default)
+   - **Advanced settings → Build variables:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (from Step 2) and `NODE_VERSION` = `22`. Leave **API token** empty: Cloudflare creates the build token itself.
+3. **Deploy.** Every push to `main` builds and deploys again in about a minute (**Deployments** tab shows the log).
+4. Domains: listed in `wrangler.jsonc` under `routes`, so a deploy attaches them, creates the DNS records and issues HTTPS certificates. With a domain bought on Cloudflare there is nothing else to do. A new domain can take up to an hour before every network can resolve it.
+5. Supabase values changed later? Edit them under **Settings → Build → Variables and secrets** and redeploy: they are baked in at build time.
 
 ### Alternative: GitHub Pages
 
@@ -72,8 +74,8 @@ Only for a **public** repository on a free GitHub account (private needs a paid 
 
 ## Step 5: check it
 
-- Open `https://YOUR-DOMAIN/` on a phone and a laptop. Play one game to the end: the result card should say “Posted”.
-- Create a test class at `https://YOUR-DOMAIN/#/classes/new`, join it from another browser, play, and open the instructor link.
+- Open `https://breakthecloud.dev/` on a phone and a laptop. Play one game to the end: the result card should say “Posted”.
+- Create a test class at `https://breakthecloud.dev/#/classes/new`, join it from another browser, play, and open the instructor link.
 - In Supabase: **Authentication → URL Configuration → Site URL** = your domain.
 
 ## Later updates

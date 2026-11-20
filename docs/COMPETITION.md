@@ -18,10 +18,10 @@ Players need only a **nickname**. Winners prove who they are with a **claim code
 3. **Supabase settings** (Authentication):
    - **Allow anonymous sign-ins: ON.**
    - **Rate Limits → anonymous sign-ins per hour: 1000 or more.** On college Wi-Fi every student shares one internet address; the default (30) would block the 31st student.
-4. **Create the competition** on the live site: footer → **Host a competition** (`https://YOUR-SITE/#/competitions/new`).
+4. **Create the competition** on the live site: footer → **Host a competition** (`https://breakthecloud.dev/#/competitions/new`).
    - Name: `VJTI Break the Cloud Cup`, link: `vjti-2026`, start and end times.
    - **Save the organiser link** in your password manager. It is shown once and is the only way to see final standings and verify winners.
-5. **Poster / slide:** the public link `https://YOUR-SITE/#/c/vjti-2026`, made into a QR code (any free QR generator), plus three lines:
+5. **Poster / slide:** the public link `https://breakthecloud.dev/#/c/vjti-2026`, made into a QR code (any free QR generator), plus three lines:
    - Scan, pick a nickname, then **screenshot your claim code** (it stays on screen until you tick “I took a screenshot”).
    - Play in **one browser, not incognito**.
    - Best score per game counts; total over all 24 games wins. Level prizes too.
@@ -30,7 +30,7 @@ Players need only a **nickname**. Winners prove who they are with a **claim code
 
 ## 2. During the event
 
-- Put `https://YOUR-SITE/#/c/vjti-2026` on the hall projector and press **Projector mode**: big leaderboard, refreshes every 30 seconds.
+- Put `https://breakthecloud.dev/#/c/vjti-2026` on the hall projector and press **Projector mode**: big leaderboard, refreshes every 30 seconds.
 - Remind players: screenshot the claim code the moment it appears. The QR link opens the competition page, which asks for a nickname straight away; any game page does the same for a player without one. The code stays in its own window until the player confirms they saved it.
 - Lost the code but still in the same browser? **My report card → Get a new claim code** (the old one stops working).
 - The **Level** tabs show who leads each level, for level prizes or shout-outs.

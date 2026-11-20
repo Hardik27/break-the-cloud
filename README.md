@@ -43,15 +43,9 @@
    ```
 6. Restart `npm run dev`. The leaderboard switches on by itself; without the `.env.local` values the game runs offline and keeps best scores in the browser.
 
-## Deploying (Cloudflare Pages, your own domain)
+## Deploying (Cloudflare, your own domain)
 
-1. Push this folder to a GitHub repository (private is fine):
-   ```
-   git remote add origin https://github.com/YOUR-USERNAME/break-the-cloud.git
-   git push -u origin main
-   ```
-2. On dash.cloudflare.com: **Workers & Pages → Create → Pages → Connect to Git**, pick the repository. Build command `npm run build`, output `dist`, environment variables `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (same as `.env.local`) and `NODE_VERSION=22`. Never add the service-role or secret key.
-3. **Custom domains** → add your domain. Every push to `main` redeploys.
+Live at **https://breakthecloud.dev**. Cloudflare builds and deploys on every push to `main` (`npm run build`, then `npx wrangler deploy` using `wrangler.jsonc`). Build variables in Cloudflare: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `NODE_VERSION=22`. Never add the service-role or secret key. Full steps: [docs/DEPLOY.md](docs/DEPLOY.md).
 
 `.github/workflows/test.yml` runs the unit tests and a build on every push and pull request; it does not publish anything. The Playwright suite is not run in CI (it takes about 15 minutes); run `npm run e2e` locally before pushing big changes.
 
