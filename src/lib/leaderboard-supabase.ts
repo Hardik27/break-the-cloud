@@ -9,6 +9,7 @@ const weekAgo = () => new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
 export function supabaseBackend(url: string, anonKey: string): Backend {
   const sb: SupabaseClient = createClient(url, anonKey, { auth: { persistSession: true, autoRefreshToken: true } });
   let session: Promise<string | null> | null = null;
+  let authError = '';
 
   /** Anonymous sign-in: no email, no password. The session lives in localStorage (disclosed on the privacy page). */
   function userId(): Promise<string | null> {
@@ -17,9 +18,16 @@ export function supabaseBackend(url: string, anonKey: string): Backend {
       const { data } = await sb.auth.getSession();
       if (data.session) return data.session.user.id;
       const { data: d, error } = await sb.auth.signInAnonymously();
-      if (error || !d.user) return null;
+      if (error || !d.user) {
+        authError = error?.message ?? '';
+        session = null; // try again next time (e.g. after the setting is switched on)
+        return null;
+      }
       return d.user.id;
-    })().catch(() => null);
+    })().catch(() => {
+      session = null;
+      return null;
+    });
     return session;
   }
 
@@ -35,7 +43,13 @@ export function supabaseBackend(url: string, anonKey: string): Backend {
       return error || !data ? null : (data.id as string);
     },
     async createClass(name, city, course) {
-      if (!(await userId())) return { ok: false, reason: 'Could not reach the server. Try again.' };
+      if (!(await userId()))
+        return {
+          ok: false,
+          reason: /anonymous/i.test(authError)
+            ? 'Anonymous sign-ins are switched off in Supabase. Turn them on: Authentication → Sign In / Providers → Allow anonymous sign-ins.'
+            : 'Could not reach the server. Try again.',
+        };
       const { data, error } = await sb.rpc('create_class', { p_name: name, p_city: city, p_course: course || null });
       const row = Array.isArray(data) ? data[0] : null;
       if (error || !row) return { ok: false, reason: error?.message?.includes('too many') ? 'Too many classes created today. Try tomorrow.' : 'Could not create the class. Check the name (3–80 characters) and city.' };
