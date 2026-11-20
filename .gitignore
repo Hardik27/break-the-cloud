@@ -7,3 +7,5 @@ playwright-report/
 blob-report/
 .DS_Store
 .wrangler/
+*.swp
+.*.swp
